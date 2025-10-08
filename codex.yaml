@@ -1,0 +1,45 @@
+# codex.yaml — 詠日和（よみびより） Codex設定ファイル
+
+project:
+  name: yomibiyori
+  description: >
+    詠日和は、AIが上の句を詠み、人が下の句で応える“詩的SNS”。
+    Codexは開発エージェントとして、API、DB、モバイルアプリの実装を自動化します。
+
+include:
+  - README.md
+  - AGENTS.md
+  - REQUIREMENTS.md
+  - OPENAPI.yaml
+  - SCHEMA.sql
+
+# Codexが初回同期時に参照するエントリタスク
+entry_task: /works 投稿API
+
+# Codexタスク実行時の出力ポリシー
+output:
+  format: markdown
+  show_diffs: true
+  summarize_commits: true
+
+# GitHub連携設定（自動PR作成などに利用）
+github:
+  repo: yomibiyori
+  default_branch: main
+  create_pull_requests: true
+  auto_commit: false
+
+# Codexエージェントの実行環境
+runtime:
+  python: "3.11"
+  node: "20"
+  framework:
+    backend: fastapi
+    frontend: react-native
+
+# 開発者メモ
+notes: |
+  - Codexは `codex sync` により上記ファイルを解析し、文脈を更新します。
+  - タスク作成例:
+      codex task create "投稿APIを実装せよ"
+  - PR作成後、レビュー＆マージでデプロイが自動反映される設計を推奨。
