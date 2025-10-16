@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
+import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.redis import get_redis_client
 from app.main import app
 from app.models import Base
 from app.db.session import get_db_session
@@ -39,13 +41,27 @@ def db_session() -> Generator[Session, None, None]:
 
 
 @pytest.fixture()
-def client(db_session: Session) -> Generator[TestClient, None, None]:
+def redis_client() -> Generator[fakeredis.FakeRedis, None, None]:
+    """Provide an isolated in-memory Redis instance."""
+
+    client = fakeredis.FakeRedis(decode_responses=True)
+    try:
+        yield client
+    finally:
+        client.flushall()
+
+
+@pytest.fixture()
+def client(db_session: Session, redis_client: fakeredis.FakeRedis) -> Generator[TestClient, None, None]:
     """FastAPI test client with dependency overrides."""
 
     def _get_test_session() -> Generator[Session, None, None]:
         yield db_session
 
     app.dependency_overrides[get_db_session] = _get_test_session
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
+    app.dependency_overrides[get_redis_client] = lambda: redis_client
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.clear()

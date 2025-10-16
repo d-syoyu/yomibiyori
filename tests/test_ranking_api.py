@@ -1,16 +1,17 @@
-
 """Tests for ranking API."""
 
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from math import sqrt
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.models import Ranking, Theme, User, Work
 
 
@@ -32,7 +33,7 @@ def _create_user(session: Session) -> User:
 def _create_theme(session: Session, theme_date: date) -> Theme:
     theme = Theme(
         id=str(uuid4()),
-        text="秋蛍 澄む夜気に揺れ",
+        text="風をつかむかるたの舞",
         category="general",
         date=theme_date,
         sponsored=False,
@@ -58,10 +59,45 @@ def _create_work(session: Session, user: User, theme: Theme, text: str) -> Work:
     return work
 
 
-def test_get_ranking_success(client: TestClient, db_session: Session) -> None:
+def _wilson(likes: int, impressions: int, z: float = 1.96) -> float:
+    if impressions <= 0:
+        return 0.0
+    phat = likes / impressions
+    denominator = 1.0 + (z * z) / impressions
+    centre = phat + (z * z) / (2 * impressions)
+    margin = z * sqrt((phat * (1 - phat) + (z * z) / (4 * impressions)) / impressions)
+    return (centre - margin) / denominator
+
+
+def test_get_ranking_success(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+) -> None:
     user = _create_user(db_session)
     theme = _create_theme(db_session, date(2025, 1, 20))
-    work = _create_work(db_session, user, theme, "銀河へと跳ねる露珠のひらめき")
+    work = _create_work(db_session, user, theme, "宵の灯にさざめく波のこゑ")
+
+    settings = get_settings()
+    redis_client.zadd(f"{settings.redis_ranking_prefix}{theme.id}", {work.id: 12})
+    redis_client.hset(f"metrics:{work.id}", mapping={"likes": 12, "impressions": 30})
+
+    response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["rank"] == 1
+    assert payload[0]["work_id"] == work.id
+    assert pytest.approx(payload[0]["score"], rel=1e-3) == _wilson(12, 30)
+    assert payload[0]["user_name"] == user.display_name
+    assert payload[0]["text"] == work.text
+
+
+def test_get_ranking_fallback_to_snapshot(client: TestClient, db_session: Session) -> None:
+    user = _create_user(db_session)
+    theme = _create_theme(db_session, date(2025, 1, 22))
+    work = _create_work(db_session, user, theme, "雪明かり頬をほころぶ影法師")
 
     ranking_entry = Ranking(
         theme_id=theme.id,
@@ -74,7 +110,6 @@ def test_get_ranking_success(client: TestClient, db_session: Session) -> None:
     db_session.commit()
 
     response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
-
     assert response.status_code == 200
     payload = response.json()
     assert len(payload) == 1
@@ -90,7 +125,10 @@ def test_get_ranking_theme_not_found(client: TestClient) -> None:
     assert response.status_code == 404
 
 
-def test_get_ranking_without_entries(client: TestClient, db_session: Session) -> None:
+def test_get_ranking_without_entries(
+    client: TestClient,
+    db_session: Session,
+) -> None:
     theme = _create_theme(db_session, date(2025, 1, 21))
     response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
     assert response.status_code == 404

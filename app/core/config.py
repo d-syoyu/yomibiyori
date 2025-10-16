@@ -35,6 +35,16 @@ class Settings(BaseSettings):
         alias="SUPABASE_JWKS_URL",
         description="URL of the Supabase JWKS endpoint.",
     )
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        alias="REDIS_URL",
+        description="Redis connection URL for ranking and cache.",
+    )
+    redis_ranking_prefix: str = Field(
+        default="rankings:",
+        alias="REDIS_RANKING_PREFIX",
+        description="Prefix for Redis keys storing ranking ZSET data.",
+    )
     service_role_key: str | None = Field(
         default=None,
         alias="SUPABASE_SERVICE_ROLE_KEY",
