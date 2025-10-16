@@ -1,4 +1,4 @@
-# .gitignore — 詠日和（よみびより）
+# .gitignore - Yomibiyori
 
 # Python
 __pycache__/
@@ -6,6 +6,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.sqlite3
+*.db
 .venv/
 .env
 env/
