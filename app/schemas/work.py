@@ -32,3 +32,10 @@ class WorkLikeResponse(BaseModel):
 
     status: Literal["liked"]
     likes_count: int = Field(ge=0, description="Current number of likes for the work")
+
+
+class WorkImpressionResponse(BaseModel):
+    """Response payload for recording an impression."""
+
+    status: Literal["recorded"]
+    impressions_count: int = Field(ge=0, description="Number of impressions tracked for this work")

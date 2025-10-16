@@ -178,3 +178,43 @@ def test_like_work_conflict(
     )
     assert second.status_code == 409
     assert second.json()["detail"].startswith("You have already")
+
+
+def test_record_impression_success(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    author = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 20))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"text": "�ł��邢�͋����R����"},
+        headers=_auth_headers(author.id),
+    )
+    work_id = creation.json()["id"]
+
+    response = client.post(f"/api/v1/works/{work_id}/impression")
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["status"] == "recorded"
+    assert payload["impressions_count"] == 1
+
+    again = client.post(f"/api/v1/works/{work_id}/impression")
+    assert again.status_code == 202
+    assert again.json()["impressions_count"] == 2
+
+    settings = get_settings()
+    metrics = redis_client.hgetall(f"metrics:{work_id}")
+    assert metrics["impressions"] == "2"
+    assert metrics["likes"] == "0"
+
+
+def test_record_impression_missing_work(
+    client: TestClient,
+) -> None:
+    response = client.post("/api/v1/works/missing/impression")
+    assert response.status_code == 404

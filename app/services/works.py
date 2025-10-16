@@ -6,13 +6,14 @@ from datetime import datetime, time, timezone
 from uuid import uuid4
 
 from fastapi import HTTPException, status
+from redis import Redis
 from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import Like, Theme, Work
-from app.schemas.work import WorkCreate, WorkResponse
+from app.schemas.work import WorkCreate, WorkImpressionResponse, WorkResponse
 
 SUBMISSION_START = time(hour=6, minute=0)
 SUBMISSION_END = time(hour=22, minute=0)
@@ -118,3 +119,33 @@ def list_works(session: Session, *, theme_id: str, limit: int) -> list[WorkRespo
         )
         for work, likes_count in results
     ]
+
+
+def record_impression(
+    session: Session,
+    *,
+    redis_client: Redis,
+    work_id: str,
+) -> WorkImpressionResponse:
+    """Record an impression for the supplied work in Redis."""
+
+    work = session.get(Work, work_id)
+    if not work:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work not found")
+
+    settings = get_settings()
+    ranking_key = f"{settings.redis_ranking_prefix}{work.theme_id}"
+    metrics_key = f"metrics:{work_id}"
+
+    pipeline = redis_client.pipeline()
+    pipeline.zadd(ranking_key, {work_id: 0}, nx=True)
+    pipeline.hsetnx(metrics_key, "likes", 0)
+    pipeline.hincrby(metrics_key, "impressions", 1)
+    results = pipeline.execute()
+
+    impressions_increment_result = results[-1]
+    impressions_count = int(impressions_increment_result) if impressions_increment_result is not None else int(
+        redis_client.hget(metrics_key, "impressions") or 0
+    )
+
+    return WorkImpressionResponse(status="recorded", impressions_count=impressions_count)

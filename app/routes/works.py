@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.redis import get_redis_client
 from app.db.session import get_db_session
-from app.schemas.work import WorkCreate, WorkLikeResponse, WorkResponse
+from app.schemas.work import WorkCreate, WorkImpressionResponse, WorkLikeResponse, WorkResponse
 from app.services import likes as likes_service
 from app.services import works as works_service
 from app.services.auth import get_current_user_id
@@ -69,5 +69,25 @@ def like_work(
         session=session,
         redis_client=redis_client,
         user_id=user_id,
+        work_id=work_id,
+    )
+
+
+@router.post(
+    "/{work_id}/impression",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=WorkImpressionResponse,
+    summary="Record an impression for a work",
+)
+def record_impression(
+    work_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+    redis_client: Annotated[Redis, Depends(get_redis_client)],
+) -> WorkImpressionResponse:
+    """Increment impression count for the target work."""
+
+    return works_service.record_impression(
+        session=session,
+        redis_client=redis_client,
         work_id=work_id,
     )
