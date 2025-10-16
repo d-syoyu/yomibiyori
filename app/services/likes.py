@@ -1,0 +1,70 @@
+"""Domain services for work likes."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from uuid import uuid4
+
+from fastapi import HTTPException, status
+from redis import Redis
+from sqlalchemy import Select, func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.core.config import get_settings
+from app.models import Like, Work
+from app.schemas.work import WorkLikeResponse
+
+
+def like_work(
+    session: Session,
+    *,
+    redis_client: Redis,
+    user_id: str,
+    work_id: str,
+) -> WorkLikeResponse:
+    """Register a like for the given work and update ranking metrics."""
+
+    work = session.get(Work, work_id)
+    if not work:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work not found")
+
+    existing_stmt = select(Like).where(Like.user_id == user_id, Like.work_id == work_id)
+    if session.execute(existing_stmt).scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already liked this work",
+        )
+
+    like = Like(
+        id=str(uuid4()),
+        user_id=user_id,
+        work_id=work_id,
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(like)
+
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already liked this work",
+        ) from exc
+
+    likes_count_stmt: Select[int] = select(func.count(Like.id)).where(Like.work_id == work_id)
+    likes_count = session.execute(likes_count_stmt).scalar_one()
+
+    settings = get_settings()
+    ranking_key = f"{settings.redis_ranking_prefix}{work.theme_id}"
+    metrics_key = f"metrics:{work_id}"
+
+    pipeline = redis_client.pipeline()
+    pipeline.zadd(ranking_key, {work_id: 0}, nx=True)
+    pipeline.zincrby(ranking_key, 1, work_id)
+    pipeline.hincrby(metrics_key, "likes", 1)
+    pipeline.hsetnx(metrics_key, "impressions", 0)
+    pipeline.execute()
+
+    return WorkLikeResponse(status="liked", likes_count=likes_count)

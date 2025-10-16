@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models import Theme, User, Work
+from app.models import Like, Theme, User, Work
 from app.services import works as works_service
 
 
@@ -19,7 +19,7 @@ def _create_user(session: Session) -> User:
     now = datetime.now(timezone.utc)
     user = User(
         id=str(uuid4()),
-        handle="testuser",
+        handle=f"testuser-{uuid4()}",
         display_name="Test User",
         bio=None,
         created_at=now,
@@ -113,3 +113,68 @@ def test_list_works_returns_likes_count(client: TestClient, db_session: Session,
     assert len(works) == 1
     assert works[0]["theme_id"] == theme.id
     assert works[0]["likes_count"] == 0
+
+
+def test_like_work_success(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    author = _create_user(db_session)
+    liker = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 18))
+
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+    creation = client.post(
+        "/api/v1/works",
+        json={"text": "�����̐l�ɓ���̕��ɓ����"},
+        headers=_auth_headers(author.id),
+    )
+    work_id = creation.json()["id"]
+
+    response = client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(liker.id),
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "liked"
+    assert payload["likes_count"] == 1
+
+    assert db_session.query(Like).count() == 1
+    settings = get_settings()
+    ranking_key = f"{settings.redis_ranking_prefix}{theme.id}"
+    assert redis_client.zscore(ranking_key, work_id) == 1.0
+    assert redis_client.hget(f"metrics:{work_id}", "likes") == "1"
+
+
+def test_like_work_conflict(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 19))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"text": "���̌��̓G���b�g�̃o���q"},
+        headers=_auth_headers(user.id),
+    )
+    work_id = creation.json()["id"]
+
+    first = client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(user.id),
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(user.id),
+    )
+    assert second.status_code == 409
+    assert second.json()["detail"].startswith("You have already")
