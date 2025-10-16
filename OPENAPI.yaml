@@ -1,17 +1,17 @@
 openapi: 3.1.0
 info:
   title: 詠日和 API
-  version: "1.0.0"
-  description: |
-    詠日和（よみびより）は、AIが上の句を提示し、人が下の句で応える“詩的SNS”です。
+  version: 1.0.0
+  description: '詠日和（よみびより）は、AIが上の句を提示し、人が下の句で応える“詩的SNS”です。
+
     本ドキュメントはFastAPIに準拠したREST API仕様を示します。
 
+    '
 servers:
-  - url: https://api.yomibiyori.app/v1
-    description: Production
-  - url: http://localhost:8000/v1
-    description: Local Development
-
+- url: https://api.yomibiyori.app/v1
+  description: Production
+- url: http://localhost:8000/v1
+  description: Local Development
 paths:
   /auth/signup:
     post:
@@ -29,33 +29,33 @@ paths:
                   format: email
                 password:
                   type: string
-              required: [email, password]
+              required:
+              - email
+              - password
       responses:
-        "201":
+        '201':
           description: 登録成功
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
-
+                $ref: '#/components/schemas/User'
   /themes/today:
     get:
       summary: 本日のお題を取得
       description: 当日6:00に解禁された上の句を返します。
       responses:
-        "200":
+        '200':
           description: お題情報
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Theme"
-
+                $ref: '#/components/schemas/Theme'
   /works:
     post:
       summary: 下の句を投稿
       description: ログインユーザーが本日のお題に対して1首を投稿します。
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -66,87 +66,84 @@ paths:
                 text:
                   type: string
                   description: 下の句本文（100文字以内）
-              required: [text]
+              required:
+              - text
       responses:
-        "201":
+        '201':
           description: 投稿成功
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Work"
-        "409":
+                $ref: '#/components/schemas/Work'
+        '409':
           description: 既に本日投稿済み
-
     get:
       summary: 作品一覧を取得
       description: 指定されたお題に対する全作品を取得します。
       parameters:
-        - name: theme_id
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
+      - name: theme_id
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
       responses:
-        "200":
+        '200':
           description: 作品一覧
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Work"
-
+                  $ref: '#/components/schemas/Work'
   /works/{id}/like:
     post:
       summary: 共鳴（いいね）を送信
       description: 指定した作品に共鳴（いいね）を登録します。
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
-        "200":
+        '200':
           description: 登録成功
-        "400":
+        '400':
           description: 不正リクエスト
-        "409":
+        '409':
           description: 重複いいね
-
   /ranking:
     get:
       summary: 当日のランキングを取得
       description: Wilson信頼区間スコアで算出されたランキングを返します。
       parameters:
-        - name: theme_id
-          in: query
-          required: true
-          schema:
-            type: string
+      - name: theme_id
+        in: query
+        required: true
+        schema:
+          type: string
       responses:
-        "200":
+        '200':
           description: ランキング結果
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Ranking"
-
+                  $ref: '#/components/schemas/Ranking'
   /sponsors:
     post:
       summary: スポンサー上の句登録
       description: 管理者／スポンサーが上の句を投稿します。
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -162,22 +159,41 @@ paths:
                   type: string
                 budget:
                   type: number
-              required: [company_name, text]
+              required:
+              - company_name
+              - text
       responses:
-        "201":
+        '201':
           description: 登録成功
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Sponsor"
-
+                $ref: '#/components/schemas/Sponsor'
+  /works/{id}/impression:
+    post:
+      summary: Record work impression
+      description: Increment impression counter for the specified work.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkImpression'
+        '404':
+          description: Work not found
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
   schemas:
     User:
       type: object
@@ -189,7 +205,6 @@ components:
         created_at:
           type: string
           format: date-time
-
     Theme:
       type: object
       properties:
@@ -202,7 +217,6 @@ components:
         date:
           type: string
           format: date
-
     Work:
       type: object
       properties:
@@ -219,7 +233,6 @@ components:
           format: date-time
         likes_count:
           type: integer
-
     Ranking:
       type: object
       properties:
@@ -233,7 +246,6 @@ components:
           type: string
         text:
           type: string
-
     Sponsor:
       type: object
       properties:
@@ -250,3 +262,12 @@ components:
         created_at:
           type: string
           format: date-time
+    WorkImpression:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - recorded
+        impressions_count:
+          type: integer
