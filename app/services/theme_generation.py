@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from typing import Protocol, Sequence
+from typing import Sequence
 from uuid import uuid4
 
 from sqlalchemy import Select, select
@@ -13,17 +13,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import Theme
+from app.services.theme_ai_client import ThemeAIClient, ThemeAIClientError, resolve_theme_ai_client
 
 
 class ThemeGenerationError(RuntimeError):
     """Raised when automatic theme generation fails after retries."""
-
-
-class ThemeAIClient(Protocol):
-    """Protocol describing a minimal interface for theme generation clients."""
-
-    def generate(self, *, category: str, target_date: date) -> str:
-        """Return a generated theme text for the requested category/date."""
 
 
 def _validate_theme_text(text: str) -> str:
@@ -57,7 +51,7 @@ def _generate_with_retry(
         try:
             raw_text = ai_client.generate(category=category, target_date=target_date)
             return _validate_theme_text(raw_text)
-        except Exception as exc:  # noqa: BLE001 - propagate after retries
+        except (ThemeAIClientError, ValueError) as exc:
             last_error = exc
             if attempt >= max_attempts:
                 break
@@ -117,7 +111,7 @@ class ThemeGenerationResult:
 
 def generate_all_categories(
     session: Session,
-    ai_client: ThemeAIClient,
+    ai_client: ThemeAIClient | None = None,
     *,
     target_date: date | None = None,
     commit: bool = True,
@@ -128,6 +122,7 @@ def generate_all_categories(
     tz = settings.timezone
     resolved_date = target_date or datetime.now(tz).date()
 
+    client = ai_client or resolve_theme_ai_client()
     results: list[ThemeGenerationResult] = []
     themes_before = {
         (theme.category, theme.date): theme.id
@@ -137,7 +132,7 @@ def generate_all_categories(
     }
 
     for category in settings.theme_categories:
-        text = _generate_with_retry(ai_client, category=category, target_date=resolved_date)
+        text = _generate_with_retry(client, category=category, target_date=resolved_date)
         existing_id = themes_before.get((category, resolved_date))
         theme = upsert_theme(session, category=category, target_date=resolved_date, text=text)
         was_created = existing_id is None

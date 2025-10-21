@@ -11,12 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import Theme
-from app.services.theme_generation import (
-    ThemeGenerationError,
-    ThemeGenerationResult,
-    ThemeAIClient,
-    generate_all_categories,
-)
+from app.services.theme_generation import ThemeGenerationError, ThemeGenerationResult, generate_all_categories
+from app.services.theme_ai_client import ThemeAIClient
 
 
 class _StaticThemeClient:

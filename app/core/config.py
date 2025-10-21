@@ -132,6 +132,27 @@ class Settings(BaseSettings):
         description="Delay in seconds between theme generation retries.",
         ge=0.0,
     )
+    theme_ai_provider: str = Field(
+        default="dummy",
+        alias="THEME_AI_PROVIDER",
+        description="Provider used for theme generation AI (dummy/openai).",
+    )
+    openai_api_key: str | None = Field(
+        default=None,
+        alias="OPENAI_API_KEY",
+        description="OpenAI API key used when THEME_AI_PROVIDER=openai.",
+    )
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        alias="OPENAI_MODEL",
+        description="OpenAI model used for theme generation.",
+    )
+    openai_timeout: float = Field(
+        default=15.0,
+        alias="OPENAI_TIMEOUT",
+        description="Timeout in seconds for OpenAI API calls.",
+        ge=1.0,
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
