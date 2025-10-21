@@ -40,3 +40,9 @@ coverage/
 .codex/
 .codex_cache/
 .codex_tasks/
+
+# Secrets & Credentials (DO NOT COMMIT)
+github_secrets_setup.txt
+setup_github_secrets.ps1
+*.secret
+*.credentials
