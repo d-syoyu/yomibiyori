@@ -37,7 +37,7 @@ def get_today_theme(session: Session) -> ThemeResponse:
         )
 
     return ThemeResponse(
-        id=theme.id,
+        id=str(theme.id),
         text=theme.text,
         category=theme.category,
         date=theme.date,
