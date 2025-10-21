@@ -40,27 +40,50 @@ class OpenAIThemeClient(ThemeAIClient):
     model: str = "gpt-4o-mini"
     endpoint: str = "https://api.openai.com/v1/chat/completions"
     timeout: float = 10.0
-    prompt_template: str = (
-        "You are a creative haiku prompt designer. Create a short upper verse (3-20 words) in Japanese for "
-        "a daily haiku challenge. The theme category is '{category}'. "
-        "Return only the verse text without additional commentary."
-    )
+
+    # カテゴリー別のプロンプト定義
+    CATEGORY_PROMPTS = {
+        "恋愛": "恋愛・片思い・ときめき・デート・カップルなど、恋にまつわるシーンを現代的でポップに表現してください。",
+        "季節": "春夏秋冬の季節感、天気、自然の移り変わりを明るく爽やかに表現してください。",
+        "日常": "日常生活、通勤・通学、食事、趣味など、身近な瞬間を親しみやすく表現してください。",
+        "ユーモア": "クスッと笑える日常のあるある、ちょっとした失敗、面白い発見などをユーモラスに表現してください。",
+    }
 
     def generate(self, *, category: str, target_date: date) -> str:
+        # カテゴリーに応じたプロンプトを取得
+        category_instruction = self.CATEGORY_PROMPTS.get(
+            category,
+            f"「{category}」というテーマで現代的な表現を使ってください。"
+        )
+
         payload = {
             "model": self.model,
             "messages": [
                 {
                     "role": "system",
-                    "content": "You craft poetic prompts in Japanese with a gentle, seasonal tone.",
+                    "content": (
+                        "あなたは現代的でポップな俳句の「上の句」を作る詩人です。"
+                        "若者にも親しみやすい、明るくリズミカルな表現を使います。"
+                    ),
                 },
                 {
                     "role": "user",
-                    "content": self.prompt_template.format(category=category, date=target_date.isoformat()),
+                    "content": (
+                        f"以下の条件で俳句の「上の句」を1つ作成してください：\n\n"
+                        f"【必須条件】\n"
+                        f"1. **5-7-5の音数を厳守**してください（例：さくら咲く(5) / 君との約束(7) / 春の風(5)）\n"
+                        f"2. 現代的でポップな表現を使ってください\n"
+                        f"3. 情景が目に浮かぶような具体的な言葉を選んでください\n"
+                        f"4. テーマ: {category_instruction}\n\n"
+                        f"【出力形式】\n"
+                        f"- 5-7-5の形式で改行を含めて出力してください\n"
+                        f"- 余計な説明は一切不要です\n"
+                        f"- 句だけを出力してください"
+                    ),
                 },
             ],
-            "temperature": 0.8,
-            "max_tokens": 60,
+            "temperature": 0.9,
+            "max_tokens": 80,
         }
 
         headers = {
