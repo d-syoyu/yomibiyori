@@ -19,7 +19,7 @@
    - テストでは fakeredis を使用するため、CI では実 Redis へは接続しない
 
 ## CD (将来構想)
-- main ブランチへマージ後、GitHub Actions から Railway / Supabase Functions / Cloudflare Workers へデプロイを自動化
+- main ブランチへマージ後、GitHub Actions から Railway などの常駐環境へデプロイを自動化
 - `infra` ブランチなどで IaC 管理を進めることも検討
 
 ## スケジューリング
@@ -34,7 +34,6 @@
 
 ## Secrets 管理
 - GitHub Actions: `DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`, `THEME_CATEGORIES`, `SUPABASE_PROJECT_REF`, `SUPABASE_SERVICE_ROLE_KEY`
-- Cloudflare Workers: `wrangler.toml` の `vars` セクションで管理
 - Railway: プロジェクト環境変数に追加し、`railway run` から参照
 
 ## 今後の TODO

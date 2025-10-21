@@ -7,8 +7,8 @@
 
 ## 実行タイミングと環境
 - **Cron**: 22:00 JST（UTC 換算で 13:00）
-- **実行環境**: Railway / Cloudflare Workers（Node 版 Cron） / GitHub Actions Scheduled のいずれか  
-  *推奨*: 同じ環境で 06:00 の配信ジョブも管理すると監視が簡潔になる。
+- **実行環境**: GitHub Actions Scheduler もしくは Railway Cron  
+  *推奨*: 現行は GitHub Actions の `finalize_rankings.yml` で 22:00 JST に実行する。
 
 ## 前提
 - Redis キー: `rankings:{theme_id}` に ZSET でリアルタイムスコアが格納されている。
