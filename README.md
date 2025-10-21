@@ -1,78 +1,81 @@
-# 詠日和（Yomibiyori）
+# Yomibiyori Backend
 
-詠日和は、AI が提案する「上の句」とユーザーが詠む「下の句」を組み合わせ、作品を共有するポエティック SNS プロジェクトです。FastAPI / SQLAlchemy を中心としたバックエンドと、React Native + Expo を想定したフロントエンドで構成されています。
+Yomibiyori is a poetic social network where AI suggests the upper verse and users compose the lower verse. This repository contains the FastAPI backend, Redis integrations, and automated jobs that power the experience.
 
-## 主な機能
-- Supabase Auth を用いた JWT 認証とプロフィール同期
-- 日替わりお題（テーマ）に対する 1 日 1 首の投稿機能
-- いいね／インプレッションを考慮したリアルタイムランキング
-- Redis を利用したランキングメトリクスの集計と 22:00 のスナップショット確定
-- Sentry・PostHog を想定したモニタリング／分析
+## Core Features
+- Supabase Auth integration with local profile sync
+- Daily theme submission window (06:00–22:00 JST) with one post per user and category
+- Real-time ranking backed by Redis (likes, impressions, Wilson score adjustments)
+- Nightly ranking snapshot persisted to PostgreSQL at 22:00
+- OpenAI-based daily theme generation
 
-詳細な仕様は `REQUIREMENTS.md`、API 定義は `OPENAPI.yaml`、DB スキーマは `SCHEMA.sql` を参照してください。
+For functional details see `REQUIREMENTS.md`, API contract `OPENAPI.yaml`, and database schema `SCHEMA.sql`.
 
-## リポジトリ構成
+## Project Structure
 ```
 app/
-  core/       # 設定・Redis ファクトリなど
-  db/         # SQLAlchemy セッション管理・Base
-  models/     # ORM モデル定義
-  routes/     # FastAPI ルータ（auth / works / ranking）
-  schemas/    # Pydantic スキーマ
-  services/   # ドメインロジック
-tests/        # Pytest テストスイート
-alembic/      # マイグレーション（未実装の場合は雛形）
-OPENAPI.yaml  # REST API 仕様
-SCHEMA.sql    # PostgreSQL DDL / RLS ポリシー
+  core/        # Settings, Redis factory
+  db/          # SQLAlchemy engine and session
+  models/      # ORM models
+  routes/      # FastAPI routers (auth, works, ranking)
+  schemas/     # Pydantic models
+  services/    # Domain services (auth, works, ranking, theme generation)
+docs/          # Architecture and operational notes
+scripts/       # CLI scripts for scheduled jobs
+tests/         # Pytest suite with fakeredis + SQLite
+.github/       # CI and scheduled workflows
+Procfile       # Railway entrypoint
 ```
 
-## 必要環境
+## Requirements
 - Python 3.11
-- Node.js 20（React Native アプリ開発用）
-- Redis（ローカルまたはマネージドサービス）
-- PostgreSQL 14 以降（ローカル開発では SQLite でも可）
-- Poetry または `venv` + `pip`（本リポジトリは `pyproject.toml` の標準パッケージ管理を想定）
-- OpenAI API キー（`gpt-4o-mini` など Chat Completions モデルを使用）
+- Redis 5+ (or Upstash)
+- PostgreSQL 14+ (Supabase compatible)
+- OpenAI API key (`gpt-4o-mini` or similar)
+- Node.js 20 (for future React Native work)
 
-## セットアップ
-1. 仮想環境の作成と依存関係のインストール
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Windows の場合: .\venv\Scripts\activate
-   pip install -U pip
-   pip install -e .[dev]
-   ```
+## Setup
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: .\venv\Scripts\activate
+pip install -U pip
+pip install -e .[dev]
+cp env.example .env  # populate with Supabase, Redis, OpenAI credentials
+uvicorn app.main:app --reload
+```
+Docs available at `http://localhost:8000/docs`.
 
-2. 環境変数の設定  
-   `env.example` を参考に `.env` を作成します。DB・Redis・Supabase に加えて `OPENAI_API_KEY` を必ずセットしてください（`THEME_AI_PROVIDER=openai` が既定値です）。
-
-3. 開発サーバーの起動
-   ```bash
-    uvicorn app.main:app --reload
-   ```
-   `http://localhost:8000/docs` で自動生成された API ドキュメントを確認できます。
-
-## テスト
-Pytest によるユニット／API テストを用意しています。
+## Tests
 ```bash
 pytest
 ```
+fakeredis is used for Redis-dependent flows; SQLite is used for tests.
 
-## データベース
-- SQLAlchemy のモデルは `app/models` 以下にあり、テストでは SQLite、実運用では PostgreSQL を想定しています。
-- RLS を含む正式なスキーマは `SCHEMA.sql` を参照してください。
-- マイグレーションは Alembic を利用する想定です（`alembic.ini` を同梱）。
+## Deployment (Railway example)
+1. Connect the GitHub repo to a new Railway service.
+2. Configure variables: `DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`, `SUPABASE_PROJECT_REF`, `SUPABASE_SERVICE_ROLE_KEY`, `THEME_CATEGORIES`, etc.
+3. Deploy – `Procfile` launches `uvicorn app.main:app --port $PORT`.
+4. Add a custom domain (optional).
+5. Ensure GitHub Actions secrets mirror production variables so scheduled jobs run successfully.
 
-## よくある操作
-- Black / Ruff などのフォーマッタは未同梱のため、必要に応じて追加してください。
-- Redis との接続をテストする場合は fakeredis を利用しており、テストスイート内のフィクスチャで自動的に差し替わります。
-- 認証系テストでは Supabase の外部通信をモックしています。実機連携時は `.env` に適切なキーを設定してください。
+Detailed steps: `docs/deployment_railway.md`.
 
-## 参考ドキュメント
-- `AGENTS.md`: エージェントの人格・優先順位・コーディング規約
-- `codex.yaml`: Codex CLI 用設定
-- `OPENAPI.yaml`: API 仕様（OpenAPI 3.1）
-- `SCHEMA.sql`: PostgreSQL DDL と RLS ポリシー
+## Scheduled Jobs
+- `generate_themes.yml` (cron `0 12 * * *` → 21:00 JST): runs `scripts/generate_themes.py`
+- `finalize_rankings.yml` (cron `0 13 * * *` → 22:00 JST): runs `scripts/finalize_rankings.py`
 
-## ライセンス
-ライセンスは未設定です。公開・配布時は適切なライセンスを追記してください。
+Required repository secrets: see `docs/actions_secrets_checklist.md`.
+
+## Reference Documents
+- `AGENTS.md`
+- `REQUIREMENTS.md`
+- `OPENAPI.yaml`
+- `SCHEMA.sql`
+- `docs/theme_generation_job.md`
+- `docs/ranking_finalization_job.md`
+- `docs/ci_cd_schedule.md`
+- `docs/deployment_railway.md`
+- `docs/actions_secrets_checklist.md`
+
+## License
+Not defined yet – add a license before publishing.
