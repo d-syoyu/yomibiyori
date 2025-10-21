@@ -32,6 +32,7 @@ SCHEMA.sql    # PostgreSQL DDL / RLS ポリシー
 - Redis（ローカルまたはマネージドサービス）
 - PostgreSQL 14 以降（ローカル開発では SQLite でも可）
 - Poetry または `venv` + `pip`（本リポジトリは `pyproject.toml` の標準パッケージ管理を想定）
+- OpenAI API キー（`gpt-4o-mini` など Chat Completions モデルを使用）
 
 ## セットアップ
 1. 仮想環境の作成と依存関係のインストール
@@ -43,7 +44,7 @@ SCHEMA.sql    # PostgreSQL DDL / RLS ポリシー
    ```
 
 2. 環境変数の設定  
-   `env.example` を参考に `.env` を作成し、DB・Redis・Supabase の接続情報を記入してください。
+   `env.example` を参考に `.env` を作成します。DB・Redis・Supabase に加えて `OPENAI_API_KEY` を必ずセットしてください（`THEME_AI_PROVIDER=openai` が既定値です）。
 
 3. 開発サーバーの起動
    ```bash

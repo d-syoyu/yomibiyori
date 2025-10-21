@@ -3,6 +3,7 @@
 ## 目的
 - 21:00 JST に翌日分のお題を生成し、`themes` テーブルへ保存する。
 - 06:00 の配信時までに API から参照可能な状態を作る。
+- 現行の AI プロバイダは OpenAI Chat Completions（`gpt-4o-mini` など）で統一する。
 
 ## 実装タスク
 1. **サービス層の作成**  
@@ -16,15 +17,9 @@
    - 例外は FastAPI ではなく Sentry ログ出力とリトライに回す。
 
 2. **AI クライアントの抽象化**  
-   - `app/services/ai_client.py`（仮称）にインターフェースを定義:
-     ```python
-     class ThemeAIClient(Protocol):
-         def generate(self, *, category: str, target_date: date) -> str: ...
-     ```
-   - 実装例:
-     - OpenAI API を呼び出す `OpenAIThemeClient`
-     - 開発時に固定文言を返す `DummyThemeClient`
-   - `.env` に API キー（`AI_PROVIDER_API_KEY` など）を追加し、`app/core/config.py` で読み込む。
+   - `app/services/theme_ai_client.py` に OpenAI 専用クライアント (`OpenAIThemeClient`) を実装。  
+   - 開発用スタブとして `DummyThemeAIClient` も残し、テストやスタブ実行時のみ明示的に利用する。  
+   - `.env` に `OPENAI_API_KEY` などのキーを追加し、`app/core/config.py` から参照する。
 
 3. **ジョブエントリポイント**  
    - `scripts/generate_themes.py` のような CLI を追加。  

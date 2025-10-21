@@ -133,9 +133,9 @@ class Settings(BaseSettings):
         ge=0.0,
     )
     theme_ai_provider: str = Field(
-        default="dummy",
+        default="openai",
         alias="THEME_AI_PROVIDER",
-        description="Provider used for theme generation AI (dummy/openai).",
+        description="Provider used for theme generation AI (openai).",
     )
     openai_api_key: str | None = Field(
         default=None,
