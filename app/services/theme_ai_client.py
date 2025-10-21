@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
@@ -13,6 +14,54 @@ from app.core.config import get_settings
 
 class ThemeAIClientError(RuntimeError):
     """Raised when an AI client cannot produce a valid theme."""
+
+
+def count_syllables(text: str) -> int:
+    """Count the number of syllables (音数) in Japanese text.
+
+    Counts hiragana and katakana characters as syllables.
+    Ignores whitespace, punctuation, and kanji.
+
+    Args:
+        text: Japanese text to count syllables in
+
+    Returns:
+        Number of syllables (mora count)
+    """
+    # Remove whitespace and common punctuation
+    text = re.sub(r'[\s\u3000。、！？]', '', text)
+
+    # Count hiragana (U+3040 to U+309F) and katakana (U+30A0 to U+30FF)
+    # This includes small kana (ゃ, ゅ, ょ, っ, etc.) and long vowel mark (ー)
+    syllables = 0
+    for char in text:
+        if '\u3040' <= char <= '\u309F' or '\u30A0' <= char <= '\u30FF':
+            syllables += 1
+
+    return syllables
+
+
+def validate_575(text: str) -> tuple[bool, list[int]]:
+    """Validate that a haiku follows the 5-7-5 syllable pattern.
+
+    Args:
+        text: Haiku text with lines separated by newlines
+
+    Returns:
+        Tuple of (is_valid, syllable_counts)
+        - is_valid: True if the haiku is exactly 5-7-5
+        - syllable_counts: List of syllable counts for each line
+    """
+    lines = text.strip().split('\n')
+
+    # Must have exactly 3 lines
+    if len(lines) != 3:
+        return False, []
+
+    counts = [count_syllables(line) for line in lines]
+    is_valid = counts == [5, 7, 5]
+
+    return is_valid, counts
 
 
 class ThemeAIClient(Protocol):
@@ -50,6 +99,12 @@ class OpenAIThemeClient(ThemeAIClient):
     }
 
     def generate(self, *, category: str, target_date: date) -> str:
+        """Generate a haiku theme with 5-7-5 syllable validation.
+
+        Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
+        """
+        MAX_RETRIES = 3
+
         # カテゴリーに応じたプロンプトを取得
         category_instruction = self.CATEGORY_PROMPTS.get(
             category,
@@ -134,27 +189,45 @@ class OpenAIThemeClient(ThemeAIClient):
             "Content-Type": "application/json",
         }
 
-        try:
-            response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
-        except requests.RequestException as exc:  # pragma: no cover - network failure path
-            raise ThemeAIClientError("Failed to call OpenAI completions endpoint") from exc
+        last_content = None
+        last_counts = None
 
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as exc:
-            raise ThemeAIClientError(f"OpenAI API returned {response.status_code}") from exc
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+            except requests.RequestException as exc:  # pragma: no cover - network failure path
+                raise ThemeAIClientError("Failed to call OpenAI completions endpoint") from exc
 
-        try:
-            payload_json = response.json()
-        except ValueError as exc:
-            raise ThemeAIClientError("OpenAI API returned invalid JSON") from exc
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as exc:
+                raise ThemeAIClientError(f"OpenAI API returned {response.status_code}") from exc
 
-        try:
-            content = payload_json["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ThemeAIClientError("OpenAI API response missing message content") from exc
+            try:
+                payload_json = response.json()
+            except ValueError as exc:
+                raise ThemeAIClientError("OpenAI API returned invalid JSON") from exc
 
-        return content.strip()
+            try:
+                content = payload_json["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError) as exc:
+                raise ThemeAIClientError("OpenAI API response missing message content") from exc
+
+            content = content.strip()
+            is_valid, counts = validate_575(content)
+
+            if is_valid:
+                print(f"[Theme generation] Success on attempt {attempt}: {content.replace(chr(10), ' / ')}")  # noqa: T201
+                return content
+
+            # Not valid, log and retry
+            last_content = content
+            last_counts = counts
+            print(f"[Theme generation] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts} for '{content.replace(chr(10), ' / ')}'")  # noqa: T201
+
+        # All retries exhausted, return last attempt with warning
+        print(f"[Theme generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")  # noqa: T201
+        return last_content or ""
 
 
 def resolve_theme_ai_client() -> ThemeAIClient:
