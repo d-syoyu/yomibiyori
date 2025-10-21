@@ -8,6 +8,7 @@ from datetime import date
 from typing import Protocol
 
 import requests
+from pykakasi import kakasi
 
 from app.core.config import get_settings
 
@@ -19,11 +20,11 @@ class ThemeAIClientError(RuntimeError):
 def count_syllables(text: str) -> int:
     """Count the number of syllables (音数) in Japanese text.
 
+    Converts kanji to hiragana using pykakasi, then counts mora.
     Counts hiragana and katakana characters as syllables.
-    Ignores whitespace, punctuation, and kanji.
 
     Args:
-        text: Japanese text to count syllables in
+        text: Japanese text to count syllables in (can include kanji)
 
     Returns:
         Number of syllables (mora count)
@@ -31,10 +32,15 @@ def count_syllables(text: str) -> int:
     # Remove whitespace and common punctuation
     text = re.sub(r'[\s\u3000。、！？]', '', text)
 
-    # Count hiragana (U+3040 to U+309F) and katakana (U+30A0 to U+30FF)
+    # Convert kanji to hiragana using pykakasi
+    kks = kakasi()
+    result = kks.convert(text)
+    hiragana_text = ''.join([item['hira'] for item in result])
+
+    # Count hiragana and katakana characters
     # This includes small kana (ゃ, ゅ, ょ, っ, etc.) and long vowel mark (ー)
     syllables = 0
-    for char in text:
+    for char in hiragana_text:
         if '\u3040' <= char <= '\u309F' or '\u30A0' <= char <= '\u30FF':
             syllables += 1
 
@@ -117,12 +123,17 @@ class OpenAIThemeClient(ThemeAIClient):
                 {
                     "role": "system",
                     "content": (
-                        "あなたは音数に精通した現代的でポップな俳句の「上の句」を作る詩人です。\n"
-                        "必ず5-7-5の音数を守り、一音一音数えながら作句します。\n"
-                        "音数ルール：\n"
-                        "- 「っ」「ゃ」「ゅ」「ょ」も1音として数えます\n"
-                        "- 「ー」（長音）も1音として数えます\n"
-                        "- 例：「コーヒー」=4音（コ・ー・ヒ・ー）、「ラッテ」=3音（ラ・ッ・テ）"
+                        "あなたは音数（モーラ数）に精通した現代的でポップな俳句の「上の句」を作る詩人です。\n"
+                        "必ず5-7-5の音数を守り、一音一音数えながら作句します。\n\n"
+                        "【重要：音数カウントルール】\n"
+                        "以下すべて1音（1モーラ）として数えます：\n"
+                        "1. 通常の仮名：「あ」「か」「さ」など → 各1音\n"
+                        "2. 促音「っ」 → 1音（例：がっこう=4音）\n"
+                        "3. 撥音「ん」 → 1音（例：さんぽ=3音）\n"
+                        "4. 長音「ー」 → 1音（例：コーヒー=4音）\n"
+                        "5. 拗音「きゃ」「しょ」「ちゅ」 → 各1音\n"
+                        "6. 小さい「ゃゅょ」 → 前の文字と合わせて1音\n\n"
+                        "注意：文字数≠音数です。音数で数えてください。"
                     ),
                 },
                 {
@@ -131,7 +142,7 @@ class OpenAIThemeClient(ThemeAIClient):
                 },
                 {
                     "role": "assistant",
-                    "content": "カフェデート（カ1フェ2デ3ー4ト5）\nきみのえがおを（き1み2の3え4が5お6を7）\nみつめてる（み1つ2め3て4る5）"
+                    "content": "カフェデート（カ1フェ2デ3ー4ト5）\n君の笑顔を（き1み2の3え4が5お6を7）\n見つめてる（み1つ2め3て4る5）"
                 },
                 {
                     "role": "user",
@@ -139,7 +150,7 @@ class OpenAIThemeClient(ThemeAIClient):
                 },
                 {
                     "role": "assistant",
-                    "content": "さくらさく（さ1く2ら3さ4く5）\nはるのこうえん（は1る2の3こ4う5え6ん7）\nあるいてる（あ1る2い3て4る5）"
+                    "content": "桜咲く（さ1く2ら3さ4く5）\n春の公園（は1る2の3こ4う5え6ん7）\n歩いてる（あ1る2い3て4る5）"
                 },
                 {
                     "role": "user",
@@ -147,7 +158,7 @@ class OpenAIThemeClient(ThemeAIClient):
                 },
                 {
                     "role": "assistant",
-                    "content": "あさごはん（あ1さ2ご3は4ん5）\nパンをこがして（パ1ン2を3こ4が5し6て7）\nあわててる（あ1わ2て3て4る5）"
+                    "content": "朝ごはん（あ1さ2ご3は4ん5）\nパンを焦がして（パ1ン2を3こ4が5し6て7）\n慌ててる（あ1わ2て3て4る5）"
                 },
                 {
                     "role": "user",
@@ -170,7 +181,7 @@ class OpenAIThemeClient(ThemeAIClient):
                         f"- ユーザーが「続きを詠みたい！」と思える内容にする\n\n"
                         f"【表現スタイル】\n"
                         f"- 現代的でポップな言葉を使用\n"
-                        f"- **必ずひらがな・カタカナのみで作成**（漢字は使用しない）\n"
+                        f"- ひらがな・カタカナ・漢字を自然にミックス\n"
                         f"- 情景が目に浮かぶ具体的な表現\n"
                         f"- テーマ: {category_instruction}\n\n"
                         f"【出力形式】\n"
