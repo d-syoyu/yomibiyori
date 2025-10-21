@@ -71,8 +71,25 @@ def upgrade() -> None:
             f"Offending IDs: {[row[0] for row in offending]}"
         )
 
+    # Drop view temporarily to allow column type change
+    connection.execute(text("DROP VIEW IF EXISTS works_with_metrics"))
+
     op.alter_column("works", "text", type_=sa.String(length=40), existing_type=sa.TEXT(), existing_nullable=False)
     op.create_check_constraint("ck_works_text_min_length", "works", "char_length(text) >= 1")
+
+    # Recreate the view
+    connection.execute(text("""
+        CREATE OR REPLACE VIEW works_with_metrics AS
+        SELECT
+          w.*,
+          COALESCE(lc.likes_count, 0) AS likes_count
+        FROM works w
+        LEFT JOIN (
+          SELECT work_id, COUNT(*)::INT AS likes_count
+          FROM likes
+          GROUP BY work_id
+        ) lc ON lc.work_id = w.id
+    """))
 
     # --- sponsors: add targeting columns --------------------------------------------
     op.add_column(
