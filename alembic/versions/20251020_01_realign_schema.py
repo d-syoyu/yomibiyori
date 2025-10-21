@@ -45,7 +45,7 @@ def upgrade() -> None:
                 where email is not null
             )
             update users
-               set email = email || '-' || id
+               set email = users.email || '-' || users.id
             from duplicates d
             where users.id = d.id and d.rn > 1
             """
