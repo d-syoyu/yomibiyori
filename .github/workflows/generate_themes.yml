@@ -28,5 +28,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           THEME_CATEGORIES: ${{ secrets.THEME_CATEGORIES }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          THEME_GENERATION_MAX_RETRIES: "5"
+          THEME_GENERATION_RETRY_DELAY_SECONDS: "10.0"
+          OPENAI_TIMEOUT: "30.0"
         run: |
           python scripts/generate_themes.py --date $(date -u +"%Y-%m-%d")
