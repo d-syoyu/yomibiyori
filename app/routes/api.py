@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter
 
-from app.routes import ranking, works
+from app.routes import auth, ranking, works
 
 api_router = APIRouter()
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(works.router, prefix="/works", tags=["works"])
 api_router.include_router(ranking.router, prefix="/ranking", tags=["ranking"])

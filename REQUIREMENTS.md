@@ -1,4 +1,4 @@
-# 📘 REQUIREMENTS.md — 詠日和 要件定義書
+﻿# 📘 REQUIREMENTS.md — 詠日和 要件定義書
 
 ## 🎯 プロジェクト概要
 詠日和（よみびより）は、AIが詠む「上の句」と人が応える「下の句」によって、日々の詩を通じた共鳴を育むSNSアプリです。  
@@ -13,8 +13,10 @@
 - **概要**: Supabase Authを利用し、メール・OAuth（Google/Apple）でログイン。  
 - **詳細**:
   - JWTによる認証。
-  - 同一ユーザーは1日1首まで投稿可能。
+  - 同一ユーザーはカテゴリごとに1日1首まで投稿可能。
+  - 役割: `authenticated` は通常ユーザー、`service_role` は管理ジョブが利用し、RLSポリシーと整合させる。
   - 未認証ユーザーは閲覧のみ可能。
+  - アプリ側 `users` テーブルは Supabase `auth.users` の `id` / `email` / `user_metadata.display_name` を同期し、メールアドレスは一意に保持する。
 
 ### 2. お題（上の句）生成・配信
 - **要件ID**: FR-002  
@@ -28,6 +30,7 @@
 - **要件ID**: FR-003  
 - **概要**: ユーザーが上の句に対して下の句を1日1回投稿。  
 - **詳細**:
+  - 下の句は40文字以内。
   - 投稿時刻を保存。
   - 投稿後は自動で鑑賞ページへ遷移。
   - 投稿内容はRLSでユーザー自身のみ編集可能。
@@ -60,7 +63,7 @@
 - **詳細**:
   - スポンサー専用管理ページ（Web側）を提供。
   - お題一覧に「提供：○○珈琲」など詩的表現で掲載。
-  - ターゲティング：地域・年齢・カテゴリ別。
+  - ターゲティング：地域（複数選択可）・年齢幅・カテゴリ別を指定可能。
 
 ### 8. 通知
 - **要件ID**: FR-008  
@@ -197,16 +200,23 @@ MyPageScreen
 
 ---
 
+## 🔧 運用ガイドライン
+
+- Supabase Authの新規ユーザー作成／プロフィール更新時には、Supabase FunctionまたはCronジョブでアプリ側`users`テーブルへ`id`/`email`/表示名を同期する（サービスロールキー利用、重複メール禁止）。
+- DBスキーマ変更はAlembicマイグレーションで管理し、ステージング → 本番の順に適用する。
+
+---
+
 ## 🧱 データモデル（概要）
 
 | エンティティ | 主なフィールド | 説明 |
 |--------------|----------------|------|
-| users | id, name, email, created_at | Supabase Authと連携 |
+| users | id, name, email, created_at | Supabase Authのプロフィールと同期 |
 | themes | id, text, category, date | 上の句（お題） |
 | works | id, user_id, theme_id, text, created_at | ユーザーの下の句投稿 |
 | likes | id, user_id, work_id, created_at | 共鳴（いいね） |
 | rankings | id, theme_id, work_id, score, snapshot_time | 22:00スナップショット |
-| sponsors | id, company_name, text, category, budget | スポンサーお題 |
+| sponsors | id, company_name, text, category, target_regions, target_age_min, target_age_max, budget | スポンサーお題 |
 
 ---
 

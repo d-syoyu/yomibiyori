@@ -1,16 +1,22 @@
 
-"""Authentication helpers for Supabase-issued JWTs."""
+"""Authentication helpers for Supabase-issued JWTs and Supabase user management."""
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from time import monotonic
 from typing import Any
 
 import requests
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models import User
+from app.schemas.auth import SignUpRequest, SignUpResponse, UserProfileResponse, SessionToken
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -21,21 +27,52 @@ class JWKSCache:
     def __init__(self) -> None:
         self._keys: dict[str, Any] | None = None
         self._etag: str | None = None
+        self._expires_at: float = 0.0
 
     def get_keys(self) -> dict[str, Any]:
         settings = get_settings()
+        now = monotonic()
+        if self._keys is not None and now < self._expires_at:
+            return self._keys
+
         headers = {"If-None-Match": self._etag} if self._etag else {}
         try:
-            response = requests.get(settings.supabase_jwks_url, headers=headers, timeout=5)
+            response = requests.get(
+                settings.supabase_jwks_url,
+                headers=headers,
+                timeout=settings.supabase_request_timeout,
+            )
         except requests.RequestException as exc:
+            if self._keys is not None:
+                return self._keys
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="JWKS fetch failed") from exc
 
         if response.status_code == 304 and self._keys is not None:
+            self._expires_at = now + settings.supabase_jwks_cache_ttl_seconds
             return self._keys
 
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            if self._keys is not None:
+                return self._keys
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="JWKS fetch failed") from exc
+
         self._etag = response.headers.get("ETag")
-        self._keys = response.json()
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            if self._keys is not None:
+                return self._keys
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Invalid JWKS payload") from exc
+
+        if not isinstance(payload, dict):
+            if self._keys is not None:
+                return self._keys
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Invalid JWKS payload")
+
+        self._keys = payload
+        self._expires_at = now + settings.supabase_jwks_cache_ttl_seconds
         return self._keys
 
 
@@ -100,3 +137,189 @@ def get_current_user_id(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role")
 
     return str(user_id)
+
+
+def _extract_supabase_error(response: requests.Response) -> str:
+    """Return a human friendly error message from a Supabase HTTP response."""
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return "Supabase request failed"
+
+    if isinstance(payload, dict):
+        for key in ("message", "msg", "error_description", "error"):
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return "Supabase request failed"
+
+
+def _upsert_user_record(
+    session: Session,
+    *,
+    user_id: str,
+    email: str,
+    display_name: str | None,
+) -> User:
+    """Synchronise the Supabase user with the local database."""
+
+    now = datetime.now(timezone.utc)
+    user = session.get(User, user_id)
+    name = display_name or (user.name if user else email)
+
+    if user:
+        user.name = name
+        user.email = email
+        user.updated_at = now
+    else:
+        user = User(
+            id=user_id,
+            name=name,
+            email=email,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(user)
+
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered") from exc
+
+    session.refresh(user)
+    return user
+
+
+def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
+    """Create a user through Supabase Auth and persist it locally."""
+
+    settings = get_settings()
+    api_key = settings.supabase_anon_key or settings.service_role_key
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase anon key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+    request_body: dict[str, Any] = {"email": payload.email, "password": payload.password}
+    if payload.display_name:
+        request_body["data"] = {"display_name": payload.display_name}
+
+    headers = {
+        "apikey": api_key,
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            f"{supabase_url}/auth/v1/signup",
+            json=request_body,
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Supabase signup failed") from exc
+
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    try:
+        payload_json = response.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from Supabase") from exc
+
+    user_payload = payload_json.get("user") or {}
+    user_id = user_payload.get("id")
+    email = user_payload.get("email")
+    if not user_id or not email:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Supabase response missing user data")
+
+    metadata = user_payload.get("user_metadata") or {}
+    display_name = metadata.get("display_name") or payload.display_name
+
+    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+
+    session_payload = payload_json.get("session") or {}
+    access_token = session_payload.get("access_token")
+    session_token = (
+        SessionToken(
+            access_token=access_token,
+            refresh_token=session_payload.get("refresh_token"),
+            token_type=session_payload.get("token_type", "bearer"),
+            expires_in=session_payload.get("expires_in"),
+        )
+        if access_token
+        else None
+    )
+
+    return SignUpResponse(
+        user_id=user.id,
+        email=user.email,
+        display_name=user.name,
+        session=session_token,
+    )
+
+
+def get_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
+    """Return the locally stored profile for the authenticated user."""
+
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+
+    return UserProfileResponse(user_id=user.id, email=user.email, display_name=user.name)
+
+
+def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
+    """Refresh the local profile using Supabase Auth admin API."""
+
+    settings = get_settings()
+    service_key = settings.service_role_key
+    if not service_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service role key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+    headers = {
+        "apikey": service_key,
+        "Authorization": f"Bearer {service_key}",
+    }
+
+    try:
+        response = requests.get(
+            f"{supabase_url}/auth/v1/admin/users/{user_id}",
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Supabase profile sync failed") from exc
+
+    if response.status_code == 404:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found in Supabase")
+
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from Supabase") from exc
+
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Supabase response missing user data")
+
+    metadata = payload.get("user_metadata") or {}
+    display_name = metadata.get("display_name")
+
+    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+
+    return UserProfileResponse(user_id=user.id, email=user.email, display_name=user.name)

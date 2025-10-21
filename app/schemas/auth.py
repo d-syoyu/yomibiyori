@@ -1,0 +1,41 @@
+"""Schemas related to authentication workflows."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class SignUpRequest(BaseModel):
+    """Payload for creating a new Supabase user."""
+
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str | None = Field(default=None, max_length=80)
+
+
+class SessionToken(BaseModel):
+    """Auth session tokens issued by Supabase."""
+
+    access_token: str
+    refresh_token: str | None = None
+    token_type: Literal["bearer"] = "bearer"
+    expires_in: int | None = None
+
+
+class SignUpResponse(BaseModel):
+    """Response body for successful sign up."""
+
+    user_id: str
+    email: EmailStr
+    display_name: str | None = None
+    session: SessionToken | None = None
+
+
+class UserProfileResponse(BaseModel):
+    """Public profile representation."""
+
+    user_id: str
+    email: EmailStr
+    display_name: str | None = None

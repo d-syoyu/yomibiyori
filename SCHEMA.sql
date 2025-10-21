@@ -24,9 +24,8 @@ $$;
 -- 直接参照しない場合に備え、ローカル独立運用も可能とする。
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
-  handle text unique not null check (length(handle) between 3 and 24),
-  display_name text,
-  bio text,
+  name text not null check (length(name) between 1 and 80),
+  email text unique not null check (position('@' in email) > 1),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -53,7 +52,7 @@ create table if not exists works (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
   theme_id uuid not null references themes(id) on delete cascade,
-  text text not null check (length(text) between 1 and 100),
+  text varchar(40) not null check (length(text) >= 1),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -94,6 +93,12 @@ create table if not exists sponsors (
   company_name text not null,
   text text not null check (length(text) between 3 and 140),
   category text not null default 'general',
+  target_regions text[] not null default '{}'::text[],
+  target_age_min smallint check (target_age_min between 0 and 120),
+  target_age_max smallint check (
+    target_age_max between 0 and 120
+    and (target_age_min is null or target_age_max >= target_age_min)
+  ),
   budget numeric(12,2),
   created_at timestamptz not null default now()
 );
@@ -120,6 +125,7 @@ alter table sponsors enable row level security;
 
 -- 役割補助（Supabase互換）。Supabaseで動作する場合は auth.uid(), auth.role() を利用可能。
 -- ここでは存在しない環境でも動くようフォールバック関数を用意（no-op的）。
+-- ロール: authenticated（一般ユーザー）と service_role（管理ジョブ）を想定し、ポリシーで判定する。
 create or replace function app_public.current_uid()
 returns uuid language sql stable as $$
   select nullif(current_setting('app.current_uid', true), '')::uuid;

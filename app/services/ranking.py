@@ -25,7 +25,7 @@ class _Candidate:
     adjusted_score: float
 
 
-def _wilson_lower_bound(likes: int, impressions: int, *, z: float = 1.96) -> float:
+def wilson_lower_bound(likes: int, impressions: int, *, z: float = 1.96) -> float:
     """Return Wilson score lower bound for the supplied metrics."""
 
     if impressions <= 0:
@@ -75,8 +75,10 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
         adjusted = float(raw_score)
         if metrics:
             likes = int(metrics.get("likes", 0))
-            impressions = int(metrics.get("impressions", max(likes, 1)))
-            adjusted = _wilson_lower_bound(likes, max(impressions, likes or 1))
+            impressions = int(metrics.get("impressions", 0))
+            unique_viewers = int(metrics.get("unique_viewers", 0))
+            baseline = max(likes or 1, impressions, unique_viewers)
+            adjusted = wilson_lower_bound(likes, max(baseline, 1))
         candidates.append(_Candidate(work_id=work_id, raw_score=float(raw_score), adjusted_score=adjusted))
 
     candidates.sort(key=lambda candidate: (candidate.adjusted_score, candidate.raw_score), reverse=True)
@@ -99,7 +101,7 @@ def _fetch_from_snapshot(session: Session, theme_id: str, limit: int) -> list[Ra
 
     entries: list[RankingEntry] = []
     for ranking, work, user in rows:
-        user_name = user.display_name or user.handle
+        user_name = user.name
         entries.append(
             RankingEntry(
                 rank=ranking.rank,
@@ -146,7 +148,7 @@ def get_ranking(
                     rank=index,
                     work_id=work.id,
                     score=candidate.adjusted_score,
-                    user_name=user.display_name or user.handle,
+                    user_name=user.name,
                     text=work.text,
                 )
             )

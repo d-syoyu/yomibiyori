@@ -1,224 +1,321 @@
 openapi: 3.1.0
 info:
-  title: 詠日和 API
+  title: Yomibiyori API
   version: 1.0.0
-  description: '詠日和（よみびより）は、AIが上の句を提示し、人が下の句で応える“詩的SNS”です。
-
-    本ドキュメントはFastAPIに準拠したREST API仕様を示します。
-
-    '
+  description: >
+    Yomibiyori is a poetic social network where people compose verses with AI.
+    This document lists the REST API endpoints that are currently implemented.
 servers:
-- url: https://api.yomibiyori.app/v1
-  description: Production
-- url: http://localhost:8000/v1
-  description: Local Development
+  - url: https://api.yomibiyori.app/api/v1
+    description: Production
+  - url: http://localhost:8000/api/v1
+    description: Local Development
 paths:
   /auth/signup:
     post:
-      summary: ユーザー登録
-      description: Supabase Auth連携で新規ユーザーを登録します。
+      tags: [auth]
+      summary: Sign up via Supabase
+      description: >
+        Proxy Supabase Auth sign up and synchronise the resulting user with the local database.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-              required:
-              - email
-              - password
+              $ref: '#/components/schemas/SignUpRequest'
       responses:
         '201':
-          description: 登録成功
+          description: User created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-  /themes/today:
+                $ref: '#/components/schemas/SignUpResponse'
+        '400':
+          description: Supabase rejected the sign-up request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Local email conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Supabase service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/profile:
     get:
-      summary: 本日のお題を取得
-      description: 当日6:00に解禁された上の句を返します。
+      tags: [auth]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: お題情報
+          description: Local profile for the authenticated user
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Theme'
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Profile not found locally
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/profile/sync:
+    post:
+      tags: [auth]
+      summary: Synchronise profile from Supabase
+      description: >
+        Fetch the Supabase Auth record using the service role key and update the local profile.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Synchronised profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Supabase user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Supabase service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /works:
     post:
-      summary: 下の句を投稿
-      description: ログインユーザーが本日のお題に対して1首を投稿します。
+      tags: [works]
+      summary: Submit a work
+      description: >
+        Authenticated users can submit one poem per category and per day while the submission window is open
+        between 06:00 and 22:00 JST.
       security:
-      - bearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                text:
-                  type: string
-                  description: 下の句本文（100文字以内）
-              required:
-              - text
+              $ref: '#/components/schemas/WorkCreate'
       responses:
         '201':
-          description: 投稿成功
+          description: Work accepted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Work'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/SubmissionWindowClosed'
         '409':
-          description: 既に本日投稿済み
+          description: Duplicate submission for this category today
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                alreadySubmitted:
+                  value:
+                    detail: You have already submitted a work today for this category
     get:
-      summary: 作品一覧を取得
-      description: 指定されたお題に対する全作品を取得します。
+      tags: [works]
+      summary: List works for a theme
+      description: Returns works linked to the supplied theme ordered by recency.
       parameters:
-      - name: theme_id
-        in: query
-        required: true
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-          default: 50
+        - name: theme_id
+          in: query
+          required: true
+          description: Theme identifier
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Number of results to return (1-200)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
       responses:
         '200':
-          description: 作品一覧
+          description: List of works
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Work'
-  /works/{id}/like:
-    post:
-      summary: 共鳴（いいね）を送信
-      description: 指定した作品に共鳴（いいね）を登録します。
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: 登録成功
-        '400':
-          description: 不正リクエスト
-        '409':
-          description: 重複いいね
-  /ranking:
-    get:
-      summary: 当日のランキングを取得
-      description: Wilson信頼区間スコアで算出されたランキングを返します。
-      parameters:
-      - name: theme_id
-        in: query
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: ランキング結果
+        '404':
+          description: Theme not found
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Ranking'
-  /sponsors:
+                $ref: '#/components/schemas/ErrorResponse'
+  /works/{work_id}/like:
     post:
-      summary: スポンサー上の句登録
-      description: 管理者／スポンサーが上の句を投稿します。
+      tags: [works]
+      summary: Send gratitude (like) to a work
+      description: Register a like for a work on behalf of the authenticated user.
       security:
-      - bearerAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: work_id
+          in: path
+          required: true
+          description: Work identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Like recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkLikeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Work not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Like already registered by this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /works/{work_id}/impression:
+    post:
+      tags: [works]
+      summary: Record impression for a work
+      description: >
+        Track viewing events for a work to align Redis-backed ranking metrics. The optional viewer hash lets
+        clients de-duplicate impressions without exposing raw identifiers, and contributes to unique viewer counts.
+      parameters:
+        - name: work_id
+          in: path
+          required: true
+          description: Work identifier
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                company_name:
-                  type: string
-                text:
-                  type: string
-                category:
-                  type: string
-                budget:
-                  type: number
-              required:
-              - company_name
-              - text
+              $ref: '#/components/schemas/WorkImpressionRequest'
       responses:
-        '201':
-          description: 登録成功
+        '200':
+          description: Impression recorded
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Sponsor'
-  /works/{id}/impression:
-    post:
-      summary: Record work impression
-      description: Increment impression counter for the specified work.
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '202':
-          description: Accepted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkImpression'
+                $ref: '#/components/schemas/WorkImpressionResponse'
         '404':
           description: Work not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /ranking:
+    get:
+      tags: [ranking]
+      summary: Retrieve ranking for a theme
+      description: >
+        Fetch ranking entries using Redis metrics when available, otherwise fall
+        back to the persisted snapshot stored in PostgreSQL.
+      parameters:
+        - name: theme_id
+          in: query
+          required: true
+          description: Theme identifier
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Number of results to return (1-100)
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Ranking entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RankingEntry'
+        '404':
+          description: No ranking data for the theme
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    SubmissionWindowClosed:
+      description: Submission window closed (22:00–06:00 JST)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            windowClosed:
+              value:
+                detail: Submissions are closed between 22:00 and 06:00 JST
   schemas:
-    User:
+    WorkCreate:
       type: object
+      required:
+        - text
       properties:
-        id:
-          type: string
-        email:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-    Theme:
-      type: object
-      properties:
-        id:
-          type: string
         text:
           type: string
-        category:
-          type: string
-        date:
-          type: string
-          format: date
+          maxLength: 40
+          minLength: 1
+          description: Poem body limited to 40 characters
     Work:
       type: object
+      required:
+        - id
+        - user_id
+        - theme_id
+        - text
+        - created_at
+        - likes_count
       properties:
         id:
           type: string
@@ -228,16 +325,131 @@ components:
           type: string
         text:
           type: string
+          maxLength: 40
         created_at:
           type: string
           format: date-time
         likes_count:
           type: integer
-    Ranking:
+          minimum: 0
+    WorkLikeResponse:
       type: object
+      required:
+        - status
+        - likes_count
+      properties:
+        status:
+          type: string
+          enum: [liked]
+        likes_count:
+          type: integer
+          minimum: 0
+    WorkImpressionRequest:
+      type: object
+      properties:
+        viewer_hash:
+          type: string
+          description: Optional SHA-256 hash representing the viewer (hex encoded)
+          minLength: 64
+          maxLength: 64
+          pattern: '^[0-9a-fA-F]{64}$'
+        count:
+          type: integer
+          description: Number of impressions to add for this event
+          default: 1
+          minimum: 1
+          maximum: 20
+    WorkImpressionResponse:
+      type: object
+      required:
+        - status
+        - impressions_count
+        - unique_viewers_count
+      properties:
+        status:
+          type: string
+          enum: [recorded]
+        impressions_count:
+          type: integer
+          minimum: 0
+        unique_viewers_count:
+          type: integer
+          minimum: 0
+          description: Approximate unique viewer count derived from hashed identifiers
+    SignUpRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        display_name:
+          type: string
+          maxLength: 80
+    SessionToken:
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+          nullable: true
+        token_type:
+          type: string
+          enum: [bearer]
+        expires_in:
+          type: integer
+          nullable: true
+    SignUpResponse:
+      type: object
+      required:
+        - user_id
+        - email
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+        session:
+          $ref: '#/components/schemas/SessionToken'
+    UserProfileResponse:
+      type: object
+      required:
+        - user_id
+        - email
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+    RankingEntry:
+      type: object
+      required:
+        - rank
+        - work_id
+        - score
+        - user_name
+        - text
       properties:
         rank:
           type: integer
+          minimum: 1
         work_id:
           type: string
         score:
@@ -246,28 +458,8 @@ components:
           type: string
         text:
           type: string
-    Sponsor:
+    ErrorResponse:
       type: object
       properties:
-        id:
+        detail:
           type: string
-        company_name:
-          type: string
-        text:
-          type: string
-        category:
-          type: string
-        budget:
-          type: number
-        created_at:
-          type: string
-          format: date-time
-    WorkImpression:
-      type: object
-      properties:
-        status:
-          type: string
-          enum:
-          - recorded
-        impressions_count:
-          type: integer
