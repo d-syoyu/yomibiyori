@@ -170,7 +170,7 @@ class OpenAIThemeClient(ThemeAIClient):
                         f"- ユーザーが「続きを詠みたい！」と思える内容にする\n\n"
                         f"【表現スタイル】\n"
                         f"- 現代的でポップな言葉を使用\n"
-                        f"- ひらがな・カタカナを積極的に活用\n"
+                        f"- **必ずひらがな・カタカナのみで作成**（漢字は使用しない）\n"
                         f"- 情景が目に浮かぶ具体的な表現\n"
                         f"- テーマ: {category_instruction}\n\n"
                         f"【出力形式】\n"
@@ -216,14 +216,18 @@ class OpenAIThemeClient(ThemeAIClient):
             content = content.strip()
             is_valid, counts = validate_575(content)
 
+            lines = content.split('\n')
+            lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
+
             if is_valid:
-                print(f"[Theme generation] Success on attempt {attempt}: {content.replace(chr(10), ' / ')}")  # noqa: T201
+                print(f"[Theme generation] ✅ Success on attempt {attempt}: {lines_detail}")  # noqa: T201
                 return content
 
             # Not valid, log and retry
             last_content = content
             last_counts = counts
-            print(f"[Theme generation] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts} for '{content.replace(chr(10), ' / ')}'")  # noqa: T201
+            print(f"[Theme generation] ❌ Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
+            print(f"[Theme generation]    Lines: {lines_detail}")  # noqa: T201
 
         # All retries exhausted, return last attempt with warning
         print(f"[Theme generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")  # noqa: T201
