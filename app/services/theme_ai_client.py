@@ -251,7 +251,7 @@ class ClaudeThemeClient(ThemeAIClient):
     """Anthropic Claude-backed theme generator."""
 
     api_key: str
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-5-20250929"
     timeout: float = 30.0
 
     # カテゴリー別のプロンプト定義（OpenAIと同じ）

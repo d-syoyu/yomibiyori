@@ -135,7 +135,7 @@ class Settings(BaseSettings):
     theme_ai_provider: str = Field(
         default="openai",
         alias="THEME_AI_PROVIDER",
-        description="Provider used for theme generation AI (openai).",
+        description="Provider used for theme generation AI (openai or claude).",
     )
     openai_api_key: str | None = Field(
         default=None,
@@ -159,7 +159,7 @@ class Settings(BaseSettings):
         description="Anthropic API key used when THEME_AI_PROVIDER=claude.",
     )
     claude_model: str = Field(
-        default="claude-sonnet-4-20250514",
+        default="claude-sonnet-4-5-20250929",
         alias="CLAUDE_MODEL",
         description="Claude model used for theme generation.",
     )
