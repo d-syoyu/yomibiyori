@@ -3,7 +3,7 @@
 from functools import lru_cache
 from zoneinfo import ZoneInfo
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -155,6 +155,15 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @field_validator("theme_categories", mode="before")
+    @classmethod
+    def parse_theme_categories(cls, v):
+        """Parse theme_categories from comma-separated string or JSON array."""
+        if isinstance(v, str):
+            # Handle comma-separated string
+            return [cat.strip() for cat in v.split(",") if cat.strip()]
+        return v
 
     @property
     def timezone(self) -> ZoneInfo:
