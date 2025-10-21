@@ -25,12 +25,13 @@ jobs:
       - name: Generate themes
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: "gpt-4o"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: "claude-sonnet-4-20250514"
+          CLAUDE_TIMEOUT: "30.0"
+          THEME_AI_PROVIDER: "claude"
           THEME_CATEGORIES: ${{ secrets.THEME_CATEGORIES }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           THEME_GENERATION_MAX_RETRIES: "5"
           THEME_GENERATION_RETRY_DELAY_SECONDS: "10.0"
-          OPENAI_TIMEOUT: "30.0"
         run: |
           python scripts/generate_themes.py --date $(date -u +"%Y-%m-%d")

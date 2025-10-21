@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
 
+import anthropic
 import requests
 from pykakasi import kakasi
 
@@ -245,6 +246,125 @@ class OpenAIThemeClient(ThemeAIClient):
         return last_content or ""
 
 
+@dataclass(slots=True)
+class ClaudeThemeClient(ThemeAIClient):
+    """Anthropic Claude-backed theme generator."""
+
+    api_key: str
+    model: str = "claude-sonnet-4-20250514"
+    timeout: float = 30.0
+
+    # カテゴリー別のプロンプト定義（OpenAIと同じ）
+    CATEGORY_PROMPTS = {
+        "恋愛": "恋愛・片思い・ときめき・デート・カップルなど、恋にまつわるシーンを現代的でポップに表現してください。",
+        "季節": "春夏秋冬の季節感、天気、自然の移り変わりを明るく爽やかに表現してください。",
+        "日常": "日常生活、通勤・通学、食事、趣味など、身近な瞬間を親しみやすく表現してください。",
+        "ユーモア": "クスッと笑える日常のあるある、ちょっとした失敗、面白い発見などをユーモラスに表現してください。",
+    }
+
+    def generate(self, *, category: str, target_date: date) -> str:
+        """Generate a haiku theme with 5-7-5 syllable validation.
+
+        Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
+        """
+        MAX_RETRIES = 3
+
+        # カテゴリーに応じたプロンプトを取得
+        category_instruction = self.CATEGORY_PROMPTS.get(
+            category,
+            f"「{category}」というテーマで現代的な表現を使ってください。"
+        )
+
+        # システムプロンプト
+        system_prompt = (
+            "あなたは音数（モーラ数）に精通した現代的でポップな俳句の「上の句」を作る詩人です。\n"
+            "必ず5-7-5の音数を守り、一音一音数えながら作句します。\n\n"
+            "【重要：音数カウントルール】\n"
+            "以下すべて1音（1モーラ）として数えます：\n"
+            "1. 通常の仮名：「あ」「か」「さ」など → 各1音\n"
+            "2. 促音「っ」 → 1音（例：がっこう=4音）\n"
+            "3. 撥音「ん」 → 1音（例：さんぽ=3音）\n"
+            "4. 長音「ー」 → 1音（例：コーヒー=4音）\n"
+            "5. 拗音「きゃ」「しょ」「ちゅ」 → 各1音\n"
+            "6. 小さい「ゃゅょ」 → 前の文字と合わせて1音\n\n"
+            "注意：文字数≠音数です。音数で数えてください。"
+        )
+
+        # ユーザープロンプト
+        user_prompt = (
+            f"以下の条件で、ユーザーが下の句を続けたくなる「上の句」を作成してください。\n"
+            f"**作成前に必ず一音ずつ数えて、5-7-5を確認してください。**\n\n"
+            f"【音数の厳守（最重要）】\n"
+            f"- 1行目：必ず5音（カ・フェ・デー・ト など）\n"
+            f"- 2行目：必ず7音（き・み・の・え・が・お・を など）\n"
+            f"- 3行目：必ず5音（み・つ・め・て・る など）\n\n"
+            f"【各行で意味の区切りを意識（重要）】\n"
+            f"- 1行目：名詞や動詞で完結（例：カフェデート、さくらさく）\n"
+            f"- 2行目：助詞で終わってもOK（例：きみのえがおを、あさのこうえんで）\n"
+            f"- 3行目：動詞で完結（例：みつめてる、あるいてる）\n"
+            f"- 単語の途中で行を区切らない（❌「たべながらみ/てる」など）\n\n"
+            f"【重要：下の句で完結させる】\n"
+            f"- 上の句では完結させず、余韻を残す\n"
+            f"- 情景描写に留め、感情や結論は下の句に委ねる\n"
+            f"- 「〜てる」「〜いる」「〜する」など、続きを想像させる表現を使う\n"
+            f"- ユーザーが「続きを詠みたい！」と思える内容にする\n\n"
+            f"【表現スタイル】\n"
+            f"- 現代的でポップな言葉を使用\n"
+            f"- ひらがな・カタカナ・漢字を自然にミックス\n"
+            f"- 情景が目に浮かぶ具体的な表現\n"
+            f"- テーマ: {category_instruction}\n\n"
+            f"【出力形式】\n"
+            f"- 必ず3行で出力（1行目5音/2行目7音/3行目5音）\n"
+            f"- 句のみを出力（音数カウント（）は不要、説明も不要）\n"
+            f"- 例の形式: さくらさく\\nはるのこうえん\\nあるいてる"
+        )
+
+        client = anthropic.Anthropic(api_key=self.api_key, timeout=self.timeout)
+
+        last_content = None
+        last_counts = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                message = client.messages.create(
+                    model=self.model,
+                    max_tokens=200,
+                    temperature=0.5,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_prompt}
+                    ]
+                )
+            except Exception as exc:  # pragma: no cover - network failure path
+                raise ThemeAIClientError("Failed to call Anthropic API") from exc
+
+            # Extract text content
+            content = ""
+            for block in message.content:
+                if block.type == "text":
+                    content += block.text
+
+            content = content.strip()
+            is_valid, counts = validate_575(content)
+
+            lines = content.split('\n')
+            lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
+
+            if is_valid:
+                print(f"[Theme generation] ✅ Success on attempt {attempt}: {lines_detail}")  # noqa: T201
+                return content
+
+            # Not valid, log and retry
+            last_content = content
+            last_counts = counts
+            print(f"[Theme generation] ❌ Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
+            print(f"[Theme generation]    Lines: {lines_detail}")  # noqa: T201
+
+        # All retries exhausted, return last attempt with warning
+        print(f"[Theme generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")  # noqa: T201
+        return last_content or ""
+
+
 def resolve_theme_ai_client() -> ThemeAIClient:
     """Return the theme AI client configured for the current environment."""
 
@@ -259,6 +379,16 @@ def resolve_theme_ai_client() -> ThemeAIClient:
             api_key=api_key,
             model=settings.openai_model,
             timeout=settings.openai_timeout,
+        )
+
+    if provider == "claude":
+        api_key = settings.anthropic_api_key
+        if not api_key:
+            raise ThemeAIClientError("ANTHROPIC_API_KEY is not configured")
+        return ClaudeThemeClient(
+            api_key=api_key,
+            model=settings.claude_model,
+            timeout=settings.claude_timeout,
         )
 
     return DummyThemeAIClient()

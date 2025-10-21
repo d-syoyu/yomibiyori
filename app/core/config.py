@@ -153,6 +153,22 @@ class Settings(BaseSettings):
         description="Timeout in seconds for OpenAI API calls.",
         ge=1.0,
     )
+    anthropic_api_key: str | None = Field(
+        default=None,
+        alias="ANTHROPIC_API_KEY",
+        description="Anthropic API key used when THEME_AI_PROVIDER=claude.",
+    )
+    claude_model: str = Field(
+        default="claude-sonnet-4-20250514",
+        alias="CLAUDE_MODEL",
+        description="Claude model used for theme generation.",
+    )
+    claude_timeout: float = Field(
+        default=30.0,
+        alias="CLAUDE_TIMEOUT",
+        description="Timeout in seconds for Claude API calls.",
+        ge=1.0,
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
