@@ -37,7 +37,10 @@ def main() -> int:
     try:
         ai_client = resolve_theme_ai_client()
     except ThemeAIClientError as exc:
-        raise SystemExit(f"[ERROR] {exc}") from exc
+        print(f"[ERROR] Failed to initialize AI client: {exc}")
+        import traceback
+        traceback.print_exc()
+        raise SystemExit(1) from exc
 
     session: Session = SessionLocal()
     try:
@@ -49,7 +52,10 @@ def main() -> int:
         )
     except ThemeGenerationError as exc:
         session.rollback()
-        raise SystemExit(f"[ERROR] {exc}") from exc
+        print(f"[ERROR] Theme generation failed: {exc}")
+        import traceback
+        traceback.print_exc()
+        raise SystemExit(1) from exc
     finally:
         if args.dry_run:
             session.rollback()
