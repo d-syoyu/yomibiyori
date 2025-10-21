@@ -131,7 +131,7 @@ def generate_all_categories(
         ).scalars()
     }
 
-    for category in settings.theme_categories:
+    for category in settings.theme_categories_list:
         text = _generate_with_retry(client, category=category, target_date=resolved_date)
         existing_id = themes_before.get((category, resolved_date))
         theme = upsert_theme(session, category=category, target_date=resolved_date, text=text)

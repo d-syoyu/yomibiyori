@@ -115,10 +115,10 @@ class Settings(BaseSettings):
         alias="DEBUG",
         description="Enable verbose debug mode.",
     )
-    theme_categories: list[str] = Field(
-        default_factory=lambda: ["general"],
+    theme_categories: str = Field(
+        default="general,nature,emotion,season,event",
         alias="THEME_CATEGORIES",
-        description="List of categories for daily theme generation.",
+        description="Comma-separated list of categories for daily theme generation.",
     )
     theme_generation_max_retries: int = Field(
         default=3,
@@ -156,14 +156,10 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    @field_validator("theme_categories", mode="before")
-    @classmethod
-    def parse_theme_categories(cls, v):
-        """Parse theme_categories from comma-separated string or JSON array."""
-        if isinstance(v, str):
-            # Handle comma-separated string
-            return [cat.strip() for cat in v.split(",") if cat.strip()]
-        return v
+    @property
+    def theme_categories_list(self) -> list[str]:
+        """Return theme categories as a list."""
+        return [cat.strip() for cat in self.theme_categories.split(",") if cat.strip()]
 
     @property
     def timezone(self) -> ZoneInfo:
