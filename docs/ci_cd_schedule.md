@@ -23,17 +23,17 @@
 - `infra` ブランチなどで IaC 管理を進めることも検討
 
 ## スケジューリング
-1. **お題生成 (21:00 JST)**
-   - Cloudflare Workers Cron Trigger もしくは Railway Scheduler で `scripts/generate_themes.py` を実行
-   - 実行ログは Workers ダッシュボード or Railway ログに集約
-2. **ランキング確定 (22:00 JST)**
-   - 同じく Scheduler を利用し、`scripts/finalize_rankings.py` を呼び出す
-   - 成功時に PostHog/Sentry へイベント送信、失敗時は Slack Webhook へ通知
-3. **06:00 通知配信**
-   - Expo Push 用の Queue へ連携するジョブを追加予定
+1. **お題生成 (21:00 JST)**  
+   - GitHub Actions の `generate_themes.yml`（cron: `0 12 * * *`）で `scripts/generate_themes.py` を実行。  
+   - Secrets に `DATABASE_URL` / `OPENAI_API_KEY` / `THEME_CATEGORIES` / `SUPABASE_PROJECT_REF` を設定すること。
+2. **ランキング確定 (22:00 JST)**  
+   - `finalize_rankings.yml`（cron: `0 13 * * *`）で `scripts/finalize_rankings.py` を実行。  
+   - Secrets として `DATABASE_URL` / `REDIS_URL` / `SUPABASE_PROJECT_REF` が必要。
+3. **06:00 通知配信 (未実装)**  
+   - Expo Push 用の Queue へ連携するジョブを追加予定。Actions もしくは Railway Scheduler での実装を検討。
 
 ## Secrets 管理
-- GitHub Actions: `SUPABASE_SERVICE_ROLE_KEY`, `REDIS_URL`, `AI_PROVIDER_API_KEY`
+- GitHub Actions: `DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`, `THEME_CATEGORIES`, `SUPABASE_PROJECT_REF`, `SUPABASE_SERVICE_ROLE_KEY`
 - Cloudflare Workers: `wrangler.toml` の `vars` セクションで管理
 - Railway: プロジェクト環境変数に追加し、`railway run` から参照
 
