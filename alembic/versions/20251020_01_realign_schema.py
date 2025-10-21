@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = "20251020_01"
-down_revision = None
+down_revision = "20251019_01"  # Depends on initial schema
 branch_labels = None
 depends_on = None
 
