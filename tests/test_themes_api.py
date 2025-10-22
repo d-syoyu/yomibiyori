@@ -76,3 +76,61 @@ def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Ses
     assert data["text"] == "新しいお題"
     assert data["category"] == "nature"
     assert data["sponsored"] is True
+
+
+def test_get_today_theme_with_category_filter(client: TestClient, db_session: Session) -> None:
+    """Test retrieving today's theme with category filter."""
+    today = date.today()
+
+    # Create themes for different categories
+    love_theme = Theme(
+        id=str(uuid4()),
+        text="恋の句",
+        category="恋愛",
+        date=today,
+        sponsored=False,
+        created_at=datetime(2025, 1, 1, 9, 0, 0, tzinfo=timezone.utc),
+    )
+    season_theme = Theme(
+        id=str(uuid4()),
+        text="季節の句",
+        category="季節",
+        date=today,
+        sponsored=False,
+        created_at=datetime(2025, 1, 1, 10, 0, 0, tzinfo=timezone.utc),
+    )
+
+    db_session.add(love_theme)
+    db_session.add(season_theme)
+    db_session.commit()
+
+    # Request specific category
+    response = client.get("/api/v1/themes/today?category=恋愛")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["id"] == love_theme.id
+    assert data["text"] == "恋の句"
+    assert data["category"] == "恋愛"
+
+
+def test_get_today_theme_category_not_found(client: TestClient, db_session: Session) -> None:
+    """Test theme not found for specified category."""
+    today = date.today()
+
+    # Create theme only for '季節' category
+    theme = Theme(
+        id=str(uuid4()),
+        text="季節の句",
+        category="季節",
+        date=today,
+        sponsored=False,
+        created_at=datetime.now(timezone.utc),
+    )
+    db_session.add(theme)
+    db_session.commit()
+
+    # Request different category
+    response = client.get("/api/v1/themes/today?category=恋愛")
+    assert response.status_code == 404
+    assert "No theme found for today in category '恋愛'" in response.json()["detail"]

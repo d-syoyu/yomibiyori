@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
@@ -21,9 +21,18 @@ router = APIRouter()
 )
 def get_today_theme(
     session: Annotated[Session, Depends(get_db_session)],
+    category: Annotated[
+        str | None,
+        Query(
+            description="Category filter (e.g., '恋愛', '季節', '日常', 'ユーモア')",
+            example="恋愛",
+        ),
+    ] = None,
 ) -> ThemeResponse:
     """Return the theme for today's date in JST timezone.
 
-    If multiple themes exist for different categories, returns the most recent.
+    If a category is specified, returns the theme for that category.
+    If multiple themes exist for different categories and no category is specified,
+    returns the most recent.
     """
-    return themes_service.get_today_theme(session=session)
+    return themes_service.get_today_theme(session=session, category=category)

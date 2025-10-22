@@ -236,6 +236,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /themes/today:
+    get:
+      tags: [themes]
+      summary: Get today's theme
+      description: >
+        Return the theme for today's date in JST timezone. If a category is specified,
+        returns the theme for that category. If no category is specified and multiple
+        themes exist for different categories, returns the most recent.
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Category filter (e.g., '恋愛', '季節', '日常', 'ユーモア')
+          schema:
+            type: string
+          example: 恋愛
+      responses:
+        '200':
+          description: Today's theme
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeResponse'
+        '404':
+          description: No theme found for today (or specified category)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /ranking:
     get:
       tags: [ranking]
@@ -458,6 +487,37 @@ components:
           type: string
         text:
           type: string
+    ThemeResponse:
+      type: object
+      required:
+        - id
+        - text
+        - category
+        - date
+        - sponsored
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+          description: Theme text (upper verse)
+        category:
+          type: string
+          description: Theme category
+          example: 恋愛
+        date:
+          type: string
+          format: date
+          description: Date this theme is for (YYYY-MM-DD)
+        sponsored:
+          type: boolean
+          description: Whether this is a sponsored theme
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when theme was created
     ErrorResponse:
       type: object
       properties:
