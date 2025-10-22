@@ -49,7 +49,7 @@ def _prepare_theme(
 
 def test_generate_all_categories_inserts_new_themes(db_session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     settings = get_settings()
-    monkeypatch.setattr(settings, "theme_categories", ["general", "emotion"])
+    monkeypatch.setattr(settings, "theme_categories", "general,emotion")
     monkeypatch.setattr(settings, "theme_generation_max_retries", 1)
 
     client = _StaticThemeClient(
@@ -70,7 +70,7 @@ def test_generate_all_categories_inserts_new_themes(db_session: Session, monkeyp
 
 def test_generate_all_categories_updates_existing_theme(db_session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     settings = get_settings()
-    monkeypatch.setattr(settings, "theme_categories", ["general"])
+    monkeypatch.setattr(settings, "theme_categories", "general")
     monkeypatch.setattr(settings, "theme_generation_max_retries", 1)
 
     target = date(2025, 1, 6)
@@ -93,7 +93,7 @@ def test_generate_all_categories_updates_existing_theme(db_session: Session, mon
 
 def test_generate_all_categories_raises_on_invalid_text(db_session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     settings = get_settings()
-    monkeypatch.setattr(settings, "theme_categories", ["general"])
+    monkeypatch.setattr(settings, "theme_categories", "general")
     monkeypatch.setattr(settings, "theme_generation_max_retries", 2)
     monkeypatch.setattr(settings, "theme_generation_retry_delay_seconds", 0.0)
 
