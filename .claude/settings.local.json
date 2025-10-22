@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pytest:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add theme retrieval API endpoint\n\nImplement GET /api/v1/themes/today endpoint to retrieve today''s theme.\nThis fixes the UI/backend integrity issue where the frontend expected\ntheme data but the backend had no retrieval endpoint.\n\n- Add ThemeResponse schema for API responses\n- Add get_today_theme service with timezone-aware logic\n- Add /themes/today endpoint returning most recent theme for today\n- Add comprehensive test coverage (3 test cases)\n- Register themes router in main API router\n\nAll tests passing (3/3).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(railway service:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: add nixpacks.toml for Railway deployment\n\nRailway was failing with ''uvicorn: command not found'' error.\nAdded nixpacks.toml to explicitly configure:\n- Python 3.11 environment\n- Proper dependency installation via pip\n- Correct start command for uvicorn\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(railway logs:*)",
+      "WebFetch(domain:yomibiyori-production.up.railway.app)",
+      "Bash(railway status:*)",
+      "Bash(railway run:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(pip install:*)",
+      "Bash(railway variables:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

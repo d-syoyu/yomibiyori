@@ -5,8 +5,8 @@
 | ------ | ---- | ---------------- |
 | `DATABASE_URL` | Supabase Postgres への接続 | generate_themes / finalize_rankings |
 | `REDIS_URL` | Redis 接続 URL | finalize_rankings |
-| `OPENAI_API_KEY` | OpenAI テーマ生成 | generate_themes |
-| `THEME_CATEGORIES` | 生成対象カテゴリ（例: `general,nature,emotion`） | generate_themes |
+| `ANTHROPIC_API_KEY` | Claude (Anthropic) テーマ生成 | generate_themes |
+| `THEME_CATEGORIES` | 生成対象カテゴリ（例: `恋愛,季節,日常,ユーモア`） | generate_themes |
 | `SUPABASE_PROJECT_REF` | Supabase プロジェクト ID | generate_themes / finalize_rankings |
 | `SUPABASE_SERVICE_ROLE_KEY` | ランキング確定ジョブ等の特権操作 | finalize_rankings |
 

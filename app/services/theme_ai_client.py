@@ -174,7 +174,7 @@ class OpenAIThemeClient(ThemeAIClient):
                         f"- 1行目：名詞や動詞で完結（例：カフェデート、さくらさく）\n"
                         f"- 2行目：助詞で終わってもOK（例：きみのえがおを、あさのこうえんで）\n"
                         f"- 3行目：動詞で完結（例：みつめてる、あるいてる）\n"
-                        f"- 単語の途中で行を区切らない（❌「たべながらみ/てる」など）\n\n"
+                        f"- 単語の途中で行を区切らない（NG例:「たべながらみ/てる」など）\n\n"
                         f"【重要：下の句で完結させる】\n"
                         f"- 上の句では完結させず、余韻を残す\n"
                         f"- 情景描写に留め、感情や結論は下の句に委ねる\n"
@@ -232,13 +232,13 @@ class OpenAIThemeClient(ThemeAIClient):
             lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
 
             if is_valid:
-                print(f"[Theme generation] ✅ Success on attempt {attempt}: {lines_detail}")  # noqa: T201
+                print(f"[Theme generation] [OK] Success on attempt {attempt}: {lines_detail}")  # noqa: T201
                 return content
 
             # Not valid, log and retry
             last_content = content
             last_counts = counts
-            print(f"[Theme generation] ❌ Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
+            print(f"[Theme generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
             print(f"[Theme generation]    Lines: {lines_detail}")  # noqa: T201
 
         # All retries exhausted, return last attempt with warning
@@ -367,13 +367,13 @@ class ClaudeThemeClient(ThemeAIClient):
             lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
 
             if is_valid:
-                print(f"[Theme generation] ✅ Success on attempt {attempt}: {lines_detail}")  # noqa: T201
+                print(f"[Theme generation] [OK] Success on attempt {attempt}: {lines_detail}")  # noqa: T201
                 return content
 
             # Not valid, log and retry
             last_content = content
             last_counts = counts
-            print(f"[Theme generation] ❌ Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
+            print(f"[Theme generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
             print(f"[Theme generation]    Lines: {lines_detail}")  # noqa: T201
 
         # All retries exhausted, return last attempt with warning
