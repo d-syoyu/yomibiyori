@@ -16,7 +16,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import User
-from app.schemas.auth import SignUpRequest, SignUpResponse, UserProfileResponse, SessionToken
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    SessionToken,
+    SignUpRequest,
+    SignUpResponse,
+    UserProfileResponse,
+)
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -259,6 +266,81 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
     )
 
     return SignUpResponse(
+        user_id=str(user.id),
+        email=user.email,
+        display_name=user.name,
+        session=session_token,
+    )
+
+
+def login_user(session: Session, *, payload: LoginRequest) -> LoginResponse:
+    """Authenticate user through Supabase Auth and return session."""
+
+    settings = get_settings()
+    api_key = settings.supabase_anon_key or settings.service_role_key
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase anon key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+    request_body: dict[str, Any] = {
+        "email": payload.email,
+        "password": payload.password,
+        "grant_type": "password",
+    }
+
+    headers = {
+        "apikey": api_key,
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            f"{supabase_url}/auth/v1/token?grant_type=password",
+            json=request_body,
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Supabase login failed") from exc
+
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    try:
+        payload_json = response.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from Supabase") from exc
+
+    user_payload = payload_json.get("user") or {}
+    user_id = user_payload.get("id")
+    email = user_payload.get("email")
+    if not user_id or not email:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Supabase response missing user data")
+
+    metadata = user_payload.get("user_metadata") or {}
+    display_name = metadata.get("display_name")
+
+    # Sync user record if needed
+    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+
+    access_token = payload_json.get("access_token")
+    session_token = (
+        SessionToken(
+            access_token=access_token,
+            refresh_token=payload_json.get("refresh_token"),
+            token_type=payload_json.get("token_type", "bearer"),
+            expires_in=payload_json.get("expires_in"),
+        )
+        if access_token
+        else None
+    )
+
+    return LoginResponse(
         user_id=str(user.id),
         email=user.email,
         display_name=user.name,

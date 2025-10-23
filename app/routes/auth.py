@@ -8,10 +8,11 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
-from app.schemas.auth import SignUpRequest, SignUpResponse, UserProfileResponse
+from app.schemas.auth import LoginRequest, LoginResponse, SignUpRequest, SignUpResponse, UserProfileResponse
 from app.services.auth import (
     get_current_user_id,
     get_user_profile,
+    login_user,
     signup_user,
     sync_user_profile,
 )
@@ -32,6 +33,21 @@ def signup(
     """Proxy Supabase sign-up and synchronise the local user record."""
 
     return signup_user(session=session, payload=payload)
+
+
+@router.post(
+    "/login",
+    status_code=status.HTTP_200_OK,
+    response_model=LoginResponse,
+    summary="Login user via Supabase",
+)
+def login(
+    payload: LoginRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> LoginResponse:
+    """Authenticate user via Supabase and return session token."""
+
+    return login_user(session=session, payload=payload)
 
 
 @router.get(

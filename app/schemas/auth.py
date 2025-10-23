@@ -33,6 +33,22 @@ class SignUpResponse(BaseModel):
     session: SessionToken | None = None
 
 
+class LoginRequest(BaseModel):
+    """Payload for user login."""
+
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginResponse(BaseModel):
+    """Response body for successful login."""
+
+    user_id: str
+    email: EmailStr
+    display_name: str | None = None
+    session: SessionToken | None = None
+
+
 class UserProfileResponse(BaseModel):
     """Public profile representation."""
 
