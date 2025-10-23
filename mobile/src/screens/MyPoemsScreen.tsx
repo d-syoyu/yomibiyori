@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 32,
     color: '#2D3748',
-    fontWeight: '500',
+    fontFamily: 'NotoSerifJP_500Medium',
   },
   workFooter: {
     flexDirection: 'row',

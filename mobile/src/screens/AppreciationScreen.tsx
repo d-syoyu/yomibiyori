@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 30,
     color: '#2D3748',
-    fontWeight: '600',
+    fontFamily: 'NotoSerifJP_500Medium',
   },
   worksScrollView: {
     flex: 1,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 28,
     color: '#2D3748',
-    fontWeight: '400',
+    fontFamily: 'NotoSerifJP_400Regular',
   },
   workText: {
     fontSize: 18,

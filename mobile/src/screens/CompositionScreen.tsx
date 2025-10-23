@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 30,
     color: '#2D3748',
-    fontWeight: '600',
+    fontFamily: 'NotoSerifJP_500Medium',
   },
   themeCategory: {
     fontSize: 14,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 26,
     color: '#4A5568',
-    fontWeight: '500',
+    fontFamily: 'NotoSerifJP_400Regular',
   },
   previewWork: {
     marginBottom: 8,
@@ -352,6 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 26,
     color: '#2D3748',
-    fontWeight: '400',
+    fontFamily: 'NotoSerifJP_400Regular',
   },
 });

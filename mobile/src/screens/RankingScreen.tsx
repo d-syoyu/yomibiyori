@@ -40,8 +40,26 @@ export default function RankingScreen() {
       setLoading(true);
       setError(null);
 
-      // Get today's theme for the category
-      const themeData = await api.getTodayTheme(category);
+      let themeData: Theme;
+      try {
+        // Try to get today's theme for the category
+        themeData = await api.getTodayTheme(category);
+      } catch (err: any) {
+        // If today's theme not found, get the most recent theme for this category
+        if (err?.status === 404) {
+          console.log('[RankingScreen] Today\'s theme not found, fetching latest theme');
+          const themesResponse = await api.getThemes({ category, limit: 1 });
+          if (themesResponse.themes && themesResponse.themes.length > 0) {
+            themeData = themesResponse.themes[0];
+            console.log('[RankingScreen] Using latest theme:', themeData.date);
+          } else {
+            throw new Error('No themes found for this category');
+          }
+        } else {
+          throw err;
+        }
+      }
+
       setTheme(themeData);
 
       // Fetch rankings for the theme
@@ -52,12 +70,14 @@ export default function RankingScreen() {
 
       // Provide user-friendly error messages
       let errorMessage = 'ランキングの取得に失敗しました';
-      if (err?.status === 404) {
+      if (err?.status === 404 || err?.detail?.includes('not found')) {
         errorMessage = 'まだランキングが作成されていません\n22:00以降に確定されます';
       } else if (err?.detail === 'Ranking not available') {
         errorMessage = 'まだランキングが作成されていません\n22:00以降に確定されます';
       } else if (err?.status === 0) {
         errorMessage = 'ネットワークに接続できません\n接続を確認してください';
+      } else if (err?.message?.includes('No themes found')) {
+        errorMessage = 'このカテゴリのお題がまだありません';
       }
 
       setError(errorMessage);
@@ -295,7 +315,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 30,
     color: '#2D3748',
-    fontWeight: '600',
+    fontFamily: 'NotoSerifJP_500Medium',
   },
   loadingContainer: {
     backgroundColor: '#FFFFFF',
@@ -390,6 +410,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 26,
     color: '#2D3748',
+    fontFamily: 'NotoSerifJP_400Regular',
   },
   workAuthor: {
     fontSize: 12,

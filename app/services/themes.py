@@ -10,7 +10,48 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import Theme
-from app.schemas.theme import ThemeResponse
+from app.schemas.theme import ThemeListResponse, ThemeResponse
+
+
+def list_themes(
+    session: Session,
+    category: str | None = None,
+    limit: int = 10,
+    offset: int = 0,
+) -> ThemeListResponse:
+    """Return a list of themes, optionally filtered by category.
+
+    Args:
+        session: Database session
+        category: Optional category filter
+        limit: Maximum number of themes to return
+        offset: Number of themes to skip
+
+    Returns:
+        ThemeListResponse with themes ordered by date descending
+    """
+    stmt = select(Theme).order_by(Theme.date.desc(), Theme.created_at.desc())
+
+    if category:
+        stmt = stmt.where(Theme.category == category)
+
+    stmt = stmt.limit(limit).offset(offset)
+
+    themes = session.execute(stmt).scalars().all()
+
+    theme_responses = [
+        ThemeResponse(
+            id=str(theme.id),
+            text=theme.text,
+            category=theme.category,
+            date=theme.date,
+            sponsored=theme.sponsored,
+            created_at=theme.created_at,
+        )
+        for theme in themes
+    ]
+
+    return ThemeListResponse(themes=theme_responses, count=len(theme_responses))
 
 
 def get_today_theme(session: Session, category: str | None = None) -> ThemeResponse:

@@ -8,10 +8,39 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
-from app.schemas.theme import ThemeResponse
+from app.schemas.theme import ThemeListResponse, ThemeResponse
 from app.services import themes as themes_service
 
 router = APIRouter()
+
+
+@router.get(
+    "",
+    response_model=ThemeListResponse,
+    summary="List themes",
+)
+def list_themes(
+    session: Annotated[Session, Depends(get_db_session)],
+    category: Annotated[
+        str | None,
+        Query(
+            description="Category filter (e.g., '恋愛', '季節', '日常', 'ユーモア')",
+            example="恋愛",
+        ),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ThemeListResponse:
+    """Return a list of themes, optionally filtered by category.
+
+    Results are ordered by date descending (most recent first).
+    """
+    return themes_service.list_themes(
+        session=session,
+        category=category,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get(
