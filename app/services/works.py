@@ -241,6 +241,64 @@ def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "
     return [work_response for work_response, _ in works_with_scores[:limit]]
 
 
+def list_my_works(
+    session: Session,
+    *,
+    user_id: str,
+    theme_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[WorkResponse]:
+    """Return works created by the authenticated user.
+
+    Args:
+        session: Database session
+        user_id: User identifier
+        theme_id: Optional theme filter
+        limit: Maximum number of works to return
+        offset: Number of works to skip
+
+    Returns:
+        List of user's works with likes count
+    """
+    # Build query to fetch user's works with likes count and user name
+    stmt = (
+        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email)
+        .outerjoin(Like, Like.work_id == Work.id)
+        .join(User, User.id == Work.user_id)
+        .where(Work.user_id == user_id)
+        .group_by(Work.id, User.name, User.email)
+        .order_by(Work.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    # Add theme filter if provided
+    if theme_id:
+        stmt = stmt.where(Work.theme_id == theme_id)
+
+    results = session.execute(stmt).all()
+
+    # Build response objects
+    works = []
+    for work, likes_count, name, email in results:
+        # Use name if available, otherwise fallback to email
+        author_name = name if name else email
+
+        work_response = WorkResponse(
+            id=str(work.id),
+            user_id=str(work.user_id),
+            theme_id=str(work.theme_id),
+            text=work.text,
+            created_at=work.created_at,
+            likes_count=likes_count or 0,
+            display_name=author_name or "Unknown",
+        )
+        works.append(work_response)
+
+    return works
+
+
 def record_impression(
     session: Session,
     *,

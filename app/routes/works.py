@@ -64,6 +64,32 @@ def list_works(
     return works_service.list_works(session=session, theme_id=theme_id, limit=limit, order_by=order_by)
 
 
+@router.get(
+    "/me",
+    response_model=list[WorkResponse],
+    summary="List works by authenticated user",
+)
+def list_my_works(
+    session: Annotated[Session, Depends(get_db_session)],
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    theme_id: Annotated[str | None, Query(description="Optional theme filter")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[WorkResponse]:
+    """Return works created by the authenticated user.
+
+    Supports optional filtering by theme and pagination.
+    """
+
+    return works_service.list_my_works(
+        session=session,
+        user_id=user_id,
+        theme_id=theme_id,
+        limit=limit,
+        offset=offset,
+    )
+
+
 @router.post(
     "/{work_id}/like",
     response_model=WorkLikeResponse,
