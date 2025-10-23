@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Sequence
+from uuid import UUID
 
 from redis import Redis
 from sqlalchemy import Select, delete, select
@@ -106,7 +107,7 @@ def _prepare_ranking_rows(
 
     work_ids = [candidate.work_id for candidate in candidates]
     stmt: Select[Work] = select(Work).where(Work.id.in_(work_ids))
-    work_map = {work.id: work for work in session.execute(stmt).scalars()}
+    work_map = {str(work.id): work for work in session.execute(stmt).scalars()}
 
     rows: list[Ranking] = []
     for index, candidate in enumerate(candidates, start=1):
@@ -116,8 +117,8 @@ def _prepare_ranking_rows(
         score_decimal = Decimal(candidate.score).quantize(Decimal("0.00001"), rounding=ROUND_HALF_UP)
         rows.append(
             Ranking(
-                theme_id=theme_id,
-                work_id=work.id,
+                theme_id=UUID(theme_id) if isinstance(theme_id, str) else theme_id,
+                work_id=UUID(work.id) if isinstance(work.id, str) else work.id,
                 score=score_decimal,
                 rank=index,
                 snapshot_time=snapshot_time,
