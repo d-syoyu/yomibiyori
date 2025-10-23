@@ -132,26 +132,83 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkR
     )
 
 
-def list_works(session: Session, *, theme_id: str, limit: int) -> list[WorkResponse]:
-    """Return works for the supplied theme ordered by recency."""
+def _calculate_fair_score(work_created_at: datetime, likes_count: int) -> float:
+    """Calculate fair score with time normalization.
+
+    Works posted early have more exposure time, so we normalize by giving
+    a boost to works posted later in the day.
+
+    Args:
+        work_created_at: When the work was created (UTC)
+        likes_count: Number of likes received
+
+    Returns:
+        Fair score (higher is better)
+    """
+    settings = get_settings()
+    SUBMISSION_END = time(hour=22, minute=0)
+
+    # Convert to JST for submission window logic
+    created_jst = work_created_at.astimezone(settings.timezone)
+
+    # Calculate submission end time on the same day
+    end_datetime = created_jst.replace(
+        hour=SUBMISSION_END.hour,
+        minute=SUBMISSION_END.minute,
+        second=0,
+        microsecond=0
+    )
+
+    # Calculate remaining hours until submission end
+    if created_jst >= end_datetime:
+        exposure_hours = 0.5  # Assume 30 minutes minimum
+    else:
+        remaining = end_datetime - created_jst
+        exposure_hours = remaining.total_seconds() / 3600.0
+
+    # Maximum exposure time is 16 hours (06:00 to 22:00)
+    MAX_EXPOSURE_HOURS = 16.0
+
+    # Normalize: works with less exposure get a boost
+    # Factor ranges from 1.0 (full exposure) to 2.0 (minimal exposure)
+    normalization = MAX_EXPOSURE_HOURS / max(exposure_hours, 0.5)
+    normalization = min(2.0, max(1.0, normalization))
+
+    # Calculate fair score: likes * time normalization
+    return likes_count * normalization
+
+
+def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "recent") -> list[WorkResponse]:
+    """Return works for the supplied theme.
+
+    Args:
+        session: Database session
+        theme_id: Theme identifier
+        limit: Maximum number of works to return
+        order_by: Sort order - "recent" (newest first) or "fair_score" (time-normalized)
+
+    Returns:
+        List of works with likes count
+    """
 
     theme = session.get(Theme, theme_id)
     if not theme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found")
 
+    # Fetch all works with likes count (without ordering, we'll sort in Python)
     stmt = (
         select(Work, func.count(Like.id).label("likes_count"))
         .outerjoin(Like, Like.work_id == Work.id)
         .where(Work.theme_id == theme_id)
         .group_by(Work.id)
-        .order_by(Work.created_at.desc())
-        .limit(limit)
     )
 
     results = session.execute(stmt).all()
 
-    return [
-        WorkResponse(
+    # Build response objects
+    works_with_scores = []
+    for work, likes_count in results:
+        work_response = WorkResponse(
             id=str(work.id),
             user_id=str(work.user_id),
             theme_id=str(work.theme_id),
@@ -159,8 +216,19 @@ def list_works(session: Session, *, theme_id: str, limit: int) -> list[WorkRespo
             created_at=work.created_at,
             likes_count=likes_count or 0,
         )
-        for work, likes_count in results
-    ]
+
+        if order_by == "fair_score":
+            fair_score = _calculate_fair_score(work.created_at, likes_count or 0)
+            works_with_scores.append((work_response, fair_score))
+        else:
+            # For "recent" ordering, use timestamp as score
+            works_with_scores.append((work_response, work.created_at.timestamp()))
+
+    # Sort by score (descending)
+    works_with_scores.sort(key=lambda x: x[1], reverse=True)
+
+    # Return only the work responses (without scores), limited
+    return [work_response for work_response, _ in works_with_scores[:limit]]
 
 
 def record_impression(

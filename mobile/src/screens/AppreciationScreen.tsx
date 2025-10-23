@@ -49,7 +49,7 @@ export default function AppreciationScreen({ route }: Props) {
         setCurrentThemeId(theme.id);
 
         console.log('[AppreciationScreen] Fetching works for theme:', theme.id);
-        const worksData = await api.getWorksByTheme(theme.id, { limit: 50 });
+        const worksData = await api.getWorksByTheme(theme.id, { limit: 50, order_by: 'fair_score' });
         console.log('[AppreciationScreen] Works received:', worksData.length, 'works');
         setWorks(worksData);
       } else {
@@ -60,15 +60,14 @@ export default function AppreciationScreen({ route }: Props) {
         for (const category of CATEGORIES) {
           try {
             const theme = await api.getTodayTheme(category);
-            const worksData = await api.getWorksByTheme(theme.id, { limit: 50 });
+            const worksData = await api.getWorksByTheme(theme.id, { limit: 50, order_by: 'fair_score' });
             allWorks.push(...worksData);
           } catch (err) {
             console.warn(`[AppreciationScreen] Failed to load works for ${category}:`, err);
           }
         }
 
-        // Sort by creation time (newest first)
-        allWorks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        // Works are already sorted by fair_score from API, no need to re-sort
         console.log('[AppreciationScreen] Total works received:', allWorks.length, 'works');
         setWorks(allWorks);
         setCurrentThemeId(null);

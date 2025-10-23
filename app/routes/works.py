@@ -52,10 +52,16 @@ def list_works(
     theme_id: Annotated[str, Query(description="Theme identifier")],
     session: Annotated[Session, Depends(get_db_session)],
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    order_by: Annotated[str, Query(description="Sort order: 'recent' or 'fair_score'")] = "recent",
 ) -> list[WorkResponse]:
-    """Return works tied to the requested theme ordered by recency."""
+    """Return works tied to the requested theme.
 
-    return works_service.list_works(session=session, theme_id=theme_id, limit=limit)
+    Sort order:
+    - 'recent': Newest first (default)
+    - 'fair_score': Time-normalized score (balances good older works with newer works)
+    """
+
+    return works_service.list_works(session=session, theme_id=theme_id, limit=limit, order_by=order_by)
 
 
 @router.post(

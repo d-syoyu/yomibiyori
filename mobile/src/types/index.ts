@@ -114,16 +114,12 @@ export interface RankingEntry {
   rank: number;
   work_id: string;
   score: number;
-  user_name?: string;
+  user_name: string;
   text: string;
 }
 
-export interface RankingResponse {
-  rankings: RankingEntry[];
-  theme_id: string;
-  snapshot_time: string;
-  count: number;
-}
+// API returns an array of ranking entries directly
+export type RankingResponse = RankingEntry[];
 
 // ============================================================================
 // Navigation Types
