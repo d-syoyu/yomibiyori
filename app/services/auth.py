@@ -259,7 +259,7 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
     )
 
     return SignUpResponse(
-        user_id=user.id,
+        user_id=str(user.id),
         email=user.email,
         display_name=user.name,
         session=session_token,
