@@ -60,11 +60,19 @@ def like_work(
     ranking_key = f"{settings.redis_ranking_prefix}{work.theme_id}"
     metrics_key = f"metrics:{work_id}"
 
-    pipeline = redis_client.pipeline()
-    pipeline.zadd(ranking_key, {work_id: 0}, nx=True)
-    pipeline.zincrby(ranking_key, 1, work_id)
-    pipeline.hincrby(metrics_key, "likes", 1)
-    pipeline.hsetnx(metrics_key, "impressions", 0)
-    pipeline.execute()
+    try:
+        pipeline = redis_client.pipeline()
+        pipeline.zadd(ranking_key, {work_id: 0}, nx=True)
+        pipeline.zincrby(ranking_key, 1, work_id)
+        pipeline.hincrby(metrics_key, "likes", 1)
+        pipeline.hsetnx(metrics_key, "impressions", 0)
+        pipeline.hsetnx(metrics_key, "unique_viewers", 0)
+        results = pipeline.execute()
+        print(f"[DEBUG] Redis pipeline executed successfully for work {work_id}")
+        print(f"[DEBUG] Ranking key: {ranking_key}, Metrics key: {metrics_key}")
+        print(f"[DEBUG] Pipeline results: {results}")
+    except Exception as exc:
+        print(f"[ERROR] Redis pipeline failed for work {work_id}: {exc}")
+        # Don't fail the like operation if Redis fails - data is already in PostgreSQL
 
     return WorkLikeResponse(status="liked", likes_count=likes_count)
