@@ -16,7 +16,10 @@
       "Bash(tree:*)",
       "Bash(find:*)",
       "Bash(pip install:*)",
-      "Bash(railway variables:*)"
+      "Bash(railway variables:*)",
+      "Bash(timeout 15 bash:*)",
+      "Bash(timeout 10 bash:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

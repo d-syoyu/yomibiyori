@@ -244,7 +244,8 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
 
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
-    session_payload = payload_json.get("session") or {}
+    # Supabase may return session data either nested under "session" key or at root level
+    session_payload = payload_json.get("session") or payload_json
     access_token = session_payload.get("access_token")
     session_token = (
         SessionToken(
