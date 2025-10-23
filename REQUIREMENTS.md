@@ -1,37 +1,44 @@
 # REQUIREMENTS.md - 詠日和 プロジェクト仕様
 
 ## プロジェクト概要
-詠日和（よみびより）は、AI が提案する「上の句」とユーザーが詠む「下の句」を組み合わせ、感性豊かな句を共有するポエティック SNS です。  
-ユーザーは毎日 06:00 に受け取るお題に対して 22:00 までに 1 首のみ投稿でき、22:00 時点でランキングを確定します。
+詠日和（よみびより）は、AI が提案する「上の句」とユーザーが詠む「下の句」を組み合わせ、感性豊かな句を共有するポエティック SNS です。
+毎日 06:00 に 4 つのカテゴリー（恋愛、季節、日常、ユーモア）ごとにお題が配信され、ユーザーは各カテゴリーにつき 22:00 までに 1 首ずつ投稿できます。22:00 時点でカテゴリーごとにランキングを確定します。
 
 ---
 
 ## 機能要件（Functional Requirements）
 
 ### 1. 認証・アカウント管理
-- **要件ID**: FR-001  
-- **概要**: Supabase Auth を利用し、メール＋OAuth（Google / Apple）でログイン可能にする。  
+- **要件ID**: FR-001
+- **概要**: Supabase Auth を利用し、メール＋OAuth（Google / Apple）でログイン可能にする。
 - **詳細**:
-  - JWT ベース認証。`authenticated` ロールは一般ユーザー、`service_role` は管理用。  
-  - ユーザーごとに 1 日 1 首まで投稿可能。  
-  - ローカル DB の `users` テーブルに Supabase `auth.users` の `id` / `email` / `user_metadata.display_name` を同期する。  
+  - JWT ベース認証。`authenticated` ロールは一般ユーザー、`service_role` は管理用。
+  - ユーザーごとに 1 カテゴリーあたり 1 日 1 首まで投稿可能（全カテゴリー合計で最大 4 首/日）。
+  - ローカル DB の `users` テーブルに Supabase `auth.users` の `id` / `email` / `user_metadata.display_name` を同期する。
   - 認証が無いユーザーは投稿系 API を利用できない。
 
 ### 2. お題（上の句）生成と配信
-- **要件ID**: FR-002  
-- **概要**: 毎日 21:00 に AI が上の句を生成し、カテゴリに紐づけて保存する。  
+- **要件ID**: FR-002
+- **概要**: 毎日 21:00 に AI が各カテゴリーの上の句を生成し、カテゴリに紐づけて保存する。
 - **詳細**:
-- ジョブは GitHub Actions Scheduler もしくは Railway 等で実行。  
-  - 生成結果は PostgreSQL の `themes` テーブルに保存。  
-  - 06:00 に Expo Push などでユーザーへ配信。
+  - ジョブは GitHub Actions Scheduler (cron: `0 12 * * *` UTC = 21:00 JST) で実行。
+  - 4 つのカテゴリー（恋愛、季節、日常、ユーモア）ごとに上の句（5-7-5）を生成。
+  - AI プロバイダー: OpenAI (gpt-4o)、Anthropic (Claude Sonnet 4.5)、または X.ai (Grok) を環境変数で選択可能。
+  - 生成された句は pykakasi で音数検証され、5-7-5 形式に適合するまで最大 3 回リトライ。
+  - 生成結果は PostgreSQL の `themes` テーブルに `(date, category, text)` として保存。
+  - 06:00 に Expo Push などでユーザーへ配信（未実装）。
 
 ### 3. 下の句投稿
-- **要件ID**: FR-003  
-- **概要**: ユーザーはお題（テーマ）に対して 1 日 1 首、40 文字以内で投稿できる。  
+- **要件ID**: FR-003
+- **概要**: ユーザーは各カテゴリーのお題（テーマ）に対して、1 カテゴリーあたり 1 日 1 首、40 文字以内で投稿できる。
 - **詳細**:
-  - 投稿内容は即時保存し、直後に確認画面へリダイレクト。  
-  - 投稿済み作品はマイページおよびテーマ別一覧で参照可能。  
-  - RLS で自身の作品のみ編集／削除可能にする。
+  - 投稿時に `theme_id` を必須パラメータとして指定し、どのカテゴリーのお題に対する投稿かを明示する。
+  - 投稿可能時間帯: 06:00–22:00 JST（この時間外は投稿不可）。
+  - 同一カテゴリーへの重複投稿を防止：同じユーザーが同じカテゴリーに同日内に 2 首以上投稿できない。
+  - 異なるカテゴリーであれば同日内に複数投稿可能（最大 4 首/日）。
+  - 投稿内容は即時保存し、直後に鑑賞画面へ遷移。
+  - 投稿済み作品はマイページおよびカテゴリー別一覧で参照可能。
+  - RLS で自身の作品のみ編集／削除可能にする（未実装）。
 
 ### 4. 感謝（いいね）・感想リアクション
 - **要件ID**: FR-004  
@@ -74,40 +81,54 @@
   - 22:00: ランキング確定通知。
 
 ### 9. モバイルアプリ UI
-- **要件ID**: FR-009  
-- **概要**: React Native + Expo でモバイルアプリを提供。  
+- **要件ID**: FR-009
+- **概要**: React Native + Expo でモバイルアプリを提供。
 - **画面構成**:
-  1. LoginScreen – OAuth ログイン／新規登録。  
-  2. HomeScreen – 本日のお題表示と投稿導線。  
-  3. ComposeScreen – 下の句投稿と下書き保存。  
-  4. RankingScreen – リアルタイム／確定ランキング表示。  
-  5. MyPageScreen – 自身の作品一覧と履歴。
+  1. **LoginScreen** – Supabase Auth による OAuth ログイン／新規登録（email + display_name 必須）。
+  2. **CategorySelectionScreen** – 4 つのカテゴリー（恋愛、季節、日常、ユーモア）を選択。
+  3. **ActionSelectionScreen** – 選択したカテゴリーで「詠む」または「鑑賞する」を選択。
+  4. **CompositionScreen** – 選択したカテゴリーのお題（上の句）を表示し、下の句を投稿。
+  5. **AppreciationScreen** – カテゴリー別または全カテゴリーの作品一覧を表示。いいね機能付き。
+  6. **RankingScreen** – カテゴリー別のリアルタイムランキング表示（未実装）。
+  7. **MyPoemsScreen** – 自身の投稿作品一覧と履歴。
 
 ---
 
 ## UI 仕様（UI Specification）
 
 ### 1. 画面フロー
-1. **LoginScreen**  
-   - OAuth ボタン（Google / Apple）。  
-   - 開発段階ではメール＋パスワードも許容。  
-   - 背景に季節感のあるイメージ。  
-2. **HomeScreen**  
-   - 現在のフェーズ（通常 / 締切間際 / 閉鎖）をステータス表示。  
-   - 今日のお題とスポンサー情報。  
-   - 投稿ボタン、ランキングへの導線。  
-3. **ComposeScreen**  
-   - 上の句を固定表示し、40 文字以内の入力欄。  
-   - ひらがな / カタカナ変換サポート、文字数カウンタ。  
-   - 投稿後は確認ダイアログを表示。  
-4. **RankingScreen**  
-   - リアルタイムタブと確定タブを切り替え。  
-   - スコア、感謝数、インプレッション数を表示。  
-   - 自分の作品位置へジャンプする機能。  
-5. **MyPageScreen**  
-   - 投稿履歴、下書き一覧。  
-   - プロフィール編集（表示名のみ）。  
-   - 通知設定／ダークモード切り替え。
+1. **LoginScreen**
+   - Supabase Auth によるメール＋パスワード認証。
+   - 新規登録時は email と display_name が必須。
+   - OAuth（Google / Apple）は未実装。
+
+2. **CategorySelectionScreen**
+   - 4 つのカテゴリー（恋愛 💕、季節 🌸、日常 ☕、ユーモア 😄）をカード形式で表示。
+   - カテゴリーをタップすると ActionSelectionScreen へ遷移。
+
+3. **ActionSelectionScreen**
+   - 選択したカテゴリーで「詠む」または「鑑賞する」を選択。
+   - 「詠む」: CompositionScreen へ遷移。
+   - 「鑑賞する」: AppreciationScreen へ遷移。
+
+4. **CompositionScreen**
+   - 選択したカテゴリーの上の句（5-7-5）を固定表示。
+   - 下の句（7-7）を 100 文字以内で入力（実際のバリデーションは 40 文字以内）。
+   - 文字数カウンタ表示。
+   - 投稿後は AppreciationScreen へ遷移し、成功ダイアログを表示。
+
+5. **AppreciationScreen**
+   - 「すべて」タブ: 全カテゴリーの作品を新しい順に表示（最大 200 件）。
+   - カテゴリータブ: 選択したカテゴリーの作品のみ表示（最大 50 件）。
+   - 各作品にいいねボタン（♥）と現在のいいね数を表示。
+   - プルダウンでリフレッシュ可能。
+
+6. **RankingScreen**
+   - カテゴリー別のリアルタイムランキング表示（未実装）。
+
+7. **MyPoemsScreen**
+   - 自身が投稿した作品の一覧を新しい順に表示。
+   - 各作品のカテゴリー、本文、投稿日時を表示。
 
 ### 2. フェーズステータス
 | フェーズ | 時間帯 | 機能状態 |
@@ -170,12 +191,14 @@
 
 | エンティティ | 主なフィールド | 説明 |
 | ------------ | -------------- | ---- |
-| users | id, name, email, created_at | Supabase Auth と同期されたユーザー情報 |
-| themes | id, text, category, date | 日替わりお題（上の句） |
-| works | id, user_id, theme_id, text, created_at | ユーザー投稿の下の句 |
-| likes | id, user_id, work_id, created_at | 感謝（いいね）アクション |
-| rankings | id, theme_id, work_id, score, snapshot_time | 22:00 時点の確定ランキング |
-| sponsors | id, company_name, text, category, target_regions, target_age_min, target_age_max, budget | スポンサー情報 |
+| users | id (UUID), name, email, created_at | Supabase Auth と同期されたユーザー情報 |
+| themes | id (UUID), text, category, date, sponsored, created_at | カテゴリー別の日替わりお題（上の句 5-7-5）|
+| works | id (UUID), user_id, theme_id, text, created_at, updated_at | ユーザー投稿の下の句（40 文字以内）|
+| likes | id (UUID), user_id, work_id, created_at | 感謝（いいね）アクション（1 ユーザー 1 作品 1 回） |
+| rankings | id (UUID), theme_id, work_id, score, snapshot_time | 22:00 時点の確定ランキング（未実装） |
+| sponsors | - | スポンサー情報（未実装） |
+
+**注:** 1 ユーザーは 1 カテゴリーにつき 1 日 1 首まで投稿可能。`works` テーブルには `(user_id, theme_id)` に対する一意性制約は無いが、`works.create_work` サービスでカテゴリーごとの重複投稿を防止。
 
 ---
 
