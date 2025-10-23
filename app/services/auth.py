@@ -273,7 +273,7 @@ def get_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
 
-    return UserProfileResponse(user_id=user.id, email=user.email, display_name=user.name)
+    return UserProfileResponse(user_id=str(user.id), email=user.email, display_name=user.name)
 
 
 def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
@@ -323,4 +323,4 @@ def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
 
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
-    return UserProfileResponse(user_id=user.id, email=user.email, display_name=user.name)
+    return UserProfileResponse(user_id=str(user.id), email=user.email, display_name=user.name)
