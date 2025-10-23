@@ -33,6 +33,7 @@ export default function AppreciationScreen({ route }: Props) {
 
   // Load works for the selected category
   const loadWorks = useCallback(async (isRefresh = false) => {
+    console.log('[AppreciationScreen] Loading works for category:', selectedCategory);
     if (isRefresh) {
       setIsRefreshing(true);
     } else {
@@ -41,15 +42,21 @@ export default function AppreciationScreen({ route }: Props) {
 
     try {
       // First, get today's theme for the category
+      console.log('[AppreciationScreen] Fetching theme...');
       const theme = await api.getTodayTheme(selectedCategory);
+      console.log('[AppreciationScreen] Theme received:', theme);
       setCurrentThemeId(theme.id);
 
       // Then, get works for that theme
+      console.log('[AppreciationScreen] Fetching works for theme:', theme.id);
       const worksData = await api.getWorksByTheme(theme.id, { limit: 50 });
+      console.log('[AppreciationScreen] Works received:', worksData.length, 'works');
       setWorks(worksData);
     } catch (error: any) {
-      console.error('Failed to load works:', error);
-      Alert.alert('エラー', '作品の取得に失敗しました');
+      console.error('[AppreciationScreen] Failed to load works:', error);
+      const errorDetail = error.detail || error.message || JSON.stringify(error);
+      console.error('[AppreciationScreen] Error details:', errorDetail);
+      Alert.alert('エラー', `作品の取得に失敗しました: ${errorDetail}`);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
