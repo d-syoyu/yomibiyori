@@ -13,64 +13,53 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/useAuthStore';
-import type { Work, Theme } from '../types';
+import type { Work, Theme, WorkDateSummary } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
 
-// Group works by theme date
-interface WorksByDate {
+// Works loaded for a specific date
+interface DateWorksCache {
   date: string;
-  dateObj: Date;
   works: Array<{ work: Work; theme?: Theme }>;
+  loaded: boolean;
 }
 
 export default function MyPoemsScreen() {
   const { user, logout } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
 
-  const [works, setWorks] = useState<Work[]>([]);
-  const [themesMap, setThemesMap] = useState<Map<string, Theme>>(new Map());
+  // サマリー情報（日付ごとの作品数、いいね数）
+  const [dateSummaries, setDateSummaries] = useState<WorkDateSummary[]>([]);
+  // 日付ごとの作品キャッシュ
+  const [dateWorksCache, setDateWorksCache] = useState<Map<string, DateWorksCache>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
-  // Load user's works
-  const loadMyWorks = useCallback(async (isRefresh = false) => {
-    console.log('[MyPoemsScreen] Loading user works');
+  // Load summary of user's works (日付ごとのサマリーのみ取得)
+  const loadMyWorksSummary = useCallback(async (isRefresh = false) => {
+    console.log('[MyPoemsScreen] Loading user works summary');
     if (isRefresh) {
       setIsRefreshing(true);
+      // リフレッシュ時はキャッシュもクリア
+      setDateWorksCache(new Map());
     } else {
       setIsLoading(true);
     }
 
     try {
-      // Fetch user's works
-      const myWorks = await api.getMyWorks({ limit: 50 });
-      console.log('[MyPoemsScreen] Works received:', myWorks.length, 'works');
-      setWorks(myWorks);
-
-      // Fetch theme information for each work
-      const uniqueThemeIds = [...new Set(myWorks.map(w => w.theme_id))];
-      console.log('[MyPoemsScreen] Fetching themes for', uniqueThemeIds.length, 'unique themes');
-
-      const newThemesMap = new Map<string, Theme>();
-      await Promise.all(
-        uniqueThemeIds.map(async (themeId) => {
-          try {
-            const theme = await getThemeById(themeId);
-            newThemesMap.set(theme.id, theme);
-          } catch (error) {
-            console.error('[MyPoemsScreen] Failed to fetch theme:', themeId, error);
-          }
-        })
-      );
-      setThemesMap(newThemesMap);
+      // Fetch summary of user's works (date, count, total_likes)
+      const summaries = await api.getMyWorksSummary();
+      console.log('[MyPoemsScreen] Summaries received:', summaries.length, 'dates');
+      setDateSummaries(summaries);
     } catch (error: any) {
-      console.error('[MyPoemsScreen] Failed to load works:', error);
+      console.error('[MyPoemsScreen] Failed to load works summary:', error);
 
       let errorMessage = '作品の取得に失敗しました';
       if (error?.status === 0) {
@@ -84,53 +73,88 @@ export default function MyPoemsScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [getThemeById]);
+  }, []);
 
-  // Load works on mount
+  // Load works for a specific date (アコーディオンを開いたときに呼ばれる)
+  const loadWorksForDate = useCallback(async (date: string) => {
+    console.log('[MyPoemsScreen] Loading works for date:', date);
+
+    // すでにキャッシュがあれば何もしない
+    const cached = dateWorksCache.get(date);
+    if (cached && cached.loaded) {
+      console.log('[MyPoemsScreen] Works already cached for date:', date);
+      return;
+    }
+
+    try {
+      // その日の全ての作品を取得（すべてのカテゴリ）
+      const myWorks = await api.getMyWorks({ limit: 200 }); // 十分大きな数
+
+      // その日の作品のみフィルタ（テーマの日付でフィルタ）
+      const worksForDate: Array<{ work: Work; theme?: Theme }> = [];
+
+      await Promise.all(
+        myWorks.map(async (work) => {
+          try {
+            const theme = await getThemeById(work.theme_id);
+            if (theme.date === date) {
+              worksForDate.push({ work, theme });
+            }
+          } catch (error) {
+            console.error('[MyPoemsScreen] Failed to fetch theme:', work.theme_id, error);
+          }
+        })
+      );
+
+      console.log('[MyPoemsScreen] Loaded', worksForDate.length, 'works for date:', date);
+
+      // キャッシュに保存
+      setDateWorksCache(prev => {
+        const newCache = new Map(prev);
+        newCache.set(date, {
+          date,
+          works: worksForDate,
+          loaded: true,
+        });
+        return newCache;
+      });
+    } catch (error: any) {
+      console.error('[MyPoemsScreen] Failed to load works for date:', date, error);
+
+      let errorMessage = `${date}の作品取得に失敗しました`;
+      if (error?.status === 0) {
+        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
+      } else if (error?.detail) {
+        errorMessage = `エラー: ${error.detail}`;
+      }
+
+      Alert.alert('エラー', errorMessage);
+    }
+  }, [dateWorksCache, getThemeById]);
+
+  // Load summary on mount
   useEffect(() => {
-    loadMyWorks();
-  }, [loadMyWorks]);
+    loadMyWorksSummary();
+  }, [loadMyWorksSummary]);
 
   const handleLogout = async () => {
     await logout();
   };
 
   const handleRefresh = () => {
-    loadMyWorks(true);
+    loadMyWorksSummary(true);
   };
 
-  // Group works by theme date
-  const groupWorksByDate = (): WorksByDate[] => {
-    const grouped = new Map<string, WorksByDate>();
-
-    works.forEach((work) => {
-      const theme = themesMap.get(work.theme_id);
-      if (!theme) return;
-
-      const dateStr = theme.date;
-      if (!grouped.has(dateStr)) {
-        grouped.set(dateStr, {
-          date: dateStr,
-          dateObj: new Date(dateStr),
-          works: [],
-        });
-      }
-      grouped.get(dateStr)!.works.push({ work, theme });
-    });
-
-    // Sort by date descending (newest first)
-    return Array.from(grouped.values()).sort(
-      (a, b) => b.dateObj.getTime() - a.dateObj.getTime()
-    );
-  };
-
-  const toggleDateExpansion = (date: string) => {
+  const toggleDateExpansion = async (date: string) => {
     setExpandedDates((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(date)) {
+        // 閉じる
         newSet.delete(date);
       } else {
+        // 開く - 作品をロード
         newSet.add(date);
+        loadWorksForDate(date); // 非同期でロード
       }
       return newSet;
     });
@@ -138,13 +162,26 @@ export default function MyPoemsScreen() {
 
   // Auto-expand the most recent date
   useEffect(() => {
-    if (works.length > 0 && themesMap.size > 0) {
-      const groupedWorks = groupWorksByDate();
-      if (groupedWorks.length > 0 && expandedDates.size === 0) {
-        setExpandedDates(new Set([groupedWorks[0].date]));
-      }
+    if (dateSummaries.length > 0 && expandedDates.size === 0) {
+      const mostRecentDate = dateSummaries[0].date;
+      setExpandedDates(new Set([mostRecentDate]));
+      loadWorksForDate(mostRecentDate);
     }
-  }, [works, themesMap]);
+  }, [dateSummaries]);
+
+  // Clear cache when app goes to background
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        console.log('[MyPoemsScreen] App going to background, clearing works cache');
+        setDateWorksCache(new Map());
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -167,13 +204,15 @@ export default function MyPoemsScreen() {
 
           <View style={styles.statsCard}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{works.length}</Text>
+              <Text style={styles.statValue}>
+                {dateSummaries.reduce((sum, s) => sum + s.works_count, 0)}
+              </Text>
               <Text style={styles.statLabel}>投稿</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {works.reduce((sum, work) => sum + work.likes_count, 0)}
+                {dateSummaries.reduce((sum, s) => sum + s.total_likes, 0)}
               </Text>
               <Text style={styles.statLabel}>共鳴</Text>
             </View>
@@ -195,7 +234,7 @@ export default function MyPoemsScreen() {
                 <ActivityIndicator size="large" color="#4A5568" />
                 <Text style={styles.loadingText}>作品を読み込み中...</Text>
               </View>
-            ) : works.length === 0 ? (
+            ) : dateSummaries.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateText}>まだ作品がありません</Text>
                 <Text style={styles.emptyStateSubtext}>
@@ -204,21 +243,22 @@ export default function MyPoemsScreen() {
               </View>
             ) : (
               <View style={styles.worksList}>
-                {groupWorksByDate().map((dateGroup) => {
-                  const isExpanded = expandedDates.has(dateGroup.date);
-                  const totalLikes = dateGroup.works.reduce((sum, { work }) => sum + work.likes_count, 0);
+                {dateSummaries.map((summary) => {
+                  const isExpanded = expandedDates.has(summary.date);
+                  const cached = dateWorksCache.get(summary.date);
+                  const isLoadingDate = isExpanded && (!cached || !cached.loaded);
 
                   return (
-                    <View key={dateGroup.date} style={styles.dateSection}>
+                    <View key={summary.date} style={styles.dateSection}>
                       {/* Accordion Header */}
                       <TouchableOpacity
                         style={styles.accordionHeader}
-                        onPress={() => toggleDateExpansion(dateGroup.date)}
+                        onPress={() => toggleDateExpansion(summary.date)}
                         activeOpacity={0.7}
                       >
                         <View style={styles.accordionHeaderLeft}>
                           <Text style={styles.accordionDate}>
-                            {new Date(dateGroup.date).toLocaleDateString('ja-JP', {
+                            {new Date(summary.date).toLocaleDateString('ja-JP', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
@@ -226,11 +266,11 @@ export default function MyPoemsScreen() {
                           </Text>
                           <View style={styles.accordionMeta}>
                             <Text style={styles.accordionMetaText}>
-                              {dateGroup.works.length}首
+                              {summary.works_count}首
                             </Text>
                             <Text style={styles.accordionMetaDivider}>•</Text>
                             <Text style={styles.accordionMetaText}>
-                              ♥ {totalLikes}
+                              ♥ {summary.total_likes}
                             </Text>
                           </View>
                         </View>
@@ -245,38 +285,51 @@ export default function MyPoemsScreen() {
                       {/* Accordion Content */}
                       {isExpanded && (
                         <View style={styles.accordionContent}>
-                          {dateGroup.works.map(({ work, theme }) => {
-                            // Combine theme (upper verse) and work (lower verse) into one tanka
-                            const tankaText = theme ? `${theme.text}\n${work.text}` : work.text;
+                          {isLoadingDate ? (
+                            <View style={styles.loadingContainer}>
+                              <ActivityIndicator size="small" color="#4A5568" />
+                              <Text style={styles.loadingText}>作品を読み込み中...</Text>
+                            </View>
+                          ) : cached && cached.works.length > 0 ? (
+                            cached.works.map(({ work, theme }) => {
+                              // Combine theme (upper verse) and work (lower verse) into one tanka
+                              const tankaText = theme ? `${theme.text}\n${work.text}` : work.text;
 
-                            return (
-                              <View key={work.id} style={styles.workCard}>
-                                {/* Complete Tanka (短歌) */}
-                                <View style={styles.tankaSection}>
-                                  <View style={styles.tankaTextContainer}>
-                                    <VerticalText
-                                      text={tankaText}
-                                      textStyle={styles.tankaVerticalText}
-                                      direction="rtl"
-                                    />
+                              return (
+                                <View key={work.id} style={styles.workCard}>
+                                  {/* Complete Tanka (短歌) */}
+                                  <View style={styles.tankaSection}>
+                                    <View style={styles.tankaTextContainer}>
+                                      <VerticalText
+                                        text={tankaText}
+                                        textStyle={styles.tankaVerticalText}
+                                        direction="rtl"
+                                      />
+                                    </View>
+                                  </View>
+
+                                  {/* Footer with time and likes */}
+                                  <View style={styles.workFooter}>
+                                    <Text style={styles.workTime}>
+                                      {new Date(work.created_at).toLocaleTimeString('ja-JP', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </Text>
+                                    <View style={styles.likesInfo}>
+                                      <Text style={styles.likesText}>♥ {work.likes_count}</Text>
+                                    </View>
                                   </View>
                                 </View>
-
-                                {/* Footer with time and likes */}
-                                <View style={styles.workFooter}>
-                                  <Text style={styles.workTime}>
-                                    {new Date(work.created_at).toLocaleTimeString('ja-JP', {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </Text>
-                                  <View style={styles.likesInfo}>
-                                    <Text style={styles.likesText}>♥ {work.likes_count}</Text>
-                                  </View>
-                                </View>
-                              </View>
-                            );
-                          })}
+                              );
+                            })
+                          ) : (
+                            <View style={styles.emptyState}>
+                              <Text style={styles.emptyStateSubtext}>
+                                この日の作品が見つかりません
+                              </Text>
+                            </View>
+                          )}
                         </View>
                       )}
                     </View>

@@ -17,6 +17,7 @@ import type {
   Work,
   WorkListResponse,
   WorkLikeResponse,
+  WorkDateSummary,
   CreateResonanceRequest,
   Resonance,
   RankingResponse,
@@ -184,6 +185,11 @@ class ApiClient {
     const response = await this.client.get<WorkListResponse>('/works/me', {
       params,
     });
+    return response.data;
+  }
+
+  async getMyWorksSummary(): Promise<WorkDateSummary[]> {
+    const response = await this.client.get<WorkDateSummary[]>('/works/me/summary');
     return response.data;
   }
 

@@ -92,6 +92,12 @@ export interface WorkLikeResponse {
   likes_count: number;
 }
 
+export interface WorkDateSummary {
+  date: string; // ISO 8601 date (YYYY-MM-DD)
+  works_count: number;
+  total_likes: number;
+}
+
 // ============================================================================
 // Resonance (共鳴) Types
 // ============================================================================
