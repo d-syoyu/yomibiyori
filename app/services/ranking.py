@@ -141,8 +141,15 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
 
     settings = get_settings()
     key = f"{settings.redis_ranking_prefix}{theme_id}"
-    raw_entries = redis_client.zrevrange(key, 0, limit - 1, withscores=True)
-    if not raw_entries:
+    print(f"[DEBUG] Attempting to read ranking from Redis key: {key}")
+    try:
+        raw_entries = redis_client.zrevrange(key, 0, limit - 1, withscores=True)
+        print(f"[DEBUG] Redis zrevrange returned {len(raw_entries)} entries")
+        if not raw_entries:
+            print(f"[DEBUG] No ranking data found in Redis for key: {key}")
+            return []
+    except Exception as exc:
+        print(f"[ERROR] Redis read failed for key {key}: {exc}")
         return []
 
     work_ids = [work_id for work_id, _ in raw_entries]
