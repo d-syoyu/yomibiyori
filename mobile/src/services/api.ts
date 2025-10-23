@@ -68,6 +68,17 @@ class ApiClient {
             detail: error.response.data?.detail || 'Unknown error occurred',
             status: error.response.status,
           };
+
+          // Handle token expiration (401 with specific message)
+          if (
+            error.response.status === 401 &&
+            error.response.data?.detail?.includes('expired')
+          ) {
+            // Token has expired - need to logout
+            // Note: This will be handled by the caller (UI components)
+            console.warn('[API] Token expired - user needs to re-login');
+          }
+
           return Promise.reject(apiError);
         } else if (error.request) {
           // Request made but no response
@@ -121,7 +132,7 @@ class ApiClient {
   }
 
   async getUserProfile(): Promise<UserProfile> {
-    const response = await this.client.get<UserProfile>('/auth/me');
+    const response = await this.client.get<UserProfile>('/auth/profile');
     return response.data;
   }
 

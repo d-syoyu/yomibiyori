@@ -183,8 +183,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           // Update stored profile
           await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
-        } catch (profileErr) {
-          // Token verification failed, but use cached profile anyway
+        } catch (profileErr: any) {
+          // Check if token has expired
+          if (profileErr?.detail?.includes('expired')) {
+            console.log('[Auth] Token verification failed, clearing session');
+            // Token has expired, force logout
+            await get().logout();
+            return;
+          }
+
+          // Other errors: use cached profile anyway
           console.log('[Auth] Token verification failed, using cached profile');
           console.log('[Auth] Error:', profileErr);
 

@@ -116,14 +116,20 @@ def _decode_jwt(token: str) -> dict[str, Any]:
                 options={
                     "verify_aud": False,
                     "verify_signature": True,
-                    "verify_exp": False,  # Allow expired tokens during development
+                    "verify_exp": True,  # Verify expiration
                     "verify_nbf": True,
                     "verify_iat": True,
                     "verify_iss": False,  # Don't verify issuer for now
                 },
             )
+        except jwt.ExpiredSignatureError:
+            # Token has expired - client should refresh token or re-login
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired. Please refresh your token or login again.",
+            )
         except JWTError as e:
-            # Debug: Log why HS256 failed
+            # Other JWT errors - try JWKS fallback
             import logging
             logging.warning(f"HS256 JWT decode failed: {e}. Falling back to JWKS (RS256).")
             pass
