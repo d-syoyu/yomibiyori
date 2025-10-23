@@ -1,11 +1,16 @@
 /**
  * Auth Store using Zustand
  * Manages authentication state and user session
+ * Uses SecureStore for encrypted token storage (iOS Keychain / Android Keystore)
  */
 
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
+import {
+  setSecureItem,
+  getSecureItems,
+  deleteSecureItems,
+} from '../utils/secureStorage';
 import type { SignUpRequest, LoginRequest, UserProfile } from '../types';
 
 // ============================================================================
@@ -52,12 +57,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await api.signUp(data);
 
-      // Store access token and refresh token
+      // Store access token and refresh token securely
       if (response.session?.access_token) {
-        await AsyncStorage.setItem(ACCESS_TOKEN_KEY, response.session.access_token);
+        await setSecureItem(ACCESS_TOKEN_KEY, response.session.access_token);
       }
       if (response.session?.refresh_token) {
-        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
+        await setSecureItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
       }
 
       // Create user profile from response
@@ -67,8 +72,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         display_name: response.display_name,
       };
 
-      // Store user profile
-      await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+      // Store user profile securely
+      await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
 
       set({
         isAuthenticated: true,
@@ -93,12 +98,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await api.login(data);
 
-      // Store access token and refresh token
+      // Store access token and refresh token securely
       if (response.session?.access_token) {
-        await AsyncStorage.setItem(ACCESS_TOKEN_KEY, response.session.access_token);
+        await setSecureItem(ACCESS_TOKEN_KEY, response.session.access_token);
       }
       if (response.session?.refresh_token) {
-        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
+        await setSecureItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
       }
 
       // Create user profile from response
@@ -108,8 +113,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         display_name: response.display_name,
       };
 
-      // Store user profile
-      await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+      // Store user profile securely
+      await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
 
       set({
         isAuthenticated: true,
@@ -132,8 +137,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isLoading: true });
     try {
-      // Clear stored credentials (including refresh token)
-      await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_PROFILE_KEY]);
+      // Clear stored credentials securely (including refresh token)
+      await deleteSecureItems([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_PROFILE_KEY]);
 
       // Clear API token
       api.setAccessToken(null);
@@ -155,15 +160,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     console.log('[Auth] Loading stored session...');
     set({ isLoading: true });
     try {
-      const [accessToken, refreshToken, userProfileJson] = await AsyncStorage.multiGet([
+      const items = await getSecureItems([
         ACCESS_TOKEN_KEY,
         REFRESH_TOKEN_KEY,
         USER_PROFILE_KEY,
       ]);
 
-      const token = accessToken[1];
-      const refresh = refreshToken[1];
-      const profileData = userProfileJson[1];
+      const token = items.find(([key]) => key === ACCESS_TOKEN_KEY)?.[1];
+      const refresh = items.find(([key]) => key === REFRESH_TOKEN_KEY)?.[1];
+      const profileData = items.find(([key]) => key === USER_PROFILE_KEY)?.[1];
 
       console.log('[Auth] Token found:', !!token);
       console.log('[Auth] Refresh token found:', !!refresh);
@@ -191,8 +196,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             error: null,
           });
 
-          // Update stored profile
-          await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
+          // Update stored profile securely
+          await setSecureItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
         } catch (profileErr: any) {
           // Check if token has expired
           if (profileErr?.detail?.includes('expired')) {
@@ -205,12 +210,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 const newSession = await api.refreshToken(refresh);
                 console.log('[Auth] Token refreshed successfully');
 
-                // Store new tokens
+                // Store new tokens securely
                 if (newSession.access_token) {
-                  await AsyncStorage.setItem(ACCESS_TOKEN_KEY, newSession.access_token);
+                  await setSecureItem(ACCESS_TOKEN_KEY, newSession.access_token);
                 }
                 if (newSession.refresh_token) {
-                  await AsyncStorage.setItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
+                  await setSecureItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
                 }
 
                 // Verify with new token
@@ -224,8 +229,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   error: null,
                 });
 
-                // Update stored profile
-                await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
+                // Update stored profile securely
+                await setSecureItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
                 return;
               } catch (refreshErr: any) {
                 console.log('[Auth] Token refresh failed, logging out');
