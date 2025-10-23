@@ -30,9 +30,14 @@ export default function LoginScreen() {
       return;
     }
 
+    if (isSignUp && !displayName.trim()) {
+      Alert.alert('エラー', '表示名を入力してください');
+      return;
+    }
+
     try {
       if (isSignUp) {
-        await signUp({ email, password, display_name: displayName });
+        await signUp({ email, password, display_name: displayName.trim() });
       } else {
         await login({ email, password });
       }
@@ -75,7 +80,7 @@ export default function LoginScreen() {
           {isSignUp && (
             <TextInput
               style={styles.input}
-              placeholder="表示名（任意）"
+              placeholder="表示名"
               value={displayName}
               onChangeText={setDisplayName}
             />

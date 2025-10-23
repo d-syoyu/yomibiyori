@@ -10,7 +10,7 @@
 export interface SignUpRequest {
   email: string;
   password: string;
-  display_name?: string;
+  display_name: string;
 }
 
 export interface SessionToken {
