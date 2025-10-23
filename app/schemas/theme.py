@@ -18,3 +18,10 @@ class ThemeResponse(BaseModel):
     date: date
     sponsored: bool
     created_at: datetime
+
+
+class ThemeListResponse(BaseModel):
+    """Response for listing themes."""
+
+    themes: list[ThemeResponse]
+    count: int
