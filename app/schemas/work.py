@@ -34,6 +34,7 @@ class WorkResponse(BaseModel):
     text: str = Field(description="Lower verse (下の句) text")
     created_at: datetime
     likes_count: int = 0
+    display_name: str = Field(description="Display name of the author")
 
 
 class WorkLikeResponse(BaseModel):

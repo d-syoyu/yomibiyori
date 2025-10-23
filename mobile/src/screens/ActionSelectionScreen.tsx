@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -36,7 +37,18 @@ export default function ActionSelectionScreen({ route }: Props) {
       navigation.navigate('Composition', { theme });
     } catch (error: any) {
       console.error('Failed to fetch theme:', error);
-      Alert.alert('エラー', 'お題の取得に失敗しました');
+
+      // Provide user-friendly error messages
+      let errorMessage = 'お題の取得に失敗しました';
+      if (error?.status === 404) {
+        errorMessage = '今日のお題がまだ作成されていません';
+      } else if (error?.status === 0) {
+        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
+      } else if (error?.detail) {
+        errorMessage = error.detail;
+      }
+
+      Alert.alert('エラー', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +59,8 @@ export default function ActionSelectionScreen({ route }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
       <View style={styles.content}>
         {/* カテゴリ表示 */}
         <View style={styles.categoryHeader}>
@@ -96,18 +109,25 @@ export default function ActionSelectionScreen({ route }: Props) {
           <Text style={styles.backButtonText}>← カテゴリ選択に戻る</Text>
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7FAFC',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7FAFC',
   },
   content: {
     flex: 1,
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
     justifyContent: 'center',
   },
   categoryHeader: {

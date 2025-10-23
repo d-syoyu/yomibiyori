@@ -116,7 +116,7 @@ function RootNavigator() {
   // Load stored session on mount
   useEffect(() => {
     loadStoredSession();
-  }, []);
+  }, [loadStoredSession]);
 
   // Show loading spinner while checking auth status
   if (isLoading) {

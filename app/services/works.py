@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models import Like, Theme, Work
+from app.models import Like, Theme, User, Work
 from app.schemas.work import (
     WorkCreate,
     WorkImpressionRequest,
@@ -122,6 +122,10 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkR
 
     session.refresh(work)
 
+    # Get user display name
+    user = session.get(User, user_id)
+    display_name = user.display_name if user and user.display_name else user.email if user else "Unknown"
+
     return WorkResponse(
         id=str(work.id),
         user_id=str(work.user_id),
@@ -129,6 +133,7 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkR
         text=work.text,
         created_at=work.created_at,
         likes_count=0,
+        display_name=display_name,
     )
 
 
@@ -195,19 +200,23 @@ def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "
     if not theme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found")
 
-    # Fetch all works with likes count (without ordering, we'll sort in Python)
+    # Fetch all works with likes count and user display name (without ordering, we'll sort in Python)
     stmt = (
-        select(Work, func.count(Like.id).label("likes_count"))
+        select(Work, func.count(Like.id).label("likes_count"), User.display_name, User.email)
         .outerjoin(Like, Like.work_id == Work.id)
+        .join(User, User.id == Work.user_id)
         .where(Work.theme_id == theme_id)
-        .group_by(Work.id)
+        .group_by(Work.id, User.display_name, User.email)
     )
 
     results = session.execute(stmt).all()
 
     # Build response objects
     works_with_scores = []
-    for work, likes_count in results:
+    for work, likes_count, display_name, email in results:
+        # Use display_name if available, otherwise fallback to email
+        author_name = display_name if display_name else email
+
         work_response = WorkResponse(
             id=str(work.id),
             user_id=str(work.user_id),
@@ -215,6 +224,7 @@ def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "
             text=work.text,
             created_at=work.created_at,
             likes_count=likes_count or 0,
+            display_name=author_name or "Unknown",
         )
 
         if order_by == "fair_score":

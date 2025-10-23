@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ThemeCategory, HomeStackParamList } from '../types';
@@ -27,7 +28,8 @@ export default function CategorySelectionScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>今日のお題</Text>
         <Text style={styles.subtitle}>カテゴリを選択してください</Text>
@@ -47,10 +49,15 @@ export default function CategorySelectionScreen() {
         </View>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7FAFC',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7FAFC',
@@ -67,7 +74,9 @@ const styles = StyleSheet.create({
     color: '#718096',
   },
   content: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 28,

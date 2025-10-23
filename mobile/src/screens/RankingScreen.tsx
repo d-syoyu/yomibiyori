@@ -13,8 +13,10 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import type { ThemeCategory, RankingEntry, Theme } from '../types';
+import VerticalText from '../components/VerticalText';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
@@ -47,7 +49,18 @@ export default function RankingScreen() {
       setRankings(rankingData);
     } catch (err: any) {
       console.error('Failed to fetch rankings:', err);
-      setError(err?.detail || 'ランキングの取得に失敗しました');
+
+      // Provide user-friendly error messages
+      let errorMessage = 'ランキングの取得に失敗しました';
+      if (err?.status === 404) {
+        errorMessage = 'まだランキングが作成されていません\n22:00以降に確定されます';
+      } else if (err?.detail === 'Ranking not available') {
+        errorMessage = 'まだランキングが作成されていません\n22:00以降に確定されます';
+      } else if (err?.status === 0) {
+        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
+      }
+
+      setError(errorMessage);
       setRankings([]);
     } finally {
       setLoading(false);
@@ -69,47 +82,59 @@ export default function RankingScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>ランキング</Text>
-        <Text style={styles.subtitle}>今日の人気作品</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        {/* Fixed Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>ランキング</Text>
+          <Text style={styles.subtitle}>今日の人気作品</Text>
 
-        {/* Category Selector */}
-        <View style={styles.categorySelector}>
-          {CATEGORIES.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.categoryButton,
-                selectedCategory === category && styles.categoryButtonActive,
-              ]}
-              onPress={() => handleCategoryChange(category)}
-            >
-              <Text style={styles.categoryIcon}>{CATEGORY_ICONS[category]}</Text>
-              <Text
+          {/* Category Selector */}
+          <View style={styles.categorySelector}>
+            {CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category}
                 style={[
-                  styles.categoryText,
-                  selectedCategory === category && styles.categoryTextActive,
+                  styles.categoryButton,
+                  selectedCategory === category && styles.categoryButtonActive,
                 ]}
+                onPress={() => handleCategoryChange(category)}
               >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.categoryIcon}>{CATEGORY_ICONS[category]}</Text>
+                <Text
+                  style={[
+                    styles.categoryText,
+                    selectedCategory === category && styles.categoryTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Theme Display */}
+          {theme && (
+            <View style={styles.themeCard}>
+              <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
+              <View style={styles.verticalTextContainer}>
+                <VerticalText
+                  text={theme.text}
+                  textStyle={styles.themeVerticalText}
+                  direction="rtl"
+                />
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* Theme Display */}
-        {theme && (
-          <View style={styles.themeCard}>
-            <Text style={styles.themeLabel}>今日のお題</Text>
-            <Text style={styles.themeText}>{theme.text}</Text>
-          </View>
-        )}
+        {/* Scrollable Ranking List */}
+        <ScrollView
+          style={styles.rankingScrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
 
         {/* Loading State */}
         {loading && (
@@ -158,7 +183,13 @@ export default function RankingScreen() {
                   <Text style={styles.rankText}>{entry.rank}</Text>
                 </View>
                 <View style={styles.workInfo}>
-                  <Text style={styles.workText}>{entry.text}</Text>
+                  <View style={styles.workVerticalContainer}>
+                    <VerticalText
+                      text={entry.text}
+                      textStyle={styles.workVerticalText}
+                      direction="ltr"
+                    />
+                  </View>
                   <Text style={styles.workAuthor}>by {entry.user_name}</Text>
                 </View>
                 <Text style={styles.scoreText}>
@@ -168,18 +199,28 @@ export default function RankingScreen() {
             ))}
           </View>
         )}
+        </ScrollView>
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7FAFC',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7FAFC',
   },
-  content: {
-    padding: 24,
+  header: {
+    backgroundColor: '#F7FAFC',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   title: {
     fontSize: 28,
@@ -190,7 +231,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#718096',
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  rankingScrollView: {
+    flex: 1,
+    paddingHorizontal: 24,
   },
   categorySelector: {
     flexDirection: 'row',
@@ -227,20 +272,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4299E1',
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   themeLabel: {
     fontSize: 12,
     color: '#718096',
-    marginBottom: 8,
+    marginBottom: 12,
     fontWeight: '600',
   },
-  themeText: {
-    fontSize: 16,
+  verticalTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
+    marginVertical: 8,
+  },
+  themeVerticalText: {
+    fontSize: 18,
+    lineHeight: 30,
     color: '#2D3748',
-    lineHeight: 24,
+    fontWeight: '600',
   },
   loadingContainer: {
     backgroundColor: '#FFFFFF',
@@ -283,13 +338,15 @@ const styles = StyleSheet.create({
   },
   rankingList: {
     gap: 12,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   rankingCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -321,11 +378,18 @@ const styles = StyleSheet.create({
   },
   workInfo: {
     flex: 1,
+    alignItems: 'center',
   },
-  workText: {
+  workVerticalContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 60,
+    marginBottom: 8,
+  },
+  workVerticalText: {
     fontSize: 16,
+    lineHeight: 26,
     color: '#2D3748',
-    marginBottom: 4,
   },
   workAuthor: {
     fontSize: 12,

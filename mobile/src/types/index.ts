@@ -81,6 +81,7 @@ export interface Work {
   text: string;
   created_at: string;
   likes_count: number;
+  display_name: string;
 }
 
 // API returns an array of works directly, not wrapped in an object

@@ -145,6 +145,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Load stored session on app start
   loadStoredSession: async () => {
+    console.log('[Auth] Loading stored session...');
     set({ isLoading: true });
     try {
       const [accessToken, userProfileJson] = await AsyncStorage.multiGet([
@@ -155,16 +156,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = accessToken[1];
       const profileData = userProfileJson[1];
 
+      console.log('[Auth] Token found:', !!token);
+      console.log('[Auth] Profile data found:', !!profileData);
+
       if (token && profileData) {
         // Set API token
         api.setAccessToken(token);
+        console.log('[Auth] API token set');
 
         // Parse user profile
         const user: UserProfile = JSON.parse(profileData);
+        console.log('[Auth] User profile parsed:', user.email);
 
-        // Verify token is still valid by fetching profile
+        // Try to verify token, but fall back to cached profile if verification fails
         try {
+          console.log('[Auth] Verifying token...');
           const freshProfile = await api.getUserProfile();
+          console.log('[Auth] Token verified successfully');
+
           set({
             isAuthenticated: true,
             user: freshProfile,
@@ -175,14 +184,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Update stored profile
           await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
         } catch (profileErr) {
-          // Token is invalid, clear session
-          await get().logout();
+          // Token verification failed, but use cached profile anyway
+          console.log('[Auth] Token verification failed, using cached profile');
+          console.log('[Auth] Error:', profileErr);
+
+          // Use cached profile for now
+          set({
+            isAuthenticated: true,
+            user: user,
+            isLoading: false,
+            error: null,
+          });
         }
       } else {
+        console.log('[Auth] No stored session found');
         set({ isLoading: false, isAuthenticated: false });
       }
     } catch (err: any) {
-      console.error('Load session error:', err);
+      console.error('[Auth] Load session error:', err);
       set({ isLoading: false, isAuthenticated: false });
     }
   },

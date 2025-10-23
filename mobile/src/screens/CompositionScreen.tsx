@@ -13,26 +13,29 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../types';
 import api from '../services/api';
+import VerticalText from '../components/VerticalText';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Composition'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
 export default function CompositionScreen({ route }: Props) {
   const navigation = useNavigation<NavigationProp>();
-  const [text, setText] = useState('');
+  const [line1, setLine1] = useState('');
+  const [line2, setLine2] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const theme = route.params?.theme;
 
   const handleSubmit = async () => {
-    if (!text.trim()) {
-      Alert.alert('エラー', '俳句を入力してください');
+    if (!line1.trim() || !line2.trim()) {
+      Alert.alert('エラー', '下の句を両方入力してください');
       return;
     }
 
@@ -43,10 +46,10 @@ export default function CompositionScreen({ route }: Props) {
 
     setIsSubmitting(true);
     try {
-      // APIに作品を投稿
+      // APIに作品を投稿（改行で結合）
       await api.createWork({
         theme_id: theme.id,
-        text: text.trim(),
+        text: `${line1.trim()}\n${line2.trim()}`,
       });
 
       // 投稿成功後、鑑賞画面に遷移
@@ -57,7 +60,8 @@ export default function CompositionScreen({ route }: Props) {
           {
             text: 'OK',
             onPress: () => {
-              setText('');
+              setLine1('');
+              setLine2('');
               // 同じカテゴリの鑑賞画面に遷移
               navigation.navigate('Appreciation', { category: theme.category });
             },
@@ -66,7 +70,19 @@ export default function CompositionScreen({ route }: Props) {
       );
     } catch (error: any) {
       console.error('Failed to submit work:', error);
-      const errorMessage = error.detail || '投稿に失敗しました';
+
+      // Provide user-friendly error messages
+      let errorMessage = '投稿に失敗しました';
+      if (error?.status === 409) {
+        errorMessage = '今日はすでにこのカテゴリに投稿済みです';
+      } else if (error?.status === 403) {
+        errorMessage = '投稿時間外です\n投稿は6:00〜22:00の間のみ可能です';
+      } else if (error?.status === 0) {
+        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
+      } else if (error?.detail) {
+        errorMessage = error.detail;
+      }
+
       Alert.alert('エラー', errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -78,50 +94,108 @@ export default function CompositionScreen({ route }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        <Text style={styles.title}>詠む</Text>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          <Text style={styles.title}>詠む</Text>
 
-        {theme ? (
-          <View style={styles.themeCard}>
-            <Text style={styles.themeLabel}>今日のお題</Text>
-            <Text style={styles.themeText}>{theme.text}</Text>
-            <Text style={styles.themeCategory}>{theme.category}</Text>
-          </View>
-        ) : (
-          <View style={styles.noThemeCard}>
-            <Text style={styles.noThemeText}>
-              お題を選択してください
-            </Text>
-          </View>
-        )}
+          {theme ? (
+            <View style={styles.themeCard}>
+              <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
+              <View style={styles.verticalTextContainer}>
+                <VerticalText
+                  text={theme.text}
+                  textStyle={styles.themeVerticalText}
+                  direction="rtl"
+                />
+              </View>
+              <Text style={styles.themeCategory}>{theme.category}</Text>
+            </View>
+          ) : (
+            <View style={styles.noThemeCard}>
+              <Text style={styles.noThemeText}>
+                お題を選択してください
+              </Text>
+            </View>
+          )}
 
         <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>あなたの俳句</Text>
+          <Text style={styles.inputLabel}>下の句（第一句：7音）</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="俳句を入力してください（17音）"
-            value={text}
-            onChangeText={setText}
+            placeholder="7音で入力してください"
+            value={line1}
+            onChangeText={setLine1}
             multiline={true}
-            maxLength={100}
+            maxLength={20}
             editable={!!theme}
           />
-          <Text style={styles.charCount}>{text.length} / 100</Text>
+          <Text style={styles.charCount}>{line1.length} / 20</Text>
         </View>
+
+        <View style={styles.inputSection}>
+          <Text style={styles.inputLabel}>下の句（第二句：7音）</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="7音で入力してください"
+            value={line2}
+            onChangeText={setLine2}
+            multiline={true}
+            maxLength={20}
+            editable={!!theme}
+          />
+          <Text style={styles.charCount}>{line2.length} / 20</Text>
+        </View>
+
+        {/* プレビュー表示 */}
+        {(line1.trim() || line2.trim()) && (
+          <View style={styles.previewSection}>
+            <Text style={styles.previewLabel}>プレビュー</Text>
+            <View style={styles.previewCard}>
+              {/* お題（上の句） */}
+              {theme && (
+                <View style={styles.previewTheme}>
+                  <Text style={styles.previewThemeLabel}>お題</Text>
+                  <View style={styles.verticalTextContainer}>
+                    <VerticalText
+                      text={theme.text}
+                      textStyle={styles.previewThemeText}
+                      direction="rtl"
+                    />
+                  </View>
+                </View>
+              )}
+
+              {/* 下の句 */}
+              {(line1.trim() || line2.trim()) && (
+                <View style={styles.previewWork}>
+                  <Text style={styles.previewWorkLabel}>下の句</Text>
+                  <View style={styles.verticalTextContainer}>
+                    <VerticalText
+                      text={`${line1}\n${line2}`}
+                      textStyle={styles.previewWorkText}
+                      direction="ltr"
+                    />
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!theme || isSubmitting || !text.trim()) && styles.submitButtonDisabled,
+            (!theme || isSubmitting || !line1.trim() || !line2.trim()) && styles.submitButtonDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={!theme || isSubmitting || !text.trim()}
+          disabled={!theme || isSubmitting || !line1.trim() || !line2.trim()}
         >
           <Text style={styles.submitButtonText}>
             {isSubmitting ? '投稿中...' : '投稿する'}
           </Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -131,8 +205,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F7FAFC',
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     padding: 24,
   },
   title: {
@@ -144,7 +220,7 @@ const styles = StyleSheet.create({
   themeCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -155,17 +231,26 @@ const styles = StyleSheet.create({
   themeLabel: {
     fontSize: 12,
     color: '#718096',
-    marginBottom: 8,
-  },
-  themeText: {
-    fontSize: 20,
+    marginBottom: 12,
     fontWeight: '600',
+  },
+  verticalTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
+    marginVertical: 8,
+  },
+  themeVerticalText: {
+    fontSize: 18,
+    lineHeight: 30,
     color: '#2D3748',
-    marginBottom: 8,
+    fontWeight: '600',
   },
   themeCategory: {
     fontSize: 14,
     color: '#4A5568',
+    marginTop: 8,
+    textAlign: 'center',
   },
   noThemeCard: {
     backgroundColor: '#EDF2F7',
@@ -194,7 +279,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    minHeight: 120,
+    minHeight: 60,
     textAlignVertical: 'top',
   },
   charCount: {
@@ -216,5 +301,57 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  previewSection: {
+    marginBottom: 24,
+  },
+  previewLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginBottom: 12,
+  },
+  previewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  previewTheme: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  previewThemeLabel: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  previewThemeText: {
+    fontSize: 16,
+    lineHeight: 26,
+    color: '#4A5568',
+    fontWeight: '500',
+  },
+  previewWork: {
+    marginBottom: 8,
+  },
+  previewWorkLabel: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  previewWorkText: {
+    fontSize: 16,
+    lineHeight: 26,
+    color: '#2D3748',
+    fontWeight: '400',
   },
 });
