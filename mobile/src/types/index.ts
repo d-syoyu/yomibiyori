@@ -80,11 +80,15 @@ export interface Work {
   user_id: string;
   text: string;
   created_at: string;
+  likes_count: number;
 }
 
-export interface WorkListResponse {
-  works: Work[];
-  count: number;
+// API returns an array of works directly, not wrapped in an object
+export type WorkListResponse = Work[];
+
+export interface WorkLikeResponse {
+  status: 'liked';
+  likes_count: number;
 }
 
 // ============================================================================

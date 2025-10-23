@@ -16,6 +16,7 @@ import type {
   CreateWorkRequest,
   Work,
   WorkListResponse,
+  WorkLikeResponse,
   CreateResonanceRequest,
   Resonance,
   RankingResponse,
@@ -162,11 +163,15 @@ class ApiClient {
 
   async getWorksByTheme(themeId: string, params?: {
     limit?: number;
-    offset?: number;
   }): Promise<WorkListResponse> {
     const response = await this.client.get<WorkListResponse>('/works', {
       params: { theme_id: themeId, ...params },
     });
+    return response.data;
+  }
+
+  async likeWork(workId: string): Promise<WorkLikeResponse> {
+    const response = await this.client.post<WorkLikeResponse>(`/works/${workId}/like`);
     return response.data;
   }
 

@@ -3,16 +3,20 @@
  * 鑑賞画面 - 他のユーザーの作品を鑑賞する
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { HomeStackParamList, ThemeCategory } from '../types';
+import type { HomeStackParamList, ThemeCategory, Work } from '../types';
+import api from '../services/api';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 
@@ -22,9 +26,74 @@ export default function AppreciationScreen({ route }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory | undefined>(
     route.params?.category
   );
+  const [works, setWorks] = useState<Work[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentThemeId, setCurrentThemeId] = useState<string | null>(null);
+
+  // Load works for the selected category
+  const loadWorks = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
+    try {
+      // First, get today's theme for the category
+      const theme = await api.getTodayTheme(selectedCategory);
+      setCurrentThemeId(theme.id);
+
+      // Then, get works for that theme
+      const worksData = await api.getWorksByTheme(theme.id, { limit: 50 });
+      setWorks(worksData);
+    } catch (error: any) {
+      console.error('Failed to load works:', error);
+      Alert.alert('エラー', '作品の取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [selectedCategory]);
+
+  // Load works when category changes
+  useEffect(() => {
+    loadWorks();
+  }, [loadWorks]);
+
+  // Handle like action
+  const handleLike = async (workId: string) => {
+    try {
+      const response = await api.likeWork(workId);
+
+      // Update the likes count in the local state
+      setWorks(prevWorks =>
+        prevWorks.map(work =>
+          work.id === workId
+            ? { ...work, likes_count: response.likes_count }
+            : work
+        )
+      );
+
+      Alert.alert('成功', 'いいねを送りました！');
+    } catch (error: any) {
+      console.error('Failed to like work:', error);
+      const errorMessage = error.detail || 'いいねに失敗しました';
+      Alert.alert('エラー', errorMessage);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadWorks(true);
+  };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+      }
+    >
       <View style={styles.content}>
         <Text style={styles.title}>鑑賞</Text>
 
@@ -73,17 +142,46 @@ export default function AppreciationScreen({ route }: Props) {
 
         <View style={styles.worksSection}>
           <Text style={styles.sectionTitle}>
-            {selectedCategory ? `${selectedCategory}の作品` : 'すべての作品'}
+            {selectedCategory ? `${selectedCategory}の作品` : '今日の作品'}
           </Text>
 
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>作品がありません</Text>
-            <Text style={styles.emptyStateSubtext}>
-              まだ誰も作品を投稿していません
-            </Text>
-          </View>
-
-          {/* TODO: Display works list from API */}
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4A5568" />
+              <Text style={styles.loadingText}>作品を読み込み中...</Text>
+            </View>
+          ) : works.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>作品がありません</Text>
+              <Text style={styles.emptyStateSubtext}>
+                まだ誰も作品を投稿していません
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.worksList}>
+              {works.map((work) => (
+                <View key={work.id} style={styles.workCard}>
+                  <Text style={styles.workText}>{work.text}</Text>
+                  <View style={styles.workFooter}>
+                    <Text style={styles.workMeta}>
+                      {new Date(work.created_at).toLocaleTimeString('ja-JP', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.likeButton}
+                      onPress={() => handleLike(work.id)}
+                    >
+                      <Text style={styles.likeButtonText}>
+                        ♥ {work.likes_count}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -137,6 +235,17 @@ const styles = StyleSheet.create({
     color: '#2D3748',
     marginBottom: 16,
   },
+  loadingContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#718096',
+  },
   emptyState: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -152,5 +261,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#718096',
     textAlign: 'center',
+  },
+  worksList: {
+    gap: 12,
+  },
+  workCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  workText: {
+    fontSize: 18,
+    color: '#2D3748',
+    lineHeight: 28,
+    marginBottom: 12,
+  },
+  workFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  workMeta: {
+    fontSize: 12,
+    color: '#A0AEC0',
+  },
+  likeButton: {
+    backgroundColor: '#EDF2F7',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  likeButtonText: {
+    fontSize: 14,
+    color: '#E53E3E',
+    fontWeight: '600',
   },
 });
