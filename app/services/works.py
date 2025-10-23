@@ -310,12 +310,12 @@ def get_my_works_summary(session: Session, *, user_id: str) -> list[WorkDateSumm
     Returns:
         List of date summaries with works count and total likes, ordered by date descending
     """
-    # Query to get works grouped by theme date with aggregated counts
+    # Query to get works with their theme date and likes count
     stmt = (
         select(
             Theme.date,
-            func.count(Work.id).label("works_count"),
-            func.coalesce(func.sum(func.count(Like.id)), 0).label("total_likes"),
+            Work.id,
+            func.count(Like.id).label("likes_count"),
         )
         .join(Theme, Work.theme_id == Theme.id)
         .outerjoin(Like, Like.work_id == Work.id)
@@ -326,13 +326,13 @@ def get_my_works_summary(session: Session, *, user_id: str) -> list[WorkDateSumm
     # Get results
     results = session.execute(stmt).all()
 
-    # Group by date and aggregate
+    # Group by date and aggregate in Python
     date_summaries = {}
-    for theme_date, works_count, total_likes in results:
+    for theme_date, work_id, likes_count in results:
         if theme_date not in date_summaries:
             date_summaries[theme_date] = {"works_count": 0, "total_likes": 0}
         date_summaries[theme_date]["works_count"] += 1
-        date_summaries[theme_date]["total_likes"] += total_likes or 0
+        date_summaries[theme_date]["total_likes"] += likes_count or 0
 
     # Build response objects
     summaries = [
