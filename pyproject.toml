@@ -44,9 +44,6 @@ exclude = ["alembic*", "tests*", "scripts*"]
 pythonpath = ["."]
 addopts = "-q"
 
-[tool.setuptools]
-zip_safe = false
-
 [tool.ruff]
 line-length = 120
 target-version = "py311"
