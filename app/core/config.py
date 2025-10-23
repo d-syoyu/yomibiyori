@@ -135,7 +135,7 @@ class Settings(BaseSettings):
     theme_ai_provider: str = Field(
         default="openai",
         alias="THEME_AI_PROVIDER",
-        description="Provider used for theme generation AI (openai or claude).",
+        description="Provider used for theme generation AI (openai, claude, or xai).",
     )
     openai_api_key: str | None = Field(
         default=None,
@@ -167,6 +167,22 @@ class Settings(BaseSettings):
         default=30.0,
         alias="CLAUDE_TIMEOUT",
         description="Timeout in seconds for Claude API calls.",
+        ge=1.0,
+    )
+    xai_api_key: str | None = Field(
+        default=None,
+        alias="XAI_API_KEY",
+        description="X.ai API key used when THEME_AI_PROVIDER=xai.",
+    )
+    xai_model: str = Field(
+        default="grok-4-fast-reasoning",
+        alias="XAI_MODEL",
+        description="X.ai Grok model used for theme generation.",
+    )
+    xai_timeout: float = Field(
+        default=30.0,
+        alias="XAI_TIMEOUT",
+        description="Timeout in seconds for X.ai API calls.",
         ge=1.0,
     )
 
