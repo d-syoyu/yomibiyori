@@ -8,6 +8,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '../stores/useAuthStore';
 import type { RootStackParamList, MainTabParamList, HomeStackParamList } from '../types';
@@ -84,6 +85,9 @@ function MainTabNavigator() {
         options={{
           title: 'ホーム',
           tabBarLabel: 'ホーム',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
         }}
       />
       <MainTab.Screen
@@ -92,6 +96,9 @@ function MainTabNavigator() {
         options={{
           title: 'ランキング',
           tabBarLabel: 'ランキング',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trophy" size={size} color={color} />
+          ),
         }}
       />
       <MainTab.Screen
@@ -100,6 +107,9 @@ function MainTabNavigator() {
         options={{
           title: 'マイページ',
           tabBarLabel: 'マイページ',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
         }}
       />
     </MainTab.Navigator>

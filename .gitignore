@@ -22,6 +22,14 @@ yarn-error.log*
 .expo/
 dist/
 build/
+mobile/.expo/
+mobile/dist/
+mobile/node_modules/
+mobile/npm-debug.log*
+mobile/yarn-debug.log*
+mobile/yarn-error.log*
+mobile/.expo-shared/
+mobile/web-build/
 
 # OS / Editor
 .DS_Store

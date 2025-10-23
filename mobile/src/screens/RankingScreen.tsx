@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import type { ThemeCategory, RankingEntry, Theme } from '../types';
 import VerticalText from '../components/VerticalText';
+import { useThemeStore } from '../stores/useThemeStore';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
@@ -28,6 +29,8 @@ const CATEGORY_ICONS: Record<ThemeCategory, string> = {
 };
 
 export default function RankingScreen() {
+  const getTodayTheme = useThemeStore(state => state.getTodayTheme);
+
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>('恋愛');
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [theme, setTheme] = useState<Theme | null>(null);
@@ -41,26 +44,11 @@ export default function RankingScreen() {
       setLoading(true);
       setError(null);
 
-      let themeData: Theme;
-      try {
-        // Try to get today's theme for the category
-        themeData = await api.getTodayTheme(category);
-      } catch (err: any) {
-        // If today's theme not found, get the most recent theme for this category
-        if (err?.status === 404) {
-          console.log('[RankingScreen] Today\'s theme not found, fetching latest theme');
-          const themesResponse = await api.getThemes({ category, limit: 1 });
-          if (themesResponse.themes && themesResponse.themes.length > 0) {
-            themeData = themesResponse.themes[0];
-            console.log('[RankingScreen] Using latest theme:', themeData.date);
-          } else {
-            throw new Error('No themes found for this category');
-          }
-        } else {
-          throw err;
-        }
-      }
+      // Get today's theme for the category (using cached store with built-in fallback)
+      // This should be instant if already cached
+      const themeData = await getTodayTheme(category);
 
+      // Display theme immediately
       setTheme(themeData);
 
       // Check if ranking is finalized (theme date is before today)
@@ -71,7 +59,7 @@ export default function RankingScreen() {
       const isRankingFinalized = themeDate < today;
       setIsFinalized(isRankingFinalized);
 
-      // Fetch rankings for the theme
+      // Now fetch rankings (this might take time)
       const rankingData = await api.getRanking(themeData.id);
       setRankings(rankingData);
     } catch (err: any) {
@@ -96,6 +84,19 @@ export default function RankingScreen() {
       setRefreshing(false);
     }
   };
+
+  // Pre-fetch all category themes on mount for instant category switching
+  useEffect(() => {
+    const prefetchAllThemes = async () => {
+      console.log('[RankingScreen] Pre-fetching all category themes');
+      await Promise.all(
+        CATEGORIES.map(category => getTodayTheme(category))
+      );
+      console.log('[RankingScreen] All themes cached');
+    };
+
+    prefetchAllThemes();
+  }, []); // Run only once on mount
 
   useEffect(() => {
     fetchRankings(selectedCategory);

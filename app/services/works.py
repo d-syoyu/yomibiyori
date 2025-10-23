@@ -15,6 +15,7 @@ from app.core.config import get_settings
 from app.models import Like, Theme, User, Work
 from app.schemas.work import (
     WorkCreate,
+    WorkDateSummary,
     WorkImpressionRequest,
     WorkImpressionResponse,
     WorkResponse,
@@ -297,6 +298,56 @@ def list_my_works(
         works.append(work_response)
 
     return works
+
+
+def get_my_works_summary(session: Session, *, user_id: str) -> list[WorkDateSummary]:
+    """Return summary of works grouped by theme date for the authenticated user.
+
+    Args:
+        session: Database session
+        user_id: User identifier
+
+    Returns:
+        List of date summaries with works count and total likes, ordered by date descending
+    """
+    # Query to get works grouped by theme date with aggregated counts
+    stmt = (
+        select(
+            Theme.date,
+            func.count(Work.id).label("works_count"),
+            func.coalesce(func.sum(func.count(Like.id)), 0).label("total_likes"),
+        )
+        .join(Theme, Work.theme_id == Theme.id)
+        .outerjoin(Like, Like.work_id == Work.id)
+        .where(Work.user_id == user_id)
+        .group_by(Theme.date, Work.id)
+    )
+
+    # Get results
+    results = session.execute(stmt).all()
+
+    # Group by date and aggregate
+    date_summaries = {}
+    for theme_date, works_count, total_likes in results:
+        if theme_date not in date_summaries:
+            date_summaries[theme_date] = {"works_count": 0, "total_likes": 0}
+        date_summaries[theme_date]["works_count"] += 1
+        date_summaries[theme_date]["total_likes"] += total_likes or 0
+
+    # Build response objects
+    summaries = [
+        WorkDateSummary(
+            date=date_key,
+            works_count=data["works_count"],
+            total_likes=data["total_likes"],
+        )
+        for date_key, data in date_summaries.items()
+    ]
+
+    # Sort by date descending (newest first)
+    summaries.sort(key=lambda s: s.date, reverse=True)
+
+    return summaries
 
 
 def record_impression(

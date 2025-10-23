@@ -12,6 +12,7 @@ from app.core.redis import get_redis_client
 from app.db.session import get_db_session
 from app.schemas.work import (
     WorkCreate,
+    WorkDateSummary,
     WorkImpressionRequest,
     WorkImpressionResponse,
     WorkLikeResponse,
@@ -62,6 +63,24 @@ def list_works(
     """
 
     return works_service.list_works(session=session, theme_id=theme_id, limit=limit, order_by=order_by)
+
+
+@router.get(
+    "/me/summary",
+    response_model=list[WorkDateSummary],
+    summary="Get summary of user's works grouped by date",
+)
+def get_my_works_summary(
+    session: Annotated[Session, Depends(get_db_session)],
+    user_id: Annotated[str, Depends(get_current_user_id)],
+) -> list[WorkDateSummary]:
+    """Return summary of works grouped by theme date.
+
+    Returns a list of dates with work counts and total likes for each date.
+    Useful for displaying an accordion-style view of works by date.
+    """
+
+    return works_service.get_my_works_summary(session=session, user_id=user_id)
 
 
 @router.get(

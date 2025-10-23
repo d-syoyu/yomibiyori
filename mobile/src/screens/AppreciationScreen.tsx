@@ -19,6 +19,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
+import { useThemeStore } from '../stores/useThemeStore';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 
@@ -32,6 +33,8 @@ const CATEGORY_ICONS: Record<ThemeCategory, string> = {
 };
 
 export default function AppreciationScreen({ route }: Props) {
+  const getTodayTheme = useThemeStore(state => state.getTodayTheme);
+
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>(
     route.params?.category || '恋愛'
   );
@@ -53,9 +56,9 @@ export default function AppreciationScreen({ route }: Props) {
     try {
       const newThemesMap = new Map<string, Theme>();
 
-      // Get theme and works for selected category
+      // Get theme and works for selected category (using cached store)
       console.log('[AppreciationScreen] Fetching theme for category:', selectedCategory);
-      const theme = await api.getTodayTheme(selectedCategory);
+      const theme = await getTodayTheme(selectedCategory);
       console.log('[AppreciationScreen] Theme received:', theme);
       setCurrentThemeId(theme.id);
       newThemesMap.set(theme.id, theme);
@@ -84,7 +87,7 @@ export default function AppreciationScreen({ route }: Props) {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, getTodayTheme]);
 
   // Load works when category changes
   useEffect(() => {

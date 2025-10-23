@@ -19,13 +19,24 @@ import { useAuthStore } from '../stores/useAuthStore';
 import type { Work, Theme } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
+import { useThemeStore } from '../stores/useThemeStore';
+
+// Group works by theme date
+interface WorksByDate {
+  date: string;
+  dateObj: Date;
+  works: Array<{ work: Work; theme?: Theme }>;
+}
 
 export default function MyPoemsScreen() {
   const { user, logout } = useAuthStore();
+  const getThemeById = useThemeStore(state => state.getThemeById);
+
   const [works, setWorks] = useState<Work[]>([]);
   const [themesMap, setThemesMap] = useState<Map<string, Theme>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
   // Load user's works
   const loadMyWorks = useCallback(async (isRefresh = false) => {
@@ -50,7 +61,7 @@ export default function MyPoemsScreen() {
       await Promise.all(
         uniqueThemeIds.map(async (themeId) => {
           try {
-            const theme = await api.getThemeById(themeId);
+            const theme = await getThemeById(themeId);
             newThemesMap.set(theme.id, theme);
           } catch (error) {
             console.error('[MyPoemsScreen] Failed to fetch theme:', themeId, error);
@@ -73,7 +84,7 @@ export default function MyPoemsScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [getThemeById]);
 
   // Load works on mount
   useEffect(() => {
@@ -87,6 +98,53 @@ export default function MyPoemsScreen() {
   const handleRefresh = () => {
     loadMyWorks(true);
   };
+
+  // Group works by theme date
+  const groupWorksByDate = (): WorksByDate[] => {
+    const grouped = new Map<string, WorksByDate>();
+
+    works.forEach((work) => {
+      const theme = themesMap.get(work.theme_id);
+      if (!theme) return;
+
+      const dateStr = theme.date;
+      if (!grouped.has(dateStr)) {
+        grouped.set(dateStr, {
+          date: dateStr,
+          dateObj: new Date(dateStr),
+          works: [],
+        });
+      }
+      grouped.get(dateStr)!.works.push({ work, theme });
+    });
+
+    // Sort by date descending (newest first)
+    return Array.from(grouped.values()).sort(
+      (a, b) => b.dateObj.getTime() - a.dateObj.getTime()
+    );
+  };
+
+  const toggleDateExpansion = (date: string) => {
+    setExpandedDates((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(date)) {
+        newSet.delete(date);
+      } else {
+        newSet.add(date);
+      }
+      return newSet;
+    });
+  };
+
+  // Auto-expand the most recent date
+  useEffect(() => {
+    if (works.length > 0 && themesMap.size > 0) {
+      const groupedWorks = groupWorksByDate();
+      if (groupedWorks.length > 0 && expandedDates.size === 0) {
+        setExpandedDates(new Set([groupedWorks[0].date]));
+      }
+    }
+  }, [works, themesMap]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -146,46 +204,81 @@ export default function MyPoemsScreen() {
               </View>
             ) : (
               <View style={styles.worksList}>
-                {works.map((work) => {
-                  const theme = themesMap.get(work.theme_id);
-                  // Combine theme (upper verse) and work (lower verse) into one tanka
-                  const tankaText = theme ? `${theme.text}\n${work.text}` : work.text;
+                {groupWorksByDate().map((dateGroup) => {
+                  const isExpanded = expandedDates.has(dateGroup.date);
+                  const totalLikes = dateGroup.works.reduce((sum, { work }) => sum + work.likes_count, 0);
 
                   return (
-                    <View key={work.id} style={styles.workCard}>
-                      {/* Complete Tanka (短歌) */}
-                      <View style={styles.tankaSection}>
-                        <Text style={styles.tankaSectionLabel}>短歌</Text>
-                        <View style={styles.tankaTextContainer}>
-                          <VerticalText
-                            text={tankaText}
-                            textStyle={styles.tankaVerticalText}
-                            direction="rtl"
-                          />
-                        </View>
-                      </View>
-
-                      {/* Footer with date and likes */}
-                      <View style={styles.workFooter}>
-                        <View style={styles.workMetaContainer}>
-                          <Text style={styles.workDate}>
-                            {new Date(work.created_at).toLocaleDateString('ja-JP', {
+                    <View key={dateGroup.date} style={styles.dateSection}>
+                      {/* Accordion Header */}
+                      <TouchableOpacity
+                        style={styles.accordionHeader}
+                        onPress={() => toggleDateExpansion(dateGroup.date)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.accordionHeaderLeft}>
+                          <Text style={styles.accordionDate}>
+                            {new Date(dateGroup.date).toLocaleDateString('ja-JP', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
                             })}
                           </Text>
-                          <Text style={styles.workTime}>
-                            {new Date(work.created_at).toLocaleTimeString('ja-JP', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </Text>
+                          <View style={styles.accordionMeta}>
+                            <Text style={styles.accordionMetaText}>
+                              {dateGroup.works.length}首
+                            </Text>
+                            <Text style={styles.accordionMetaDivider}>•</Text>
+                            <Text style={styles.accordionMetaText}>
+                              ♥ {totalLikes}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={styles.likesInfo}>
-                          <Text style={styles.likesText}>♥ {work.likes_count}</Text>
+                        <Text style={[
+                          styles.accordionIcon,
+                          isExpanded && styles.accordionIconExpanded
+                        ]}>
+                          ›
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Accordion Content */}
+                      {isExpanded && (
+                        <View style={styles.accordionContent}>
+                          {dateGroup.works.map(({ work, theme }) => {
+                            // Combine theme (upper verse) and work (lower verse) into one tanka
+                            const tankaText = theme ? `${theme.text}\n${work.text}` : work.text;
+
+                            return (
+                              <View key={work.id} style={styles.workCard}>
+                                {/* Complete Tanka (短歌) */}
+                                <View style={styles.tankaSection}>
+                                  <View style={styles.tankaTextContainer}>
+                                    <VerticalText
+                                      text={tankaText}
+                                      textStyle={styles.tankaVerticalText}
+                                      direction="rtl"
+                                    />
+                                  </View>
+                                </View>
+
+                                {/* Footer with time and likes */}
+                                <View style={styles.workFooter}>
+                                  <Text style={styles.workTime}>
+                                    {new Date(work.created_at).toLocaleTimeString('ja-JP', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </Text>
+                                  <View style={styles.likesInfo}>
+                                    <Text style={styles.likesText}>♥ {work.likes_count}</Text>
+                                  </View>
+                                </View>
+                              </View>
+                            );
+                          })}
                         </View>
-                      </View>
+                      )}
                     </View>
                   );
                 })}
@@ -327,33 +420,76 @@ const styles = StyleSheet.create({
     color: '#718096',
   },
   worksList: {
-    gap: 16,
+    gap: 12,
+  },
+  dateSection: {
+    marginBottom: 12,
+  },
+  accordionHeader: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  accordionHeaderLeft: {
+    flex: 1,
+  },
+  accordionDate: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginBottom: 6,
+  },
+  accordionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  accordionMetaText: {
+    fontSize: 13,
+    color: '#718096',
+  },
+  accordionMetaDivider: {
+    fontSize: 13,
+    color: '#CBD5E0',
+  },
+  accordionIcon: {
+    fontSize: 24,
+    color: '#CBD5E0',
+    transform: [{ rotate: '0deg' }],
+  },
+  accordionIconExpanded: {
+    transform: [{ rotate: '90deg' }],
+  },
+  accordionContent: {
+    marginTop: 8,
+    gap: 12,
   },
   workCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tankaSection: {
-    marginBottom: 16,
-  },
-  tankaSectionLabel: {
-    fontSize: 12,
-    color: '#718096',
-    marginBottom: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+    marginBottom: 12,
   },
   tankaTextContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 180,
-    paddingVertical: 16,
+    minHeight: 160,
+    paddingVertical: 12,
   },
   tankaVerticalText: {
     fontSize: 18,
@@ -365,21 +501,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
   },
-  workMetaContainer: {
-    flex: 1,
-  },
-  workDate: {
-    fontSize: 12,
-    color: '#4A5568',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
   workTime: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#A0AEC0',
   },
   likesInfo: {

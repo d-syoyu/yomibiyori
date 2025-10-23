@@ -11,6 +11,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory } from '../types';
 import api from '../services/api';
+import { useThemeStore } from '../stores/useThemeStore';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ActionSelection'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -24,6 +25,7 @@ const CATEGORY_INFO: Record<ThemeCategory, { emoji: string; name: string }> = {
 
 export default function ActionSelectionScreen({ route }: Props) {
   const navigation = useNavigation<NavigationProp>();
+  const getTodayTheme = useThemeStore(state => state.getTodayTheme);
   const { category } = route.params;
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,8 +34,8 @@ export default function ActionSelectionScreen({ route }: Props) {
   const handleCompose = async () => {
     setIsLoading(true);
     try {
-      // お題を取得
-      const theme = await api.getTodayTheme(category);
+      // お題を取得（キャッシュから）
+      const theme = await getTodayTheme(category);
       navigation.navigate('Composition', { theme });
     } catch (error: any) {
       console.error('Failed to fetch theme:', error);

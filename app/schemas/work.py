@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -71,3 +71,11 @@ class WorkImpressionResponse(BaseModel):
         ge=0,
         description="Approximate unique viewer count derived from hashed identifiers",
     )
+
+
+class WorkDateSummary(BaseModel):
+    """Summary of works for a specific theme date."""
+
+    date: date = Field(description="Theme date (テーマの日付)")
+    works_count: int = Field(ge=0, description="Number of works for this date")
+    total_likes: int = Field(ge=0, description="Total likes across all works for this date")
