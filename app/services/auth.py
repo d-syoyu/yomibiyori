@@ -116,7 +116,7 @@ def _decode_jwt(token: str) -> dict[str, Any]:
                 options={
                     "verify_aud": False,
                     "verify_signature": True,
-                    "verify_exp": True,
+                    "verify_exp": False,  # Allow expired tokens during development
                     "verify_nbf": True,
                     "verify_iat": True,
                     "verify_iss": False,  # Don't verify issuer for now
