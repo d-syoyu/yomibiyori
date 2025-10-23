@@ -115,7 +115,10 @@ def _decode_jwt(token: str) -> dict[str, Any]:
                 algorithms=["HS256"],
                 options={"verify_aud": False},
             )
-        except JWTError:
+        except JWTError as e:
+            # Debug: Log why HS256 failed
+            import logging
+            logging.warning(f"HS256 JWT decode failed: {e}. Falling back to JWKS (RS256).")
             pass
 
     return _decode_with_jwks(token, settings)
