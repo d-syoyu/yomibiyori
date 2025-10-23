@@ -148,30 +148,19 @@ export default function MyPoemsScreen() {
               <View style={styles.worksList}>
                 {works.map((work) => {
                   const theme = themesMap.get(work.theme_id);
+                  // Combine theme (upper verse) and work (lower verse) into one tanka
+                  const tankaText = theme ? `${theme.text}\n${work.text}` : work.text;
+
                   return (
                     <View key={work.id} style={styles.workCard}>
-                      {/* Theme (上の句) */}
-                      {theme && (
-                        <View style={styles.themeSection}>
-                          <Text style={styles.themeSectionLabel}>お題（上の句）</Text>
-                          <View style={styles.verticalTextContainer}>
-                            <VerticalText
-                              text={theme.text}
-                              textStyle={styles.themeVerticalText}
-                              direction="rtl"
-                            />
-                          </View>
-                        </View>
-                      )}
-
-                      {/* Work (下の句) */}
-                      <View style={styles.workSection}>
-                        <Text style={styles.workSectionLabel}>あなたの詠み（下の句）</Text>
-                        <View style={styles.verticalTextContainer}>
+                      {/* Complete Tanka (短歌) */}
+                      <View style={styles.tankaSection}>
+                        <Text style={styles.tankaSectionLabel}>短歌</Text>
+                        <View style={styles.tankaTextContainer}>
                           <VerticalText
-                            text={work.text}
-                            textStyle={styles.workVerticalText}
-                            direction="ltr"
+                            text={tankaText}
+                            textStyle={styles.tankaVerticalText}
+                            direction="rtl"
                           />
                         </View>
                       </View>
@@ -350,42 +339,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  themeSection: {
+  tankaSection: {
     marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
-  themeSectionLabel: {
+  tankaSectionLabel: {
     fontSize: 12,
     color: '#718096',
-    marginBottom: 12,
+    marginBottom: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
-  workSection: {
-    marginBottom: 12,
-  },
-  workSectionLabel: {
-    fontSize: 12,
-    color: '#4299E1',
-    marginBottom: 12,
-    fontWeight: '600',
-  },
-  verticalTextContainer: {
+  tankaTextContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 120,
-    marginVertical: 8,
+    minHeight: 180,
+    paddingVertical: 16,
   },
-  themeVerticalText: {
-    fontSize: 16,
-    lineHeight: 28,
-    color: '#718096',
-    fontWeight: '500',
-  },
-  workVerticalText: {
+  tankaVerticalText: {
     fontSize: 18,
-    lineHeight: 28,
+    lineHeight: 32,
     color: '#2D3748',
     fontWeight: '500',
   },

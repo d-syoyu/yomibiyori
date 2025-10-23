@@ -56,3 +56,33 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
         sponsored=theme.sponsored,
         created_at=theme.created_at,
     )
+
+
+def get_theme_by_id(session: Session, theme_id: str) -> ThemeResponse:
+    """Return a theme by its ID.
+
+    Args:
+        session: Database session
+        theme_id: Theme identifier
+
+    Returns:
+        ThemeResponse for the specified theme
+
+    Raises:
+        HTTPException: 404 if theme not found
+    """
+    theme = session.get(Theme, theme_id)
+    if not theme:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Theme with id '{theme_id}' not found"
+        )
+
+    return ThemeResponse(
+        id=str(theme.id),
+        text=theme.text,
+        category=theme.category,
+        date=theme.date,
+        sponsored=theme.sponsored,
+        created_at=theme.created_at,
+    )

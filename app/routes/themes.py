@@ -36,3 +36,16 @@ def get_today_theme(
     returns the most recent.
     """
     return themes_service.get_today_theme(session=session, category=category)
+
+
+@router.get(
+    "/{theme_id}",
+    response_model=ThemeResponse,
+    summary="Get theme by ID",
+)
+def get_theme_by_id(
+    theme_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> ThemeResponse:
+    """Return a specific theme by its ID."""
+    return themes_service.get_theme_by_id(session=session, theme_id=theme_id)
