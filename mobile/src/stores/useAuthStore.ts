@@ -17,10 +17,10 @@ import type { SignUpRequest, LoginRequest, UserProfile } from '../types';
 // Constants
 // ============================================================================
 
-const ACCESS_TOKEN_KEY = '@yomibiyori:accessToken';
-const REFRESH_TOKEN_KEY = '@yomibiyori:refreshToken';
-const TOKEN_EXPIRES_AT_KEY = '@yomibiyori:tokenExpiresAt';
-const USER_PROFILE_KEY = '@yomibiyori:userProfile';
+const ACCESS_TOKEN_KEY = 'yomibiyori.accessToken';
+const REFRESH_TOKEN_KEY = 'yomibiyori.refreshToken';
+const TOKEN_EXPIRES_AT_KEY = 'yomibiyori.tokenExpiresAt';
+const USER_PROFILE_KEY = 'yomibiyori.userProfile';
 
 // Refresh token proactively when less than 5 minutes remain
 const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
