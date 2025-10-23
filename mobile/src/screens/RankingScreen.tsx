@@ -34,6 +34,7 @@ export default function RankingScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFinalized, setIsFinalized] = useState(false);
 
   const fetchRankings = async (category: ThemeCategory) => {
     try {
@@ -61,6 +62,14 @@ export default function RankingScreen() {
       }
 
       setTheme(themeData);
+
+      // Check if ranking is finalized (theme date is before today)
+      const themeDate = new Date(themeData.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      themeDate.setHours(0, 0, 0, 0);
+      const isRankingFinalized = themeDate < today;
+      setIsFinalized(isRankingFinalized);
 
       // Fetch rankings for the theme
       const rankingData = await api.getRanking(themeData.id);
@@ -106,8 +115,25 @@ export default function RankingScreen() {
       <View style={styles.container}>
         {/* Fixed Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>ランキング</Text>
-          <Text style={styles.subtitle}>今日の人気作品</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>ランキング</Text>
+            {theme && (
+              <View style={[
+                styles.statusBadge,
+                isFinalized ? styles.statusBadgeFinalized : styles.statusBadgeTemporary
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  isFinalized ? styles.statusBadgeTextFinalized : styles.statusBadgeTextTemporary
+                ]}>
+                  {isFinalized ? '確定' : '仮'}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.subtitle}>
+            {isFinalized ? '確定したランキング' : 'リアルタイム集計中（22:00確定）'}
+          </Text>
 
           {/* Category Selector */}
           <View style={styles.categorySelector}>
@@ -242,14 +268,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#2D3748',
-    marginBottom: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusBadgeFinalized: {
+    backgroundColor: '#48BB78',
+  },
+  statusBadgeTemporary: {
+    backgroundColor: '#EDF2F7',
+    borderWidth: 1,
+    borderColor: '#CBD5E0',
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusBadgeTextFinalized: {
+    color: '#FFFFFF',
+  },
+  statusBadgeTextTemporary: {
+    color: '#718096',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#718096',
     marginBottom: 20,
   },
