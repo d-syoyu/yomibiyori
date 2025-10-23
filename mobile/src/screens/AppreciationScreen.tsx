@@ -41,17 +41,38 @@ export default function AppreciationScreen({ route }: Props) {
     }
 
     try {
-      // First, get today's theme for the category
-      console.log('[AppreciationScreen] Fetching theme...');
-      const theme = await api.getTodayTheme(selectedCategory);
-      console.log('[AppreciationScreen] Theme received:', theme);
-      setCurrentThemeId(theme.id);
+      if (selectedCategory) {
+        // Single category: get theme and works
+        console.log('[AppreciationScreen] Fetching theme for category:', selectedCategory);
+        const theme = await api.getTodayTheme(selectedCategory);
+        console.log('[AppreciationScreen] Theme received:', theme);
+        setCurrentThemeId(theme.id);
 
-      // Then, get works for that theme
-      console.log('[AppreciationScreen] Fetching works for theme:', theme.id);
-      const worksData = await api.getWorksByTheme(theme.id, { limit: 50 });
-      console.log('[AppreciationScreen] Works received:', worksData.length, 'works');
-      setWorks(worksData);
+        console.log('[AppreciationScreen] Fetching works for theme:', theme.id);
+        const worksData = await api.getWorksByTheme(theme.id, { limit: 50 });
+        console.log('[AppreciationScreen] Works received:', worksData.length, 'works');
+        setWorks(worksData);
+      } else {
+        // All categories: get themes for all categories and merge works
+        console.log('[AppreciationScreen] Fetching works for all categories');
+        const allWorks: Work[] = [];
+
+        for (const category of CATEGORIES) {
+          try {
+            const theme = await api.getTodayTheme(category);
+            const worksData = await api.getWorksByTheme(theme.id, { limit: 50 });
+            allWorks.push(...worksData);
+          } catch (err) {
+            console.warn(`[AppreciationScreen] Failed to load works for ${category}:`, err);
+          }
+        }
+
+        // Sort by creation time (newest first)
+        allWorks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        console.log('[AppreciationScreen] Total works received:', allWorks.length, 'works');
+        setWorks(allWorks);
+        setCurrentThemeId(null);
+      }
     } catch (error: any) {
       console.error('[AppreciationScreen] Failed to load works:', error);
       const errorDetail = error.detail || error.message || JSON.stringify(error);
