@@ -360,7 +360,7 @@ def test_record_work_impression_updates_metrics(
 
     creation = client.post(
         "/api/v1/works",
-        json={"text": "misty dawn hums across the river"},
+        json={"theme_id": theme.id, "text": "misty dawn hums across the river"},
         headers=_auth_headers(author.id),
     )
     work_id = creation.json()["id"]
@@ -375,6 +375,10 @@ def test_record_work_impression_updates_metrics(
     assert payload["status"] == "recorded"
     assert payload["impressions_count"] == 3
     assert payload["unique_viewers_count"] == 1
+
+    # Clear rate limit key to allow repeat impression
+    rate_limit_key = f"impression_rate:{work_id}:{viewer_hash}"
+    redis_client.delete(rate_limit_key)
 
     repeat = client.post(
         f"/api/v1/works/{work_id}/impression",
@@ -401,6 +405,42 @@ def test_record_work_impression_updates_metrics(
 
     today_bucket = datetime.now(get_settings().timezone).strftime("%Y%m%d")
     assert redis_client.exists(f"impressions:{work_id}:{today_bucket}") == 1
+
+
+def test_record_work_impression_rate_limit(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that rapid successive impressions from same viewer are rate limited."""
+    author = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 22))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "silent waves echo the distant shore"},
+        headers=_auth_headers(author.id),
+    )
+    work_id = creation.json()["id"]
+
+    viewer_hash = "c" * 64
+
+    # First impression should succeed
+    first = client.post(
+        f"/api/v1/works/{work_id}/impression",
+        json={"viewer_hash": viewer_hash, "count": 1},
+    )
+    assert first.status_code == 200
+
+    # Immediate second impression should be rate limited
+    second = client.post(
+        f"/api/v1/works/{work_id}/impression",
+        json={"viewer_hash": viewer_hash, "count": 1},
+    )
+    assert second.status_code == 429
+    assert "Too many impressions" in second.json()["detail"]
 
 
 def test_record_work_impression_missing_work(client: TestClient) -> None:

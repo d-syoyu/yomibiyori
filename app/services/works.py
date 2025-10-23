@@ -170,7 +170,7 @@ def record_impression(
     work_id: str,
     payload: WorkImpressionRequest,
 ) -> WorkImpressionResponse:
-    """Record an impression for the supplied work."""
+    """Record an impression for the supplied work with rate limiting and anomaly detection."""
 
     work = session.get(Work, work_id)
     if not work:
@@ -178,14 +178,26 @@ def record_impression(
 
     settings = get_settings()
     metrics_key = f"metrics:{work_id}"
+    viewer_hash = payload.viewer_hash.lower() if payload.viewer_hash else None
 
+    # Rate limiting: prevent rapid successive impressions from same viewer
+    if viewer_hash:
+        rate_limit_key = f"impression_rate:{work_id}:{viewer_hash}"
+        if redis_client.exists(rate_limit_key):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many impressions from this viewer. Please wait before viewing again.",
+            )
+        # Set rate limit: 1 impression per viewer per work every 10 seconds
+        redis_client.setex(rate_limit_key, 10, "1")
+
+    # Record impression and update metrics
     pipeline = redis_client.pipeline()
     pipeline.hsetnx(metrics_key, "likes", 0)
     pipeline.hincrby(metrics_key, "impressions", payload.count)
     results = pipeline.execute()
     impressions_total = int(results[1])
 
-    viewer_hash = payload.viewer_hash.lower() if payload.viewer_hash else None
     unique_viewers = 0
     if viewer_hash:
         day_bucket = datetime.now(settings.timezone).strftime("%Y%m%d")
@@ -202,6 +214,18 @@ def record_impression(
                 unique_viewers = int(stored_unique)
             except (TypeError, ValueError):
                 unique_viewers = 0
+
+    # Anomaly detection: check impression/viewer ratio
+    if unique_viewers > 0:
+        ratio = impressions_total / unique_viewers
+        # If ratio exceeds 10:1, log warning (suspicious activity)
+        if ratio > 10.0:
+            from app.core.logging import logger
+
+            logger.warning(
+                f"Suspicious impression pattern detected for work {work_id}: "
+                f"{impressions_total} impressions from {unique_viewers} viewers (ratio: {ratio:.2f})"
+            )
 
     return WorkImpressionResponse(
         status="recorded",
