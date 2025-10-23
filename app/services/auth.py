@@ -430,3 +430,57 @@ def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
     return UserProfileResponse(user_id=str(user.id), email=user.email, display_name=user.name)
+
+
+def refresh_access_token(*, refresh_token: str) -> SessionToken:
+    """Refresh the access token using a refresh token."""
+
+    settings = get_settings()
+    api_key = settings.supabase_anon_key or settings.service_role_key
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase anon key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+    request_body: dict[str, Any] = {
+        "refresh_token": refresh_token,
+        "grant_type": "refresh_token",
+    }
+
+    headers = {
+        "apikey": api_key,
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            f"{supabase_url}/auth/v1/token?grant_type=refresh_token",
+            json=request_body,
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Supabase token refresh failed") from exc
+
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    try:
+        payload_json = response.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from Supabase") from exc
+
+    access_token = payload_json.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Supabase response missing token data")
+
+    return SessionToken(
+        access_token=access_token,
+        refresh_token=payload_json.get("refresh_token"),
+        token_type=payload_json.get("token_type", "bearer"),
+        expires_in=payload_json.get("expires_in"),
+    )

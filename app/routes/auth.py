@@ -8,11 +8,20 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
-from app.schemas.auth import LoginRequest, LoginResponse, SignUpRequest, SignUpResponse, UserProfileResponse
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    RefreshTokenRequest,
+    SessionToken,
+    SignUpRequest,
+    SignUpResponse,
+    UserProfileResponse,
+)
 from app.services.auth import (
     get_current_user_id,
     get_user_profile,
     login_user,
+    refresh_access_token,
     signup_user,
     sync_user_profile,
 )
@@ -76,3 +85,15 @@ def sync_profile(
     """Fetch Supabase profile information and persist it locally."""
 
     return sync_user_profile(session=session, user_id=user_id)
+
+
+@router.post(
+    "/refresh",
+    status_code=status.HTTP_200_OK,
+    response_model=SessionToken,
+    summary="Refresh access token using refresh token",
+)
+def refresh_token(payload: RefreshTokenRequest) -> SessionToken:
+    """Use refresh token to obtain new access token and refresh token."""
+
+    return refresh_access_token(refresh_token=payload.refresh_token)

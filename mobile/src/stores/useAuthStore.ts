@@ -13,6 +13,7 @@ import type { SignUpRequest, LoginRequest, UserProfile } from '../types';
 // ============================================================================
 
 const ACCESS_TOKEN_KEY = '@yomibiyori:accessToken';
+const REFRESH_TOKEN_KEY = '@yomibiyori:refreshToken';
 const USER_PROFILE_KEY = '@yomibiyori:userProfile';
 
 // ============================================================================
@@ -51,9 +52,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await api.signUp(data);
 
-      // Store access token
+      // Store access token and refresh token
       if (response.session?.access_token) {
         await AsyncStorage.setItem(ACCESS_TOKEN_KEY, response.session.access_token);
+      }
+      if (response.session?.refresh_token) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
       }
 
       // Create user profile from response
@@ -89,9 +93,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await api.login(data);
 
-      // Store access token
+      // Store access token and refresh token
       if (response.session?.access_token) {
         await AsyncStorage.setItem(ACCESS_TOKEN_KEY, response.session.access_token);
+      }
+      if (response.session?.refresh_token) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
       }
 
       // Create user profile from response
@@ -125,8 +132,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isLoading: true });
     try {
-      // Clear stored credentials
-      await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, USER_PROFILE_KEY]);
+      // Clear stored credentials (including refresh token)
+      await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_PROFILE_KEY]);
 
       // Clear API token
       api.setAccessToken(null);
@@ -148,15 +155,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     console.log('[Auth] Loading stored session...');
     set({ isLoading: true });
     try {
-      const [accessToken, userProfileJson] = await AsyncStorage.multiGet([
+      const [accessToken, refreshToken, userProfileJson] = await AsyncStorage.multiGet([
         ACCESS_TOKEN_KEY,
+        REFRESH_TOKEN_KEY,
         USER_PROFILE_KEY,
       ]);
 
       const token = accessToken[1];
+      const refresh = refreshToken[1];
       const profileData = userProfileJson[1];
 
       console.log('[Auth] Token found:', !!token);
+      console.log('[Auth] Refresh token found:', !!refresh);
       console.log('[Auth] Profile data found:', !!profileData);
 
       if (token && profileData) {
@@ -186,10 +196,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (profileErr: any) {
           // Check if token has expired
           if (profileErr?.detail?.includes('expired')) {
-            console.log('[Auth] Token verification failed, clearing session');
-            // Token has expired, force logout
-            await get().logout();
-            return;
+            console.log('[Auth] Token expired, attempting to refresh...');
+
+            // Try to refresh the token
+            if (refresh) {
+              try {
+                console.log('[Auth] Refreshing token...');
+                const newSession = await api.refreshToken(refresh);
+                console.log('[Auth] Token refreshed successfully');
+
+                // Store new tokens
+                if (newSession.access_token) {
+                  await AsyncStorage.setItem(ACCESS_TOKEN_KEY, newSession.access_token);
+                }
+                if (newSession.refresh_token) {
+                  await AsyncStorage.setItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
+                }
+
+                // Verify with new token
+                const freshProfile = await api.getUserProfile();
+                console.log('[Auth] Profile fetched with new token');
+
+                set({
+                  isAuthenticated: true,
+                  user: freshProfile,
+                  isLoading: false,
+                  error: null,
+                });
+
+                // Update stored profile
+                await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
+                return;
+              } catch (refreshErr: any) {
+                console.log('[Auth] Token refresh failed, logging out');
+                console.log('[Auth] Refresh error:', refreshErr);
+                // Refresh failed, force logout
+                await get().logout();
+                return;
+              }
+            } else {
+              console.log('[Auth] No refresh token available, logging out');
+              // No refresh token, force logout
+              await get().logout();
+              return;
+            }
           }
 
           // Other errors: use cached profile anyway

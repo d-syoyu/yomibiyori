@@ -10,6 +10,7 @@ import type {
   LoginRequest,
   LoginResponse,
   UserProfile,
+  SessionToken,
   Theme,
   ThemeListResponse,
   ThemeCategory,
@@ -134,6 +135,27 @@ class ApiClient {
   async getUserProfile(): Promise<UserProfile> {
     const response = await this.client.get<UserProfile>('/auth/profile');
     return response.data;
+  }
+
+  async refreshToken(refreshToken: string): Promise<SessionToken> {
+    const response = await this.client.post<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>(
+      '/auth/refresh',
+      { refresh_token: refreshToken }
+    );
+
+    const sessionToken: SessionToken = {
+      access_token: response.data.access_token,
+      refresh_token: response.data.refresh_token,
+      token_type: 'bearer',
+      expires_in: response.data.expires_in,
+    };
+
+    // Update the access token for future requests
+    if (sessionToken.access_token) {
+      this.setAccessToken(sessionToken.access_token);
+    }
+
+    return sessionToken;
   }
 
   // ==========================================================================

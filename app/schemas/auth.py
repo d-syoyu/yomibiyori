@@ -55,3 +55,9 @@ class UserProfileResponse(BaseModel):
     user_id: str
     email: EmailStr
     display_name: str | None = None
+
+
+class RefreshTokenRequest(BaseModel):
+    """Payload for refreshing access token."""
+
+    refresh_token: str = Field(min_length=1, description="Refresh token from previous login/signup")
