@@ -122,9 +122,9 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkR
 
     session.refresh(work)
 
-    # Get user display name
+    # Get user name
     user = session.get(User, user_id)
-    display_name = user.display_name if user and user.display_name else user.email if user else "Unknown"
+    display_name = user.name if user and user.name else user.email if user else "Unknown"
 
     return WorkResponse(
         id=str(work.id),
@@ -200,22 +200,22 @@ def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "
     if not theme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found")
 
-    # Fetch all works with likes count and user display name (without ordering, we'll sort in Python)
+    # Fetch all works with likes count and user name (without ordering, we'll sort in Python)
     stmt = (
-        select(Work, func.count(Like.id).label("likes_count"), User.display_name, User.email)
+        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email)
         .outerjoin(Like, Like.work_id == Work.id)
         .join(User, User.id == Work.user_id)
         .where(Work.theme_id == theme_id)
-        .group_by(Work.id, User.display_name, User.email)
+        .group_by(Work.id, User.name, User.email)
     )
 
     results = session.execute(stmt).all()
 
     # Build response objects
     works_with_scores = []
-    for work, likes_count, display_name, email in results:
-        # Use display_name if available, otherwise fallback to email
-        author_name = display_name if display_name else email
+    for work, likes_count, name, email in results:
+        # Use name if available, otherwise fallback to email
+        author_name = name if name else email
 
         work_response = WorkResponse(
             id=str(work.id),
