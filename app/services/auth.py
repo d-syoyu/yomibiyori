@@ -113,7 +113,14 @@ def _decode_jwt(token: str) -> dict[str, Any]:
                 token,
                 secret,
                 algorithms=["HS256"],
-                options={"verify_aud": False},
+                options={
+                    "verify_aud": False,
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_nbf": True,
+                    "verify_iat": True,
+                    "verify_iss": False,  # Don't verify issuer for now
+                },
             )
         except JWTError as e:
             # Debug: Log why HS256 failed
