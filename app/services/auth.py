@@ -173,7 +173,15 @@ def _upsert_user_record(
 
     now = datetime.now(timezone.utc)
     user = session.get(User, user_id)
-    name = display_name or (user.name if user else email)
+
+    # Use display_name if provided, otherwise use existing name, or extract from email
+    if display_name:
+        name = display_name
+    elif user and user.name:
+        name = user.name
+    else:
+        # Extract username from email (part before @)
+        name = email.split("@")[0] if "@" in email else email
 
     if user:
         user.name = name
