@@ -44,6 +44,30 @@ def wilson_lower_bound(likes: int, impressions: int, *, z: float = 1.96) -> floa
     return max(0.0, float(score))
 
 
+def bayesian_average(likes: int, impressions: int, *, prior_mean: float = 0.05, prior_confidence: int = 100) -> float:
+    """Calculate Bayesian average to handle low sample sizes fairly.
+
+    For works with few impressions, this provides a more stable estimate by
+    incorporating prior knowledge (global average like rate).
+
+    Args:
+        likes: Number of likes received
+        impressions: Number of impressions (views)
+        prior_mean: Prior expectation of like rate (default: 5%)
+        prior_confidence: Confidence in prior (equivalent sample size, default: 100)
+
+    Returns:
+        Bayesian average like rate (0.0 - 1.0)
+    """
+    if impressions <= 0:
+        return prior_mean
+
+    # Bayesian average formula: (prior_confidence * prior_mean + impressions * observed_rate) / (prior_confidence + impressions)
+    observed_rate = likes / impressions
+    weighted_score = (prior_confidence * prior_mean + impressions * observed_rate) / (prior_confidence + impressions)
+    return max(0.0, min(1.0, float(weighted_score)))
+
+
 def _calculate_time_normalization_factor(work_created_at: datetime) -> float:
     """Calculate time normalization factor to compensate for posting time bias.
 
@@ -106,7 +130,14 @@ def _fetch_metrics(redis_client: Redis, work_ids: Sequence[str]) -> dict[str, di
 
 
 def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_Candidate]:
-    """Return ranking candidates sourced from Redis with anomaly mitigation."""
+    """Return ranking candidates with Bayesian average and Wilson score hybrid approach.
+
+    This function implements a multi-stage fairness algorithm:
+    1. Calculate effective sample size (using unique viewers)
+    2. For low samples (<100 impressions): Use Bayesian average
+    3. For high samples (>=100 impressions): Use Wilson confidence interval
+    4. Apply anomaly detection penalties
+    """
 
     settings = get_settings()
     key = f"{settings.redis_ranking_prefix}{theme_id}"
@@ -117,6 +148,12 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
     work_ids = [work_id for work_id, _ in raw_entries]
     metrics_map = _fetch_metrics(redis_client, work_ids)
 
+    # Threshold for switching between Bayesian and Wilson
+    IMPRESSION_THRESHOLD = 100
+    # Prior parameters for Bayesian average
+    PRIOR_LIKE_RATE = 0.05  # 5% global average like rate
+    PRIOR_CONFIDENCE = 100  # Equivalent to 100 impressions of prior data
+
     candidates: list[_Candidate] = []
     for position, (work_id, raw_score) in enumerate(raw_entries, start=1):
         metrics = metrics_map.get(work_id)
@@ -126,6 +163,7 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
             impressions = int(metrics.get("impressions", 0))
             unique_viewers = int(metrics.get("unique_viewers", 0))
 
+            # Stage 1: Calculate effective sample size
             # Use unique viewers as the primary denominator for fairness
             # Cap impressions to prevent manipulation (max 5 impressions per unique viewer)
             MAX_IMPRESSIONS_PER_VIEWER = 5
@@ -133,16 +171,26 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
 
             # Use unique viewers as baseline, with minimum of 1 to avoid division by zero
             # If no unique viewers yet, use capped impressions as fallback
-            effective_viewers = max(unique_viewers, max(1, capped_impressions // 2))
+            effective_sample_size = max(unique_viewers, max(1, capped_impressions // 2))
 
-            # Calculate Wilson score based on likes vs effective viewers
-            adjusted = wilson_lower_bound(likes, effective_viewers)
+            # Stage 2 & 3: Choose scoring method based on sample size
+            if effective_sample_size < IMPRESSION_THRESHOLD:
+                # Low sample size: Use Bayesian average for stability
+                adjusted = bayesian_average(
+                    likes,
+                    effective_sample_size,
+                    prior_mean=PRIOR_LIKE_RATE,
+                    prior_confidence=PRIOR_CONFIDENCE
+                )
+            else:
+                # High sample size: Use Wilson score for confidence
+                adjusted = wilson_lower_bound(likes, effective_sample_size)
 
-            # Apply penalty for suspicious impression patterns
-            if unique_viewers > 0:
+            # Stage 4: Apply penalty for suspicious impression patterns
+            if unique_viewers > 0 and impressions > 0:
                 ratio = impressions / unique_viewers
                 if ratio > 10.0:
-                    # Apply penalty: reduce score by 20% for each 10x excess
+                    # Suspicious pattern: reduce score by 20% for each 10x excess
                     penalty_factor = max(0.1, 1.0 - ((ratio - 10.0) / 10.0) * 0.2)
                     adjusted *= penalty_factor
 
