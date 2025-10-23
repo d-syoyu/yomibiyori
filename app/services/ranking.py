@@ -105,7 +105,7 @@ def _fetch_from_snapshot(session: Session, theme_id: str, limit: int) -> list[Ra
         entries.append(
             RankingEntry(
                 rank=ranking.rank,
-                work_id=ranking.work_id,
+                work_id=str(ranking.work_id),
                 score=float(ranking.score),
                 user_name=user_name,
                 text=work.text,
@@ -146,7 +146,7 @@ def get_ranking(
             entries.append(
                 RankingEntry(
                     rank=index,
-                    work_id=work.id,
+                    work_id=str(work.id),
                     score=candidate.adjusted_score,
                     user_name=user.name,
                     text=work.text,

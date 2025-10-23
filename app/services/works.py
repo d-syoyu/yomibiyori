@@ -100,9 +100,9 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkR
     session.refresh(work)
 
     return WorkResponse(
-        id=work.id,
-        user_id=work.user_id,
-        theme_id=work.theme_id,
+        id=str(work.id),
+        user_id=str(work.user_id),
+        theme_id=str(work.theme_id),
         text=work.text,
         created_at=work.created_at,
         likes_count=0,
@@ -129,9 +129,9 @@ def list_works(session: Session, *, theme_id: str, limit: int) -> list[WorkRespo
 
     return [
         WorkResponse(
-            id=work.id,
-            user_id=work.user_id,
-            theme_id=work.theme_id,
+            id=str(work.id),
+            user_id=str(work.user_id),
+            theme_id=str(work.theme_id),
             text=work.text,
             created_at=work.created_at,
             likes_count=likes_count or 0,
