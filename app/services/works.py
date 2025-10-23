@@ -52,8 +52,31 @@ def _current_theme_for_submission(session: Session) -> Theme:
 def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkResponse:
     """Create a work for the authenticated user if no previous submission exists."""
 
-    theme = _current_theme_for_submission(session)
+    # Validate the specified theme exists and is submittable
+    theme = session.get(Theme, payload.theme_id)
+    if not theme:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Theme with id '{payload.theme_id}' not found",
+        )
 
+    # Check submission window (06:00-22:00 JST)
+    settings = get_settings()
+    now_jst = datetime.now(settings.timezone)
+    if not (SUBMISSION_START <= now_jst.time() < SUBMISSION_END):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Submissions are closed between 22:00 and 06:00 JST",
+        )
+
+    # Check theme is for today
+    if theme.date != now_jst.date():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Theme is not for today (theme date: {theme.date}, today: {now_jst.date()})",
+        )
+
+    # Check user hasn't already submitted for this category today
     existing_today_stmt: Select[str] = (
         select(Work.id)
         .join(Theme, Theme.id == Work.theme_id)

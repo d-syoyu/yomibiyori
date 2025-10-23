@@ -11,6 +11,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class WorkCreate(BaseModel):
     """Payload for creating a work (lower verse / 下の句)."""
 
+    theme_id: str = Field(
+        ...,
+        description="ID of the theme (upper verse / 上の句) to respond to",
+    )
     text: str = Field(
         ...,
         min_length=1,
