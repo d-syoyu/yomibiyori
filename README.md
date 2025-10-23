@@ -1,13 +1,15 @@
-# Yomibiyori Backend
+# Yomibiyori Backend (詠日和)
 
-Yomibiyori is a poetic social network where AI suggests the upper verse and users compose the lower verse. This repository contains the FastAPI backend, Redis integrations, and automated jobs that power the experience.
+Yomibiyori is a poetic social network where AI generates the **upper verse** (上の句, kami-no-ku, 5-7-5 syllables) and users compose the **lower verse** (下の句, shimo-no-ku, 7-7 syllables) to complete a tanka (短歌, 5-7-5-7-7). This repository contains the FastAPI backend, Redis integrations, and automated jobs that power the experience.
 
 ## Core Features
-- Supabase Auth integration with local profile sync
-- Daily theme submission window (06:00–22:00 JST) with one post per user and category
-- Real-time ranking backed by Redis (likes, impressions, Wilson score adjustments)
-- Nightly ranking snapshot persisted to PostgreSQL at 22:00
-- OpenAI-based daily theme generation
+- **Theme Generation**: AI generates daily upper verses (5-7-5 syllables) for users to continue
+- **User Submissions**: Users compose lower verses (7-7 syllables) to complete the tanka
+- **Supabase Auth**: Integration with local profile sync
+- **Daily Submission Window**: 06:00–22:00 JST, one lower verse per user per category
+- **Real-time Ranking**: Backed by Redis (likes, impressions, Wilson score adjustments)
+- **Nightly Snapshot**: Rankings persisted to PostgreSQL at 22:00
+- **AI-Powered Themes**: Claude Sonnet 4.5 / OpenAI GPT-4o-mini for theme generation
 
 For functional details see `REQUIREMENTS.md`, API contract `OPENAPI.yaml`, and database schema `SCHEMA.sql`.
 
@@ -44,6 +46,18 @@ cp env.example .env  # populate with Supabase, Redis, OpenAI credentials
 uvicorn app.main:app --reload
 ```
 Docs available at `http://localhost:8000/docs`.
+
+### Windows UTF-8 Configuration
+To avoid character encoding issues on Windows, set the following environment variables:
+```powershell
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+```
+Or add to your PowerShell profile:
+```powershell
+[System.Environment]::SetEnvironmentVariable('PYTHONIOENCODING', 'utf-8', 'User')
+[System.Environment]::SetEnvironmentVariable('PYTHONUTF8', '1', 'User')
+```
 
 ## Tests
 ```bash

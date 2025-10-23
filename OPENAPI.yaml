@@ -101,9 +101,11 @@ paths:
   /works:
     post:
       tags: [works]
-      summary: Submit a work
+      summary: Submit a work (lower verse / 下の句)
       description: >
-        Authenticated users can submit one poem per category and per day while the submission window is open
+        Authenticated users can submit one lower verse (shimo-no-ku, 7-7 syllables) per category
+        and per day while the submission window is open. The lower verse should continue the
+        upper verse (kami-no-ku, 5-7-5 syllables) provided by the theme to form a complete tanka (5-7-5-7-7)
         between 06:00 and 22:00 JST.
       security:
         - bearerAuth: []
@@ -239,11 +241,12 @@ paths:
   /themes/today:
     get:
       tags: [themes]
-      summary: Get today's theme
+      summary: Get today's theme (upper verse / 上の句)
       description: >
-        Return the theme for today's date in JST timezone. If a category is specified,
-        returns the theme for that category. If no category is specified and multiple
-        themes exist for different categories, returns the most recent.
+        Return today's theme (upper verse in 5-7-5 format) for the current date in JST timezone.
+        Users will create lower verses (7-7) to continue this theme and form a complete tanka.
+        If a category is specified, returns the theme for that category. If no category is
+        specified and multiple themes exist for different categories, returns the most recent.
       parameters:
         - name: category
           in: query
@@ -335,7 +338,9 @@ components:
           type: string
           maxLength: 40
           minLength: 1
-          description: Poem body limited to 40 characters
+          description: >
+            Lower verse (下の句) text, ideally 7-7 syllables to continue the theme's upper verse.
+            Limited to 40 characters. User creativity is respected; syllable validation is not enforced
     Work:
       type: object
       required:
@@ -355,6 +360,7 @@ components:
         text:
           type: string
           maxLength: 40
+          description: Lower verse (下の句) text
         created_at:
           type: string
           format: date-time
@@ -502,7 +508,9 @@ components:
           format: uuid
         text:
           type: string
-          description: Theme text (upper verse)
+          description: >
+            Theme text (upper verse / 上の句) in 5-7-5 syllable format.
+            Users will create lower verses (7-7) to complete the tanka
         category:
           type: string
           description: Theme category

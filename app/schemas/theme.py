@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ThemeResponse(BaseModel):
-    """Public representation of a theme."""
+    """Public representation of a theme (upper verse / 上の句)."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    text: str
+    text: str = Field(description="Upper verse (上の句) in 5-7-5 syllable format")
     category: str
     date: date
     sponsored: bool

@@ -9,20 +9,25 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkCreate(BaseModel):
-    """Payload for creating a work."""
+    """Payload for creating a work (lower verse / 下の句)."""
 
-    text: str = Field(..., min_length=1, max_length=40, description="Body of the poem (<= 40 chars)")
+    text: str = Field(
+        ...,
+        min_length=1,
+        max_length=40,
+        description="Lower verse (下の句) text, ideally 7-7 syllables to continue the theme's upper verse (<= 40 chars)",
+    )
 
 
 class WorkResponse(BaseModel):
-    """Public representation of a work."""
+    """Public representation of a work (lower verse / 下の句)."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     user_id: str
     theme_id: str
-    text: str
+    text: str = Field(description="Lower verse (下の句) text")
     created_at: datetime
     likes_count: int = 0
 

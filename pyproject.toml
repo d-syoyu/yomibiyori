@@ -43,3 +43,14 @@ exclude = ["alembic*", "tests*", "scripts*"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 addopts = "-q"
+
+[tool.setuptools]
+zip_safe = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
