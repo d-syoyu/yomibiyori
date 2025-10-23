@@ -19,7 +19,11 @@ import type { SignUpRequest, LoginRequest, UserProfile } from '../types';
 
 const ACCESS_TOKEN_KEY = '@yomibiyori:accessToken';
 const REFRESH_TOKEN_KEY = '@yomibiyori:refreshToken';
+const TOKEN_EXPIRES_AT_KEY = '@yomibiyori:tokenExpiresAt';
 const USER_PROFILE_KEY = '@yomibiyori:userProfile';
+
+// Refresh token proactively when less than 5 minutes remain
+const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 // ============================================================================
 // Store State Interface
@@ -38,6 +42,7 @@ interface AuthState {
   logout: () => Promise<void>;
   loadStoredSession: () => Promise<void>;
   clearError: () => void;
+  ensureValidToken: () => Promise<void>;
 }
 
 // ============================================================================
@@ -63,6 +68,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       if (response.session?.refresh_token) {
         await setSecureItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
+      }
+
+      // Calculate and store token expiration time
+      if (response.session?.expires_in) {
+        const expiresAt = Date.now() + response.session.expires_in * 1000;
+        await setSecureItem(TOKEN_EXPIRES_AT_KEY, expiresAt.toString());
       }
 
       // Create user profile from response
@@ -106,6 +117,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await setSecureItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
       }
 
+      // Calculate and store token expiration time
+      if (response.session?.expires_in) {
+        const expiresAt = Date.now() + response.session.expires_in * 1000;
+        await setSecureItem(TOKEN_EXPIRES_AT_KEY, expiresAt.toString());
+      }
+
       // Create user profile from response
       const userProfile: UserProfile = {
         user_id: response.user_id,
@@ -137,8 +154,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isLoading: true });
     try {
-      // Clear stored credentials securely (including refresh token)
-      await deleteSecureItems([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_PROFILE_KEY]);
+      // Clear stored credentials securely (including refresh token and expiration)
+      await deleteSecureItems([
+        ACCESS_TOKEN_KEY,
+        REFRESH_TOKEN_KEY,
+        TOKEN_EXPIRES_AT_KEY,
+        USER_PROFILE_KEY,
+      ]);
 
       // Clear API token
       api.setAccessToken(null);
@@ -218,6 +240,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   await setSecureItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
                 }
 
+                // Store new expiration time
+                if (newSession.expires_in) {
+                  const expiresAt = Date.now() + newSession.expires_in * 1000;
+                  await setSecureItem(TOKEN_EXPIRES_AT_KEY, expiresAt.toString());
+                }
+
                 // Verify with new token
                 const freshProfile = await api.getUserProfile();
                 console.log('[Auth] Profile fetched with new token');
@@ -272,6 +300,62 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Clear error message
   clearError: () => {
     set({ error: null });
+  },
+
+  // Ensure token is valid (proactive refresh)
+  ensureValidToken: async () => {
+    try {
+      // Get token expiration time
+      const items = await getSecureItems([TOKEN_EXPIRES_AT_KEY, REFRESH_TOKEN_KEY]);
+      const expiresAtStr = items.find(([key]) => key === TOKEN_EXPIRES_AT_KEY)?.[1];
+      const refreshToken = items.find(([key]) => key === REFRESH_TOKEN_KEY)?.[1];
+
+      if (!expiresAtStr || !refreshToken) {
+        // No expiration info or refresh token, skip proactive refresh
+        return;
+      }
+
+      const expiresAt = parseInt(expiresAtStr, 10);
+      const now = Date.now();
+      const timeRemaining = expiresAt - now;
+
+      console.log('[Auth] Token expires in:', Math.floor(timeRemaining / 1000), 'seconds');
+
+      // If token expires soon, refresh it proactively
+      if (timeRemaining < TOKEN_REFRESH_THRESHOLD_MS) {
+        console.log('[Auth] Token expiring soon, refreshing proactively...');
+
+        try {
+          const newSession = await api.refreshToken(refreshToken);
+          console.log('[Auth] Token refreshed proactively');
+
+          // Store new tokens securely
+          if (newSession.access_token) {
+            await setSecureItem(ACCESS_TOKEN_KEY, newSession.access_token);
+          }
+          if (newSession.refresh_token) {
+            await setSecureItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
+          }
+
+          // Store new expiration time
+          if (newSession.expires_in) {
+            const newExpiresAt = Date.now() + newSession.expires_in * 1000;
+            await setSecureItem(TOKEN_EXPIRES_AT_KEY, newExpiresAt.toString());
+          }
+        } catch (refreshErr: any) {
+          console.error('[Auth] Proactive token refresh failed:', refreshErr);
+          // Check if it's an auth error (refresh token expired)
+          if (refreshErr?.status === 401 || refreshErr?.detail?.includes('expired')) {
+            console.log('[Auth] Refresh token expired, logging out');
+            await get().logout();
+          }
+          // For other errors, let the request proceed and handle it there
+        }
+      }
+    } catch (err: any) {
+      console.error('[Auth] ensureValidToken error:', err);
+      // Don't throw, let the request proceed
+    }
   },
 }));
 

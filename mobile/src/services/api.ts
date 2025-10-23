@@ -38,6 +38,7 @@ const API_BASE_URL = 'https://yomibiyori-production.up.railway.app/api/v1';
 class ApiClient {
   private client: AxiosInstance;
   private accessToken: string | null = null;
+  private tokenValidationHook: (() => Promise<void>) | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -48,9 +49,18 @@ class ApiClient {
       },
     });
 
-    // Request interceptor to add auth token
+    // Request interceptor to add auth token and validate it
     this.client.interceptors.request.use(
-      (config) => {
+      async (config) => {
+        // Run token validation hook before request (proactive refresh)
+        if (this.tokenValidationHook) {
+          try {
+            await this.tokenValidationHook();
+          } catch (err) {
+            console.error('[API] Token validation hook failed:', err);
+          }
+        }
+
         if (this.accessToken) {
           config.headers.Authorization = `Bearer ${this.accessToken}`;
         }
@@ -110,6 +120,14 @@ class ApiClient {
    */
   getAccessToken(): string | null {
     return this.accessToken;
+  }
+
+  /**
+   * Set token validation hook for proactive refresh
+   * This hook will be called before each authenticated request
+   */
+  setTokenValidationHook(hook: (() => Promise<void>) | null) {
+    this.tokenValidationHook = hook;
   }
 
   // ==========================================================================
