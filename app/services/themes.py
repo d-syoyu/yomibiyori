@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -57,6 +57,12 @@ def list_themes(
 def get_today_theme(session: Session, category: str | None = None) -> ThemeResponse:
     """Return the theme for today's date in the application timezone.
 
+    Theme day changes at 6:00 JST, not at midnight:
+    - Before 6:00 JST: Returns yesterday's theme
+    - After 6:00 JST: Returns today's theme
+
+    This matches the specification that yesterday's ranking is viewable until 6:00 AM.
+
     Args:
         session: Database session
         category: Optional category filter (e.g., '恋愛', '季節', '日常', 'ユーモア')
@@ -72,7 +78,13 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
     """
     settings = get_settings()
     now_jst = datetime.now(settings.timezone)
-    today_date = now_jst.date()
+
+    # Theme day changes at 6:00 JST
+    # If before 6:00 JST, use yesterday's theme
+    if now_jst.hour < 6:
+        today_date = (now_jst - timedelta(days=1)).date()
+    else:
+        today_date = now_jst.date()
 
     stmt = select(Theme).where(Theme.date == today_date)
 
