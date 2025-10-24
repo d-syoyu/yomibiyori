@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db_session
+from app.db.session import get_authenticated_db_session, get_db_session
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -65,8 +65,8 @@ def login(
     summary="Get current user profile",
 )
 def profile(
-    session: Annotated[Session, Depends(get_db_session)],
     user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> UserProfileResponse:
     """Return the locally stored profile for the authenticated user."""
 
@@ -79,8 +79,8 @@ def profile(
     summary="Synchronise profile data from Supabase",
 )
 def sync_profile(
-    session: Annotated[Session, Depends(get_db_session)],
     user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> UserProfileResponse:
     """Fetch Supabase profile information and persist it locally."""
 

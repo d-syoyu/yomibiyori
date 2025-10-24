@@ -9,7 +9,7 @@ from redis import Redis
 from sqlalchemy.orm import Session
 
 from app.core.redis import get_redis_client
-from app.db.session import get_db_session
+from app.db.session import get_authenticated_db_session, get_db_session
 from app.schemas.work import (
     WorkCreate,
     WorkDateSummary,
@@ -33,8 +33,8 @@ router = APIRouter()
 )
 def submit_work(
     payload: WorkCreate,
-    session: Annotated[Session, Depends(get_db_session)],
     user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> WorkResponse:
     """Create a work for the authenticated user.
 
@@ -71,8 +71,8 @@ def list_works(
     summary="Get summary of user's works grouped by date",
 )
 def get_my_works_summary(
-    session: Annotated[Session, Depends(get_db_session)],
     user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> list[WorkDateSummary]:
     """Return summary of works grouped by theme date.
 
@@ -89,8 +89,8 @@ def get_my_works_summary(
     summary="List works by authenticated user",
 )
 def list_my_works(
-    session: Annotated[Session, Depends(get_db_session)],
     user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
     theme_id: Annotated[str | None, Query(description="Optional theme filter")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -116,9 +116,9 @@ def list_my_works(
 )
 def like_work(
     work_id: str,
-    session: Annotated[Session, Depends(get_db_session)],
-    redis_client: Annotated[Redis, Depends(get_redis_client)],
     user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+    redis_client: Annotated[Redis, Depends(get_redis_client)],
 ) -> WorkLikeResponse:
     """Register a like for the target work on behalf of the authenticated user."""
 
