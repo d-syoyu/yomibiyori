@@ -95,3 +95,56 @@ def get_db_session() -> Generator[Session, None, None]:
         yield session
     finally:
         session.close()
+
+
+def get_db_session_with_user(
+    user_id: str,
+    role: str = "authenticated",
+) -> Generator[Session, None, None]:
+    """FastAPI dependency that yields a database session with explicit user context.
+
+    This version receives user_id as a parameter to ensure GUC variables are set
+    before the session is used.
+
+    Args:
+        user_id: The authenticated user's identifier
+        role: The user's role (authenticated or service_role)
+    """
+    session: Session = SessionLocal()
+    try:
+        # Set RLS context with explicit user info
+        _set_session_context(session, user_id, role)
+
+        yield session
+    finally:
+        session.close()
+
+
+def get_authenticated_db_session() -> Generator[Session, None, None]:
+    """FastAPI dependency that yields an authenticated database session.
+
+    This function MUST be used with Depends(get_current_user_id) to ensure
+    proper RLS context. It re-reads the ContextVar to get the user info set
+    by get_current_user_id.
+
+    Usage:
+        @router.post("/works")
+        def create_work(
+            user_id: Annotated[str, Depends(get_current_user_id)],  # ← Must be first
+            session: Annotated[Session, Depends(get_authenticated_db_session)],  # ← Then this
+        ):
+            ...
+    """
+    session: Session = SessionLocal()
+    try:
+        # Re-read ContextVar to get the values set by get_current_user_id
+        ctx_user_id = _request_user_id.get()
+        ctx_role = _request_user_role.get()
+
+        # Set RLS context if available
+        if ctx_user_id or ctx_role:
+            _set_session_context(session, ctx_user_id, ctx_role)
+
+        yield session
+    finally:
+        session.close()
