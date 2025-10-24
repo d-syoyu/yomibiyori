@@ -38,4 +38,6 @@ jobs:
           THEME_GENERATION_RETRY_DELAY_SECONDS: "10.0"
           APP_TIMEZONE: "Asia/Tokyo"
         run: |
-          python scripts/generate_themes.py
+          # Generate theme for tomorrow (runs at 21:00 JST, generates for next day's 06:00 release)
+          TOMORROW=$(TZ=Asia/Tokyo date -d '+1 day' '+%Y-%m-%d')
+          python scripts/generate_themes.py --date $TOMORROW
