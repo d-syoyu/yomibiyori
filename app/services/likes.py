@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging import logger
 from app.models import Like, Work
 from app.schemas.work import WorkLikeResponse
 
@@ -68,11 +69,10 @@ def like_work(
         pipeline.hsetnx(metrics_key, "impressions", 0)
         pipeline.hsetnx(metrics_key, "unique_viewers", 0)
         results = pipeline.execute()
-        print(f"[DEBUG] Redis pipeline executed successfully for work {work_id}")
-        print(f"[DEBUG] Ranking key: {ranking_key}, Metrics key: {metrics_key}")
-        print(f"[DEBUG] Pipeline results: {results}")
+        logger.debug(f"Redis pipeline executed successfully for work {work_id}")
+        logger.debug(f"Pipeline updated ranking and metrics for work {work_id}")
     except Exception as exc:
-        print(f"[ERROR] Redis pipeline failed for work {work_id}: {exc}")
+        logger.error(f"Redis pipeline failed for work {work_id}: {exc}")
         # Don't fail the like operation if Redis fails - data is already in PostgreSQL
 
     return WorkLikeResponse(status="liked", likes_count=likes_count)

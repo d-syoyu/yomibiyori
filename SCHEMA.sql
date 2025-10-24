@@ -159,24 +159,25 @@ create policy if not exists write_own_user on users
 -- works: 自分の作品のみ作成・更新・削除可能（1日1首はユニーク制約で担保）
 create policy if not exists insert_own_work on works
   for insert
-  with check (user_id = coalesce(app_public.current_uid(), user_id));
+  with check (user_id = app_public.current_uid() or app_public.is_service_role());
 
 create policy if not exists update_own_work on works
   for update
-  using (user_id = coalesce(app_public.current_uid(), user_id));
+  using (user_id = app_public.current_uid() or app_public.is_service_role())
+  with check (user_id = app_public.current_uid() or app_public.is_service_role());
 
 create policy if not exists delete_own_work on works
   for delete
-  using (user_id = coalesce(app_public.current_uid(), user_id));
+  using (user_id = app_public.current_uid() or app_public.is_service_role());
 
 -- likes: 自分のいいねのみ作成・削除可能
 create policy if not exists insert_own_like on likes
   for insert
-  with check (user_id = coalesce(app_public.current_uid(), user_id));
+  with check (user_id = app_public.current_uid() or app_public.is_service_role());
 
 create policy if not exists delete_own_like on likes
   for delete
-  using (user_id = coalesce(app_public.current_uid(), user_id));
+  using (user_id = app_public.current_uid() or app_public.is_service_role());
 
 -- themes/sponsors/rankings: サービスロールのみ書き込み可能（ジョブ・管理画面）
 create policy if not exists write_service_themes on themes

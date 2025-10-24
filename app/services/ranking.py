@@ -15,6 +15,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging import logger
 from app.models import Ranking, Theme, User, Work
 from app.schemas.ranking import RankingEntry
 
@@ -141,15 +142,15 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
 
     settings = get_settings()
     key = f"{settings.redis_ranking_prefix}{theme_id}"
-    print(f"[DEBUG] Attempting to read ranking from Redis key: {key}")
+    logger.debug(f"Attempting to read ranking from Redis (theme_id={theme_id})")
     try:
         raw_entries = redis_client.zrevrange(key, 0, limit - 1, withscores=True)
-        print(f"[DEBUG] Redis zrevrange returned {len(raw_entries)} entries")
+        logger.debug(f"Redis zrevrange returned {len(raw_entries)} entries for theme {theme_id}")
         if not raw_entries:
-            print(f"[DEBUG] No ranking data found in Redis for key: {key}")
+            logger.debug(f"No ranking data found in Redis for theme {theme_id}")
             return []
     except Exception as exc:
-        print(f"[ERROR] Redis read failed for key {key}: {exc}")
+        logger.error(f"Redis read failed for theme {theme_id}: {exc}")
         return []
 
     work_ids = [work_id for work_id, _ in raw_entries]

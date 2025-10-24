@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.db.session import set_request_user_context
 from app.models import User
 from app.schemas.auth import (
     LoginRequest,
@@ -140,8 +141,11 @@ def _decode_jwt(token: str) -> dict[str, Any]:
 def get_current_user_id(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> str:
-    """Return the authenticated user identifier from the Authorization header."""
+    """Return the authenticated user identifier from the Authorization header.
 
+    This function also sets the request user context for Row Level Security (RLS)
+    to work correctly in PostgreSQL.
+    """
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 
@@ -158,6 +162,9 @@ def get_current_user_id(
     role = payload.get("role", "authenticated")
     if role not in {"authenticated", "service_role"}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role")
+
+    # Set request context for RLS policies
+    set_request_user_context(str(user_id), role)
 
     return str(user_id)
 
