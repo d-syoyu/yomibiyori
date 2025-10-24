@@ -25,6 +25,9 @@ const USER_PROFILE_KEY = 'yomibiyori.userProfile';
 // Refresh token proactively when less than 5 minutes remain
 const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
+// Global flag to prevent concurrent refresh attempts
+let isRefreshing = false;
+
 // ============================================================================
 // Store State Interface
 // ============================================================================
@@ -304,6 +307,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Ensure token is valid (proactive refresh)
   ensureValidToken: async () => {
+    // Prevent concurrent refresh attempts
+    if (isRefreshing) {
+      console.log('[Auth] Refresh already in progress, skipping');
+      return;
+    }
+
     try {
       // Get token expiration time
       const items = await getSecureItems([TOKEN_EXPIRES_AT_KEY, REFRESH_TOKEN_KEY]);
@@ -321,9 +330,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       console.log('[Auth] Token expires in:', Math.floor(timeRemaining / 1000), 'seconds');
 
+      // If token is already expired (negative value), force logout
+      if (timeRemaining < 0) {
+        console.log('[Auth] Token already expired, logging out');
+        await get().logout();
+        return;
+      }
+
       // If token expires soon, refresh it proactively
       if (timeRemaining < TOKEN_REFRESH_THRESHOLD_MS) {
         console.log('[Auth] Token expiring soon, refreshing proactively...');
+
+        // Set refreshing flag
+        isRefreshing = true;
 
         try {
           const newSession = await api.refreshToken(refreshToken);
@@ -332,6 +351,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Store new tokens securely
           if (newSession.access_token) {
             await setSecureItem(ACCESS_TOKEN_KEY, newSession.access_token);
+            api.setAccessToken(newSession.access_token); // Update API client token immediately
           }
           if (newSession.refresh_token) {
             await setSecureItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
@@ -350,10 +370,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await get().logout();
           }
           // For other errors, let the request proceed and handle it there
+        } finally {
+          // Clear refreshing flag
+          isRefreshing = false;
         }
       }
     } catch (err: any) {
       console.error('[Auth] ensureValidToken error:', err);
+      isRefreshing = false;
       // Don't throw, let the request proceed
     }
   },
