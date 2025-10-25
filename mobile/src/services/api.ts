@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import Constants from 'expo-constants';
 import type {
   SignUpRequest,
   SignUpResponse,
@@ -19,9 +20,8 @@ import type {
   WorkListResponse,
   WorkLikeResponse,
   WorkDateSummary,
-  CreateResonanceRequest,
-  Resonance,
   RankingResponse,
+  PushSubscriptionRequest,
   ApiError,
 } from '../types';
 
@@ -29,7 +29,14 @@ import type {
 // Configuration
 // ============================================================================
 
-const API_BASE_URL = 'https://yomibiyori-production.up.railway.app/api/v1';
+type ExpoExtra = {
+  apiBaseUrl?: string;
+};
+
+const extra = (Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {}) as ExpoExtra;
+
+const API_BASE_URL =
+  extra.apiBaseUrl ?? process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';
 
 // ============================================================================
 // Axios Instance
@@ -244,29 +251,6 @@ class ApiClient {
     return response.data;
   }
 
-  async getWorkById(workId: string): Promise<Work> {
-    const response = await this.client.get<Work>(`/works/${workId}`);
-    return response.data;
-  }
-
-  // ==========================================================================
-  // Resonance (共鳴) Endpoints
-  // ==========================================================================
-
-  async createResonance(data: CreateResonanceRequest): Promise<Resonance> {
-    const response = await this.client.post<Resonance>('/resonances', data);
-    return response.data;
-  }
-
-  async deleteResonance(workId: string): Promise<void> {
-    await this.client.delete(`/resonances/${workId}`);
-  }
-
-  async getResonanceCount(workId: string): Promise<number> {
-    const response = await this.client.get<{ count: number }>(`/resonances/${workId}/count`);
-    return response.data.count;
-  }
-
   // ==========================================================================
   // Ranking Endpoints
   // ==========================================================================
@@ -276,6 +260,14 @@ class ApiClient {
       params: { theme_id: themeId },
     });
     return response.data;
+  }
+
+  // ==========================================================================
+  // Push Notification Endpoints
+  // ==========================================================================
+
+  async registerPushToken(data: PushSubscriptionRequest): Promise<void> {
+    await this.client.post('/push-subscriptions', data);
   }
 }
 

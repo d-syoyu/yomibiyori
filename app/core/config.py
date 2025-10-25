@@ -133,7 +133,7 @@ class Settings(BaseSettings):
         ge=0.0,
     )
     theme_ai_provider: str = Field(
-        default="openai",
+        default="xai",
         alias="THEME_AI_PROVIDER",
         description="Provider used for theme generation AI (openai, claude, or xai).",
     )

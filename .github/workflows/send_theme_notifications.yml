@@ -1,12 +1,12 @@
-name: Finalize Rankings
+name: Send Theme Notifications
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 13 * * *"  # 22:00 JST
+    - cron: "0 21 * * *"  # 06:00 JST
 
 jobs:
-  finalize:
+  notify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -22,12 +22,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install --no-cache-dir -e .
 
-      - name: Finalize rankings
+      - name: Send theme release notifications
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          APP_TIMEZONE: "Asia/Tokyo"
         run: |
-          TODAY_JST=$(TZ=Asia/Tokyo date '+%Y-%m-%d')
-          python scripts/finalize_rankings.py --date $TODAY_JST
+          # Send notifications for today's themes (released at 06:00 JST)
+          TODAY=$(TZ=Asia/Tokyo date '+%Y-%m-%d')
+          python scripts/send_theme_release_notification.py --date $TODAY

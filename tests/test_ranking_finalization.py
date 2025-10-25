@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from redis import Redis
@@ -87,7 +87,12 @@ def test_finalize_rankings_persists_snapshot(
     result = finalize_rankings_for_date(db_session, redis_client, target_date=target, limit=10)
 
     assert theme.id in result
-    stored = db_session.query(Ranking).filter_by(theme_id=theme.id).order_by(Ranking.rank).all()
+    stored = (
+        db_session.query(Ranking)
+        .filter(Ranking.theme_id == UUID(theme.id))
+        .order_by(Ranking.rank)
+        .all()
+    )
     assert len(stored) == 2
 
     def _quantize(value: float) -> float:
@@ -97,10 +102,10 @@ def test_finalize_rankings_persists_snapshot(
         work_a.id: _quantize(wilson_lower_bound(12, 30)),
         work_b.id: _quantize(wilson_lower_bound(6, 12)),
     }
-    ordered_ids = [entry.work_id for entry in stored]
+    ordered_ids = [str(entry.work_id) for entry in stored]
     assert ordered_ids == sorted(expected_scores, key=expected_scores.get, reverse=True)
     for row in stored:
-        assert float(row.score) == pytest.approx(expected_scores[row.work_id], rel=1e-5)
+        assert float(row.score) == pytest.approx(expected_scores[str(row.work_id)], rel=1e-5)
 
 
 def test_finalize_rankings_clears_previous_entries_when_no_candidates(
@@ -111,8 +116,8 @@ def test_finalize_rankings_clears_previous_entries_when_no_candidates(
     theme = _create_theme(db_session, target)
 
     ranking_entry = Ranking(
-        theme_id=theme.id,
-        work_id=str(uuid4()),
+        theme_id=UUID(theme.id),
+        work_id=uuid4(),
         score=Decimal("0.50000"),
         rank=1,
         snapshot_time=datetime.now(timezone.utc),
@@ -123,7 +128,11 @@ def test_finalize_rankings_clears_previous_entries_when_no_candidates(
     summary = finalize_rankings_for_date(db_session, redis_client, target_date=target)
     assert summary[theme.id] == []
 
-    remaining = db_session.query(Ranking).filter_by(theme_id=theme.id).count()
+    remaining = (
+        db_session.query(Ranking)
+        .filter(Ranking.theme_id == UUID(theme.id))
+        .count()
+    )
     assert remaining == 0
 
 
@@ -140,4 +149,9 @@ def test_finalize_rankings_skips_missing_work(
 
     summary = finalize_rankings_for_date(db_session, redis_client, target_date=target)
     assert summary[theme.id] == []
-    assert db_session.query(Ranking).filter_by(theme_id=theme.id).count() == 0
+    assert (
+        db_session.query(Ranking)
+        .filter(Ranking.theme_id == UUID(theme.id))
+        .count()
+        == 0
+    )

@@ -218,4 +218,38 @@ $$;
 --   set app.current_role = 'service_role' | 'anonymous' | 'user';
 -- Supabase環境では自動的に auth.uid(), auth.role() が利用できるため上記は不要。
 
+-- ========= Push Subscriptions =========
+create table if not exists push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  expo_token text not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  constraint uq_push_subscriptions_token unique (expo_token)
+);
+
+-- RLS for push_subscriptions
+alter table push_subscriptions enable row level security;
+
+-- Users can only read their own push subscriptions
+create policy if not exists read_own_push_subscription on push_subscriptions
+  for select
+  using (user_id = app_public.current_uid() or app_public.is_service_role());
+
+-- Users can only insert their own push subscriptions
+create policy if not exists insert_own_push_subscription on push_subscriptions
+  for insert
+  with check (user_id = app_public.current_uid() or app_public.is_service_role());
+
+-- Users can update their own push subscriptions (for token refresh)
+create policy if not exists update_own_push_subscription on push_subscriptions
+  for update
+  using (user_id = app_public.current_uid() or app_public.is_service_role())
+  with check (user_id = app_public.current_uid() or app_public.is_service_role());
+
+-- Users can delete their own push subscriptions
+create policy if not exists delete_own_push_subscription on push_subscriptions
+  for delete
+  using (user_id = app_public.current_uid() or app_public.is_service_role());
+
 -- ========= 完了 =========
+

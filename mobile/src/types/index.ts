@@ -98,22 +98,6 @@ export interface WorkDateSummary {
   total_likes: number;
 }
 
-// ============================================================================
-// Resonance (共鳴) Types
-// ============================================================================
-
-export interface CreateResonanceRequest {
-  work_id: string;
-}
-
-export interface Resonance {
-  id: string;
-  work_id: string;
-  user_id: string;
-  created_at: string;
-}
-
-// ============================================================================
 // Ranking Types
 // ============================================================================
 
@@ -121,12 +105,20 @@ export interface RankingEntry {
   rank: number;
   work_id: string;
   score: number;
-  user_name: string;
+  display_name: string;
   text: string;
 }
 
 // API returns an array of ranking entries directly
 export type RankingResponse = RankingEntry[];
+
+// ============================================================================
+// Push Notification Types
+// ============================================================================
+
+export interface PushSubscriptionRequest {
+  expo_token: string;
+}
 
 // ============================================================================
 // Navigation Types

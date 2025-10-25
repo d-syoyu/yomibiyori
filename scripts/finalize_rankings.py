@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.core.redis import get_redis_client
 from app.db.session import SessionLocal
 from app.services.ranking_finalization import finalize_rankings_for_date
+from app.services import notifications
 
 
 def _parse_args() -> argparse.Namespace:
@@ -36,6 +37,7 @@ def main() -> int:
     settings = get_settings()
     target_date = args.target_date
 
+    resolved_date = target_date or datetime.now(settings.timezone).date()
     session: Session = SessionLocal()
     redis_client: Redis = get_redis_client()
     try:
@@ -45,10 +47,14 @@ def main() -> int:
             target_date=target_date,
             limit=args.limit,
         )
+        if summary:
+            notifications.send_ranking_finalized_notifications(
+                session,
+                target_date=datetime.combine(resolved_date, datetime.min.time(), tzinfo=settings.timezone),
+            )
     finally:
         session.close()
 
-    resolved_date = target_date or datetime.now(settings.timezone).date()
     print(f"Finalized rankings for date {resolved_date}:")
     for theme_id, entries in summary.items():
         print(f" - theme {theme_id}: {len(entries)} entries")

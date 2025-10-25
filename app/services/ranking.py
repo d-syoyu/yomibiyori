@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 from redis import Redis
-from sqlalchemy import Select, select
+from sqlalchemy import Select, select, or_
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -126,7 +126,18 @@ def _fetch_metrics(redis_client: Redis, work_ids: Sequence[str]) -> dict[str, di
     metrics: dict[str, dict[str, Any]] = {}
     for work_id, payload in zip(work_ids, responses, strict=True):
         if isinstance(payload, dict) and payload:
-            metrics[work_id] = payload
+            decoded_payload: dict[str, Any] = {}
+            for key, value in payload.items():
+                decoded_key = key.decode("utf-8") if isinstance(key, bytes) else str(key)
+                if isinstance(value, bytes):
+                    try:
+                        decoded_value: Any = value.decode("utf-8")
+                    except UnicodeDecodeError:
+                        decoded_value = value
+                else:
+                    decoded_value = value
+                decoded_payload[decoded_key] = decoded_value
+            metrics[work_id] = decoded_payload
     return metrics
 
 
@@ -153,7 +164,13 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
         logger.error(f"Redis read failed for theme {theme_id}: {exc}")
         return []
 
-    work_ids = [work_id for work_id, _ in raw_entries]
+    work_ids: list[str] = []
+    decoded_entries: list[tuple[str, float]] = []
+    for work_id_raw, score in raw_entries:
+        work_id = work_id_raw.decode("utf-8") if isinstance(work_id_raw, bytes) else str(work_id_raw)
+        work_ids.append(work_id)
+        decoded_entries.append((work_id, score))
+
     metrics_map = _fetch_metrics(redis_client, work_ids)
 
     # Threshold for switching between Bayesian and Wilson
@@ -163,7 +180,7 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
     PRIOR_CONFIDENCE = 100  # Equivalent to 100 impressions of prior data
 
     candidates: list[_Candidate] = []
-    for position, (work_id, raw_score) in enumerate(raw_entries, start=1):
+    for position, (work_id, raw_score) in enumerate(decoded_entries, start=1):
         metrics = metrics_map.get(work_id)
         adjusted = float(raw_score)
         if metrics:
@@ -171,15 +188,24 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
             impressions = int(metrics.get("impressions", 0))
             unique_viewers = int(metrics.get("unique_viewers", 0))
 
-            # Stage 1: Calculate effective sample size
-            # Use unique viewers as the primary denominator for fairness
-            # Cap impressions to prevent manipulation (max 5 impressions per unique viewer)
-            MAX_IMPRESSIONS_PER_VIEWER = 5
-            capped_impressions = min(impressions, unique_viewers * MAX_IMPRESSIONS_PER_VIEWER)
+            if unique_viewers <= 0:
+                # Fallback to impressions when unique viewer telemetry is unavailable
+                effective_sample_size = max(1, impressions)
+                capped_impressions = impressions
+            else:
+                # Stage 1: Calculate effective sample size
+                # Use unique viewers as the primary denominator for fairness
+                # Cap impressions to prevent manipulation (max 5 impressions per unique viewer)
+                MAX_IMPRESSIONS_PER_VIEWER = 5
+                capped_impressions = min(impressions, unique_viewers * MAX_IMPRESSIONS_PER_VIEWER)
 
-            # Use unique viewers as baseline, with minimum of 1 to avoid division by zero
-            # If no unique viewers yet, use capped impressions as fallback
-            effective_sample_size = max(unique_viewers, max(1, capped_impressions // 2))
+                # Use unique viewers as baseline, with minimum of 1 to avoid division by zero
+                # If no unique viewers yet, use capped impressions as fallback
+                effective_sample_size = max(unique_viewers, max(1, capped_impressions // 2))
+
+            # Ensure capped impressions have a sensible fallback for later calculations
+            if capped_impressions <= 0 and impressions > 0:
+                capped_impressions = impressions
 
             # Stage 2 & 3: Choose scoring method based on sample size
             if effective_sample_size < IMPRESSION_THRESHOLD:
@@ -211,29 +237,61 @@ def _build_candidates(redis_client: Redis, theme_id: str, limit: int) -> list[_C
 def _fetch_from_snapshot(session: Session, theme_id: str, limit: int) -> list[RankingEntry]:
     """Fallback to persisted snapshot in PostgreSQL."""
 
-    stmt: Select[tuple[Ranking, Work, User]] = (
-        select(Ranking, Work, User)
-        .join(Work, Ranking.work_id == Work.id)
-        .join(User, Work.user_id == User.id)
-        .where(Ranking.theme_id == theme_id)
-        .order_by(Ranking.rank.asc())
-        .limit(limit)
-    )
+    from uuid import UUID
 
-    rows = session.execute(stmt).all()
+    stmt: Select[Ranking] = select(Ranking).order_by(Ranking.rank.asc())
+    ranking_rows = session.execute(stmt).scalars().all()
+
+    def _normalize_theme(value: object) -> tuple[str, str | None]:
+        if isinstance(value, UUID):
+            return (str(value), value.hex)
+        text_value = str(value)
+        try:
+            parsed = UUID(text_value)
+            return (text_value, parsed.hex)
+        except ValueError:
+            return (text_value, None)
+
+    normalized_query_id, normalized_hex = _normalize_theme(theme_id)
 
     entries: list[RankingEntry] = []
-    for ranking, work, user in rows:
-        user_name = user.name
+    for ranking in ranking_rows:
+        ranking_theme, ranking_hex = _normalize_theme(ranking.theme_id)
+        if ranking_theme != normalized_query_id and ranking_hex != normalized_query_id and (
+            normalized_hex is None or (ranking_theme != normalized_hex and ranking_hex != normalized_hex)
+        ):
+            continue
+
+        work_id_value = ranking.work_id
+        if isinstance(work_id_value, UUID):
+            work_id_str = str(work_id_value)
+        else:
+            work_id_str = str(work_id_value)
+            if len(work_id_str) == 32:
+                try:
+                    work_id_str = str(UUID(work_id_str))
+                except ValueError:
+                    pass
+
+        work = session.get(Work, work_id_str)
+        if not work:
+            continue
+        user = session.get(User, work.user_id)
+        if not user:
+            continue
+
+        display_name = user.name if user.name else user.email
         entries.append(
             RankingEntry(
                 rank=ranking.rank,
-                work_id=str(ranking.work_id),
+                work_id=str(work.id),
                 score=float(ranking.score),
-                user_name=user_name,
+                display_name=display_name,
                 text=work.text,
             )
         )
+        if len(entries) >= limit:
+            break
     return entries
 
 
@@ -282,12 +340,13 @@ def get_ranking(
             if not context:
                 continue
             work, user = context
+            display_name = user.name if user.name else user.email
             entries.append(
                 RankingEntry(
                     rank=index,
                     work_id=str(work.id),
                     score=time_adjusted_score,  # Use time-adjusted score in response
-                    user_name=user.name,
+                    display_name=display_name,
                     text=work.text,
                 )
             )

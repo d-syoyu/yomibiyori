@@ -21,6 +21,23 @@ class RankingFinalizationError(RuntimeError):
     """Raised when the ranking finalization process encounters a fatal error."""
 
 
+def _normalize_identifier(value: str | bytes | UUID) -> str:
+    """Return a canonical hyphenated string representation of an identifier."""
+
+    if isinstance(value, bytes):
+        value = value.decode("utf-8")
+    elif isinstance(value, UUID):
+        return str(value)
+
+    text = str(value)
+    if len(text) == 32:
+        try:
+            return str(UUID(text))
+        except ValueError:
+            return text
+    return text
+
+
 @dataclass(slots=True)
 class SnapshotEntry:
     """Internal representation of a ranking snapshot row."""
@@ -69,11 +86,17 @@ def _collect_candidates(
     if not raw_entries:
         return []
 
-    work_ids = [work_id for work_id, _ in raw_entries]
+    decoded_entries: list[tuple[str, float]] = []
+    work_ids: list[str] = []
+    for work_id_raw, raw_score in raw_entries:
+        work_id = _normalize_identifier(work_id_raw)
+        work_ids.append(work_id)
+        decoded_entries.append((work_id, raw_score))
+
     metrics_map = _fetch_metrics(redis_client, work_ids)
 
     candidates: list[SnapshotEntry] = []
-    for position, (work_id, raw_score) in enumerate(raw_entries, start=1):
+    for position, (work_id, raw_score) in enumerate(decoded_entries, start=1):
         metrics = metrics_map.get(work_id, {})
         likes = metrics.get("likes", 0)
         impressions = metrics.get("impressions", 0)
@@ -109,16 +132,27 @@ def _prepare_ranking_rows(
     stmt: Select[Work] = select(Work).where(Work.id.in_(work_ids))
     work_map = {str(work.id): work for work in session.execute(stmt).scalars()}
 
+    normalized_theme_id = _normalize_identifier(theme_id)
+    try:
+        normalized_theme_uuid: object = UUID(normalized_theme_id)
+    except ValueError:
+        normalized_theme_uuid = normalized_theme_id
+
     rows: list[Ranking] = []
     for index, candidate in enumerate(candidates, start=1):
         work = work_map.get(candidate.work_id)
         if not work:
             continue
         score_decimal = Decimal(candidate.score).quantize(Decimal("0.00001"), rounding=ROUND_HALF_UP)
+        work_identifier = _normalize_identifier(work.id)
+        try:
+            work_uuid: object = UUID(work_identifier)
+        except ValueError:
+            work_uuid = work_identifier
         rows.append(
             Ranking(
-                theme_id=UUID(theme_id) if isinstance(theme_id, str) else theme_id,
-                work_id=UUID(work.id) if isinstance(work.id, str) else work.id,
+                theme_id=normalized_theme_uuid,
+                work_id=work_uuid,
                 score=score_decimal,
                 rank=index,
                 snapshot_time=snapshot_time,
@@ -148,10 +182,27 @@ def finalize_rankings_for_date(
     finalised: dict[str, list[Ranking]] = {}
 
     for theme in themes:
-        candidates = _collect_candidates(redis_client, theme_id=theme.id, limit=limit)
-        rows = _prepare_ranking_rows(session, theme_id=theme.id, snapshot_time=snapshot_time, candidates=candidates)
+        normalized_theme_id = _normalize_identifier(theme.id)
+        candidates = _collect_candidates(redis_client, theme_id=normalized_theme_id, limit=limit)
+        rows = _prepare_ranking_rows(
+            session,
+            theme_id=normalized_theme_id,
+            snapshot_time=snapshot_time,
+            candidates=candidates,
+        )
 
-        session.execute(delete(Ranking).where(Ranking.theme_id == theme.id))
+        delete_values: list[object]
+        try:
+            theme_uuid = UUID(normalized_theme_id)
+            delete_values = [theme_uuid, UUID(theme_uuid.hex)]
+        except ValueError:
+            delete_values = [normalized_theme_id]
+
+        session.execute(
+            delete(Ranking).where(
+                Ranking.theme_id.in_(delete_values)
+            )
+        )
         for row in rows:
             session.add(row)
 

@@ -80,12 +80,14 @@ def test_submit_work_success(
     user = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 15))
 
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 15, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
 
     poem = "twilight hush colors the quiet sky"
     response = client.post(
         "/api/v1/works",
-        json={"text": poem},
+        json={"theme_id": theme.id, "text": poem},
         headers=_auth_headers(user.id),
     )
 
@@ -107,20 +109,22 @@ def test_submit_work_conflict(
 ) -> None:
     user = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 16))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 16, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
 
     headers = _auth_headers(user.id)
     poem = "moon echoes cradle gentle wishes"
     first = client.post(
         "/api/v1/works",
-        json={"text": poem},
+        json={"theme_id": theme.id, "text": poem},
         headers=headers,
     )
     assert first.status_code == 201
 
     second = client.post(
         "/api/v1/works",
-        json={"text": poem},
+        json={"theme_id": theme.id, "text": poem},
         headers=headers,
     )
     assert second.status_code == 409
@@ -138,11 +142,13 @@ def test_submit_work_conflict_same_day_same_category(
     secondary_theme = _create_theme(db_session, theme_date=shared_date, category="general")
 
     headers = _auth_headers(user.id)
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(shared_date.year, shared_date.month, shared_date.day, 12, 0, tzinfo=settings.timezone))
 
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: primary_theme)
     first = client.post(
         "/api/v1/works",
-        json={"text": "gentle rain sketches the city lights"},
+        json={"theme_id": primary_theme.id, "text": "gentle rain sketches the city lights"},
         headers=headers,
     )
     assert first.status_code == 201
@@ -150,7 +156,7 @@ def test_submit_work_conflict_same_day_same_category(
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: secondary_theme)
     second = client.post(
         "/api/v1/works",
-        json={"text": "echoes weave softly along the bay"},
+        json={"theme_id": secondary_theme.id, "text": "echoes weave softly along the bay"},
         headers=headers,
     )
     assert second.status_code == 409
@@ -168,11 +174,13 @@ def test_submit_work_allowed_same_day_different_category(
     travel_theme = _create_theme(db_session, theme_date=shared_date, category="travel")
 
     headers = _auth_headers(user.id)
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(shared_date.year, shared_date.month, shared_date.day, 12, 0, tzinfo=settings.timezone))
 
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: nature_theme)
     first = client.post(
         "/api/v1/works",
-        json={"text": "green hills echo the hush of clouds"},
+        json={"theme_id": nature_theme.id, "text": "green hills echo the hush of clouds"},
         headers=headers,
     )
     assert first.status_code == 201
@@ -180,7 +188,7 @@ def test_submit_work_allowed_same_day_different_category(
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: travel_theme)
     second = client.post(
         "/api/v1/works",
-        json={"text": "harbor lights beckon a drifting breeze"},
+        json={"theme_id": travel_theme.id, "text": "harbor lights beckon a drifting breeze"},
         headers=headers,
     )
     assert second.status_code == 201
@@ -196,11 +204,11 @@ def test_submit_work_rejected_outside_submission_window(
     _freeze_datetime(monkeypatch, closed_time)
 
     user = _create_user(db_session)
-    _create_theme(db_session, theme_date=closed_time.date())
+    theme = _create_theme(db_session, theme_date=closed_time.date())
 
     response = client.post(
         "/api/v1/works",
-        json={"text": "quiet harbor sleeps beneath the stars"},
+        json={"theme_id": theme.id, "text": "quiet harbor sleeps beneath the stars"},
         headers=_auth_headers(user.id),
     )
 
@@ -218,19 +226,22 @@ def test_submit_work_allowed_next_day_same_category(
     second_theme = _create_theme(db_session, theme_date=date(2025, 1, 19), category="general")
 
     headers = _auth_headers(user.id)
+    settings = get_settings()
 
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: first_theme)
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 18, 12, 0, tzinfo=settings.timezone))
     first = client.post(
         "/api/v1/works",
-        json={"text": "evening hush cradles the harbor glow"},
+        json={"theme_id": first_theme.id, "text": "evening hush cradles the harbor glow"},
         headers=headers,
     )
     assert first.status_code == 201
 
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 19, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: second_theme)
     second = client.post(
         "/api/v1/works",
-        json={"text": "dawn returns painting whispers of silver"},
+        json={"theme_id": second_theme.id, "text": "dawn returns painting whispers of silver"},
         headers=headers,
     )
     assert second.status_code == 201
@@ -248,7 +259,7 @@ def test_submit_work_too_long(
     long_poem = "this line intentionally exceeds forty characters to fail"
     response = client.post(
         "/api/v1/works",
-        json={"text": long_poem},
+        json={"theme_id": theme.id, "text": long_poem},
         headers=_auth_headers(user.id),
     )
 
@@ -265,12 +276,14 @@ def test_list_works_returns_likes_count(
 ) -> None:
     user = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 18))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 18, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
 
     headers = _auth_headers(user.id)
     client.post(
         "/api/v1/works",
-        json={"text": "morning dew threads a silver shimmer"},
+        json={"theme_id": theme.id, "text": "morning dew threads a silver shimmer"},
         headers=headers,
     )
 
@@ -292,10 +305,12 @@ def test_like_work_success(
     liker = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 19))
 
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 19, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
     creation = client.post(
         "/api/v1/works",
-        json={"text": "lantern light traces whispered stories"},
+        json={"theme_id": theme.id, "text": "lantern light traces whispered stories"},
         headers=_auth_headers(author.id),
     )
     work_id = creation.json()["id"]
@@ -325,11 +340,13 @@ def test_like_work_conflict(
 ) -> None:
     user = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 20))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 20, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
 
     creation = client.post(
         "/api/v1/works",
-        json={"text": "starlit tide hums a drifting prayer"},
+        json={"theme_id": theme.id, "text": "starlit tide hums a drifting prayer"},
         headers=_auth_headers(user.id),
     )
     work_id = creation.json()["id"]
@@ -356,6 +373,8 @@ def test_record_work_impression_updates_metrics(
 ) -> None:
     author = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 21))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 21, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
 
     creation = client.post(
@@ -403,7 +422,7 @@ def test_record_work_impression_updates_metrics(
     assert redis_client.hget(metrics_key, "likes") == "0"
     assert redis_client.hget(metrics_key, "unique_viewers") == "2"
 
-    today_bucket = datetime.now(get_settings().timezone).strftime("%Y%m%d")
+    today_bucket = works_service.datetime.now(get_settings().timezone).strftime("%Y%m%d")
     assert redis_client.exists(f"impressions:{work_id}:{today_bucket}") == 1
 
 
@@ -416,6 +435,8 @@ def test_record_work_impression_rate_limit(
     """Test that rapid successive impressions from same viewer are rate limited."""
     author = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 22))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 22, 12, 0, tzinfo=settings.timezone))
     monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
 
     creation = client.post(

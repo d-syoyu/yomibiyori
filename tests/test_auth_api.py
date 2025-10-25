@@ -111,7 +111,7 @@ def test_signup_supabase_error_propagates(client: TestClient, monkeypatch: pytes
 
     response = client.post(
         "/api/v1/auth/signup",
-        json={"email": "duplicate@example.com", "password": "SecurePass1!"},
+        json={"email": "duplicate@example.com", "password": "SecurePass1!", "display_name": "Duplicate Poet"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User already registered"

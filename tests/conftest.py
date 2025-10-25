@@ -11,9 +11,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.redis import get_redis_client
+from app.core.config import get_settings
 from app.main import app
 from app.models import Base
-from app.db.session import get_db_session
+from app.db.session import get_db_session, get_authenticated_db_session
 
 TEST_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False}, future=True)
@@ -27,6 +28,19 @@ def prepare_database() -> Generator[None, None, None]:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
+
+
+@pytest.fixture(autouse=True)
+def configure_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure required Supabase settings are populated for tests."""
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "supabase_anon_key", "test-anon-key")
+    monkeypatch.setattr(settings, "service_role_key", "test-service-role")
+    monkeypatch.setattr(settings, "supabase_url", "https://test.supabase.co")
+    monkeypatch.setattr(settings, "supabase_request_timeout", 0.5)
+    monkeypatch.setattr(settings, "supabase_jwt_secret", "dev-secret")
+    monkeypatch.setattr(settings, "expo_access_token", "test-expo-token")
 
 
 @pytest.fixture()
@@ -59,6 +73,7 @@ def client(db_session: Session, redis_client: fakeredis.FakeRedis) -> Generator[
         yield db_session
 
     app.dependency_overrides[get_db_session] = _get_test_session
+    app.dependency_overrides[get_authenticated_db_session] = _get_test_session
     app.dependency_overrides[get_redis_client] = lambda: redis_client
     try:
         with TestClient(app) as test_client:

@@ -237,7 +237,7 @@ export default function RankingScreen() {
                       direction="ltr"
                     />
                   </View>
-                  <Text style={styles.workAuthor}>by {entry.user_name}</Text>
+                  <Text style={styles.workAuthor}>by {entry.display_name}</Text>
                 </View>
                 <Text style={styles.scoreText}>
                   {(entry.score * 100).toFixed(1)}%

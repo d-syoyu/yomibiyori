@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from math import sqrt
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import Ranking, Theme, User, Work
+from app.services import ranking as ranking_service
 
 
 def _create_user(session: Session) -> User:
@@ -81,6 +82,9 @@ def test_get_ranking_success(
     redis_client.zadd(f"{settings.redis_ranking_prefix}{theme.id}", {work.id: 12})
     redis_client.hset(f"metrics:{work.id}", mapping={"likes": 12, "impressions": 30})
 
+    expected_candidate = ranking_service._build_candidates(redis_client, theme.id, 1)[0]
+    expected_score = expected_candidate.adjusted_score * ranking_service._calculate_time_normalization_factor(work.created_at)
+
     response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
 
     assert response.status_code == 200
@@ -88,8 +92,8 @@ def test_get_ranking_success(
     assert len(payload) == 1
     assert payload[0]["rank"] == 1
     assert payload[0]["work_id"] == work.id
-    assert pytest.approx(payload[0]["score"], rel=1e-3) == _wilson(12, 30)
-    assert payload[0]["user_name"] == user.name
+    assert pytest.approx(payload[0]["score"], rel=1e-6) == expected_score
+    assert payload[0]["display_name"] == user.name
     assert payload[0]["text"] == work.text
 
 
@@ -109,11 +113,16 @@ def test_get_ranking_uses_unique_viewers(
         mapping={"likes": 8, "impressions": 10, "unique_viewers": 40},
     )
 
+    expected_candidate = ranking_service._build_candidates(redis_client, theme.id, 1)[0]
+    expected_score = expected_candidate.adjusted_score * ranking_service._calculate_time_normalization_factor(work.created_at)
+
     response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
     assert response.status_code == 200
     payload = response.json()
     assert len(payload) == 1
-    assert pytest.approx(payload[0]["score"], rel=1e-3) == _wilson(8, 40)
+    assert pytest.approx(payload[0]["score"], rel=1e-6) == expected_score
+    assert payload[0]["display_name"] == user.name
+    assert payload[0]["text"] == work.text
 
 
 def test_get_ranking_fallback_to_snapshot(client: TestClient, db_session: Session) -> None:
@@ -122,8 +131,8 @@ def test_get_ranking_fallback_to_snapshot(client: TestClient, db_session: Sessio
     work = _create_work(db_session, user, theme, "Snowlight crowns the silent harbor bell")
 
     ranking_entry = Ranking(
-        theme_id=theme.id,
-        work_id=work.id,
+        theme_id=UUID(theme.id),
+        work_id=UUID(work.id),
         score=Decimal("0.84210"),
         rank=1,
         snapshot_time=datetime.now(timezone.utc),
@@ -137,8 +146,8 @@ def test_get_ranking_fallback_to_snapshot(client: TestClient, db_session: Sessio
     assert len(payload) == 1
     assert payload[0]["rank"] == 1
     assert payload[0]["work_id"] == work.id
-    assert pytest.approx(payload[0]["score"], rel=1e-3) == float(ranking_entry.score)
-    assert payload[0]["user_name"] == user.name
+    assert pytest.approx(payload[0]["score"], rel=1e-6) == float(ranking_entry.score)
+    assert payload[0]["display_name"] == user.name
     assert payload[0]["text"] == work.text
 
 

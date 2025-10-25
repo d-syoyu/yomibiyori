@@ -13,5 +13,5 @@ class RankingEntry(BaseModel):
     rank: int
     work_id: str
     score: float
-    user_name: str
+    display_name: str
     text: str
