@@ -40,7 +40,6 @@ def configure_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "supabase_url", "https://test.supabase.co")
     monkeypatch.setattr(settings, "supabase_request_timeout", 0.5)
     monkeypatch.setattr(settings, "supabase_jwt_secret", "dev-secret")
-    monkeypatch.setattr(settings, "expo_access_token", "test-expo-token")
 
 
 @pytest.fixture()

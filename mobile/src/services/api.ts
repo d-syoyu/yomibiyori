@@ -21,7 +21,6 @@ import type {
   WorkLikeResponse,
   WorkDateSummary,
   RankingResponse,
-  PushSubscriptionRequest,
   ApiError,
 } from '../types';
 
@@ -260,14 +259,6 @@ class ApiClient {
       params: { theme_id: themeId },
     });
     return response.data;
-  }
-
-  // ==========================================================================
-  // Push Notification Endpoints
-  // ==========================================================================
-
-  async registerPushToken(data: PushSubscriptionRequest): Promise<void> {
-    await this.client.post('/push-subscriptions', data);
   }
 }
 

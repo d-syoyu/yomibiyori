@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * *"  # 21:00 JST
-    - cron: "50 12 * * *" # 21:50 JST reminder
 
 jobs:
   generate:
@@ -24,7 +23,6 @@ jobs:
           pip install --no-cache-dir -e .
 
       - name: Generate themes
-        if: github.event_name != 'schedule' || github.event.schedule == '0 12 * * *'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -43,11 +41,3 @@ jobs:
           # Generate theme for tomorrow (runs at 21:00 JST, generates for next day's 06:00 release)
           TOMORROW=$(TZ=Asia/Tokyo date -d '+1 day' '+%Y-%m-%d')
           python scripts/generate_themes.py --date $TOMORROW
-
-      - name: Send submission reminder
-        if: github.event_name == 'schedule' && github.event.schedule == '50 12 * * *'
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-        run: |
-          python scripts/send_submission_reminder.py

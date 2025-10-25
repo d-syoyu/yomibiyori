@@ -79,9 +79,6 @@ railway variables set R2_ACCOUNT_ID="YOUR_R2_ACCOUNT_ID"
 railway variables set R2_ACCESS_KEY_ID="YOUR_R2_ACCESS_KEY"
 railway variables set R2_SECRET_ACCESS_KEY="YOUR_R2_SECRET_KEY"
 
-# Expo (プッシュ通知用 - 将来的に使用)
-railway variables set EXPO_ACCESS_TOKEN="YOUR_EXPO_TOKEN"
-
 # Sentry (エラートラッキング)
 railway variables set SENTRY_DSN="YOUR_SENTRY_DSN"
 

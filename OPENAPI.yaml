@@ -372,23 +372,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /push-subscriptions:
-    post:
-      tags: [notifications]
-      summary: Register Expo push token for the authenticated user
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PushSubscriptionCreate'
-      responses:
-        '204':
-          description: Push subscription registered successfully
-        '401':
-          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     bearerAuth:
@@ -520,16 +503,6 @@ components:
         total_likes:
           type: integer
           minimum: 0
-    PushSubscriptionCreate:
-      type: object
-      required:
-        - expo_token
-      properties:
-        expo_token:
-          type: string
-          minLength: 10
-          maxLength: 255
-          description: Expo push notification token (ExponentPushToken[...])
     SignUpRequest:
       type: object
       required:

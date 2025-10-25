@@ -11,7 +11,6 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.services.theme_generation import ThemeGenerationError, generate_all_categories
 from app.services.theme_ai_client import resolve_theme_ai_client, ThemeAIClientError
-from app.services import notifications
 
 
 def _parse_args() -> argparse.Namespace:
@@ -52,11 +51,6 @@ def main() -> int:
             target_date=target_date,
             commit=not args.dry_run,
         )
-        if not args.dry_run and results:
-            notifications.send_theme_release_notifications(
-                session,
-                target_date=datetime.combine(resolved_date, datetime.min.time(), tzinfo=settings.timezone),
-            )
     except ThemeGenerationError as exc:
         session.rollback()
         print(f"[ERROR] Theme generation failed: {exc}")

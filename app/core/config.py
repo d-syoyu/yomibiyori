@@ -90,11 +90,6 @@ class Settings(BaseSettings):
         alias="APP_TIMEZONE",
         description="IANA timezone used to resolve the daily theme window.",
     )
-    expo_access_token: str | None = Field(
-        default=None,
-        alias="EXPO_ACCESS_TOKEN",
-        description="Expo access token for push notifications.",
-    )
     sentry_dsn: str | None = Field(
         default=None,
         alias="SENTRY_DSN",

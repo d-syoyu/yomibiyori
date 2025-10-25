@@ -15,7 +15,6 @@ import {
 import Navigation from './src/navigation';
 import api from './src/services/api';
 import useAuthStore from './src/stores/useAuthStore';
-import { setupNotificationListeners, registerPushToken } from './src/utils/notifications';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -32,25 +31,6 @@ export default function App() {
 
     return () => {
       api.setTokenValidationHook(null);
-    };
-  }, []);
-
-  // Setup push notifications
-  useEffect(() => {
-    const cleanup = setupNotificationListeners();
-
-    // Register push token when user is authenticated
-    const unsubscribe = useAuthStore.subscribe((state) => {
-      if (state.isAuthenticated && state.user) {
-        registerPushToken().catch((error) => {
-          console.error('[App] Failed to register push token:', error);
-        });
-      }
-    });
-
-    return () => {
-      cleanup();
-      unsubscribe();
     };
   }, []);
 

@@ -113,14 +113,6 @@ export interface RankingEntry {
 export type RankingResponse = RankingEntry[];
 
 // ============================================================================
-// Push Notification Types
-// ============================================================================
-
-export interface PushSubscriptionRequest {
-  expo_token: string;
-}
-
-// ============================================================================
 // Navigation Types
 // ============================================================================
 

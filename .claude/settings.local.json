@@ -83,7 +83,8 @@
       "Bash(DATABASE_URL=\"sqlite:///./test.db\" EXPO_ACCESS_TOKEN=\"test-token\" python scripts/send_submission_reminder.py:*)",
       "Bash(DATABASE_URL=\"sqlite:///./test.db\" EXPO_ACCESS_TOKEN=\"test-token\" python scripts/finalize_rankings.py:*)",
       "Bash(DATABASE_URL=\"sqlite:///./test.db\" REDIS_URL=\"redis://localhost:6379/0\" EXPO_ACCESS_TOKEN=\"test-token\" python:*)",
-      "Bash(gh secret list:*)"
+      "Bash(gh secret list:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": [],
     "ask": []

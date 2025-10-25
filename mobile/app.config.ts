@@ -2,7 +2,6 @@ import type { ExpoConfig } from '@expo/config';
 import 'dotenv/config';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';
-const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID;
 
 const config: ExpoConfig = {
   expo: {
@@ -29,22 +28,9 @@ const config: ExpoConfig = {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: [
-      'expo-font',
-      'expo-secure-store',
-      [
-        'expo-notifications',
-        {
-          icon: './assets/notification-icon.png',
-          color: '#4A5568',
-        },
-      ],
-    ],
+    plugins: ['expo-font', 'expo-secure-store'],
     extra: {
       apiBaseUrl: API_BASE_URL,
-      eas: {
-        projectId: EAS_PROJECT_ID,
-      },
     },
   },
 };

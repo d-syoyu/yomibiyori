@@ -27,7 +27,6 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
         run: |
           TODAY_JST=$(TZ=Asia/Tokyo date '+%Y-%m-%d')
           python scripts/finalize_rankings.py --date $TODAY_JST
