@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging import logger
 from app.models import Like, Theme, User, Work
 from app.schemas.work import (
     WorkCreate,
@@ -50,7 +51,7 @@ def _current_theme_for_submission(session: Session) -> Theme:
     return theme
 
 
-def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkResponse:
+def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_client: Redis | None = None) -> WorkResponse:
     """Create a work for the authenticated user if no previous submission exists."""
 
     # Validate the specified theme exists and is submittable
@@ -122,6 +123,28 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate) -> WorkR
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate submission detected") from exc
 
     session.refresh(work)
+
+    # Initialize ranking entry in Redis with score 0
+    if redis_client:
+        settings = get_settings()
+        ranking_key = f"{settings.redis_ranking_prefix}{theme.id}"
+        metrics_key = f"metrics:{work.id}"
+
+        try:
+            pipeline = redis_client.pipeline()
+            # Add work to ranking ZSET with initial score of 0
+            pipeline.zadd(ranking_key, {str(work.id): 0})
+            # Initialize metrics
+            pipeline.hset(metrics_key, mapping={
+                "likes": 0,
+                "impressions": 0,
+                "unique_viewers": 0,
+            })
+            pipeline.execute()
+            logger.debug(f"Initialized ranking entry for work {work.id} in Redis")
+        except Exception as exc:
+            logger.error(f"Failed to initialize Redis ranking entry for work {work.id}: {exc}")
+            # Don't fail the work creation if Redis fails - data is already in PostgreSQL
 
     # Get user name
     user = session.get(User, user_id)

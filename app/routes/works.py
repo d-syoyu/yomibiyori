@@ -35,13 +35,14 @@ def submit_work(
     payload: WorkCreate,
     user_id: Annotated[str, Depends(get_current_user_id)],
     session: Annotated[Session, Depends(get_authenticated_db_session)],
+    redis_client: Annotated[Redis, Depends(get_redis_client)],
 ) -> WorkResponse:
     """Create a work for the authenticated user.
 
     A user may submit at most one work for the active theme in the current day.
     """
 
-    return works_service.create_work(session=session, user_id=user_id, payload=payload)
+    return works_service.create_work(session=session, user_id=user_id, payload=payload, redis_client=redis_client)
 
 
 @router.get(
