@@ -341,10 +341,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       // Attempt to refresh the token
-      {
-
-        // Set refreshing flag
-        isRefreshing = true;
+      // Set refreshing flag
+      isRefreshing = true;
 
       try {
         const newSession = await api.refreshToken(refreshToken);
