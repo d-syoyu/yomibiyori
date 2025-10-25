@@ -330,50 +330,51 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       console.log('[Auth] Token expires in:', Math.floor(timeRemaining / 1000), 'seconds');
 
-      // If token is already expired (negative value), force logout
+      // If token is already expired or expiring soon, refresh it proactively
       if (timeRemaining < 0) {
-        console.log('[Auth] Token already expired, logging out');
-        await get().logout();
+        console.log('[Auth] Token already expired, attempting refresh...');
+      } else if (timeRemaining < TOKEN_REFRESH_THRESHOLD_MS) {
+        console.log('[Auth] Token expiring soon, refreshing proactively...');
+      } else {
+        // Token is still valid and not expiring soon
         return;
       }
 
-      // If token expires soon, refresh it proactively
-      if (timeRemaining < TOKEN_REFRESH_THRESHOLD_MS) {
-        console.log('[Auth] Token expiring soon, refreshing proactively...');
+      // Attempt to refresh the token
+      {
 
         // Set refreshing flag
         isRefreshing = true;
 
-        try {
-          const newSession = await api.refreshToken(refreshToken);
-          console.log('[Auth] Token refreshed proactively');
+      try {
+        const newSession = await api.refreshToken(refreshToken);
+        console.log('[Auth] Token refreshed successfully');
 
-          // Store new tokens securely
-          if (newSession.access_token) {
-            await setSecureItem(ACCESS_TOKEN_KEY, newSession.access_token);
-            api.setAccessToken(newSession.access_token); // Update API client token immediately
-          }
-          if (newSession.refresh_token) {
-            await setSecureItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
-          }
-
-          // Store new expiration time
-          if (newSession.expires_in) {
-            const newExpiresAt = Date.now() + newSession.expires_in * 1000;
-            await setSecureItem(TOKEN_EXPIRES_AT_KEY, newExpiresAt.toString());
-          }
-        } catch (refreshErr: any) {
-          console.error('[Auth] Proactive token refresh failed:', refreshErr);
-          // Check if it's an auth error (refresh token expired)
-          if (refreshErr?.status === 401 || refreshErr?.detail?.includes('expired')) {
-            console.log('[Auth] Refresh token expired, logging out');
-            await get().logout();
-          }
-          // For other errors, let the request proceed and handle it there
-        } finally {
-          // Clear refreshing flag
-          isRefreshing = false;
+        // Store new tokens securely
+        if (newSession.access_token) {
+          await setSecureItem(ACCESS_TOKEN_KEY, newSession.access_token);
+          api.setAccessToken(newSession.access_token); // Update API client token immediately
         }
+        if (newSession.refresh_token) {
+          await setSecureItem(REFRESH_TOKEN_KEY, newSession.refresh_token);
+        }
+
+        // Store new expiration time
+        if (newSession.expires_in) {
+          const newExpiresAt = Date.now() + newSession.expires_in * 1000;
+          await setSecureItem(TOKEN_EXPIRES_AT_KEY, newExpiresAt.toString());
+        }
+      } catch (refreshErr: any) {
+        console.error('[Auth] Token refresh failed:', refreshErr);
+        // Check if it's an auth error (refresh token expired)
+        if (refreshErr?.status === 401 || refreshErr?.detail?.includes('expired')) {
+          console.log('[Auth] Refresh token expired, logging out');
+          await get().logout();
+        }
+        // For other errors, let the request proceed and handle it there
+      } finally {
+        // Clear refreshing flag
+        isRefreshing = false;
       }
     } catch (err: any) {
       console.error('[Auth] ensureValidToken error:', err);
