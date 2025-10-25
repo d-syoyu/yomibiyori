@@ -354,8 +354,10 @@ def get_ranking(
         if entries:
             return entries
 
+    # Fallback to persisted snapshot
     snapshot_entries = _fetch_from_snapshot(session, theme_id, limit)
-    if not snapshot_entries:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ranking not available")
+    if snapshot_entries:
+        return snapshot_entries
 
-    return snapshot_entries
+    # Return empty list if no works have been submitted yet (not an error condition)
+    return []
