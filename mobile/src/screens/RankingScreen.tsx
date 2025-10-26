@@ -46,6 +46,14 @@ const isRankingFinalizedForTheme = (themeDate: string) => {
   const { year, month, day, hour } = getCurrentJstComponents();
   const currentDate = formatDateString(year, month, day);
 
+  console.log('[RankingScreen] 確定判定:', {
+    themeDate,
+    currentDate,
+    currentHour: hour,
+    isAfter22: hour >= 22,
+    comparison: currentDate === themeDate ? 'same day' : (currentDate > themeDate ? 'past theme' : 'future theme')
+  });
+
   if (currentDate > themeDate) {
     return true;
   }
