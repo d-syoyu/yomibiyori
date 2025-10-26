@@ -22,6 +22,7 @@ import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { VALIDATION_MESSAGES } from '../constants/errorMessages';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
+import { identifyUser, trackEvent, EventNames } from '../utils/analytics';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -50,10 +51,25 @@ export default function LoginScreen() {
     try {
       if (isSignUp) {
         await signUp({ email, password, display_name: displayName.trim() });
+        trackEvent(EventNames.SIGNUP_ATTEMPTED, { success: true });
       } else {
         await login({ email, password });
+        trackEvent(EventNames.LOGIN_ATTEMPTED, { success: true });
+      }
+
+      // Identify user after successful login/signup
+      const user = useAuthStore.getState().user;
+      if (user?.user_id) {
+        identifyUser(user.user_id, {
+          email: user.email,
+          display_name: user.display_name,
+        });
       }
     } catch (err: any) {
+      trackEvent(isSignUp ? EventNames.SIGNUP_ATTEMPTED : EventNames.LOGIN_ATTEMPTED, {
+        success: false,
+        error: err?.message || 'Unknown error',
+      });
       handleError(err, 'authentication');
       clearError();
     }

@@ -26,6 +26,7 @@ import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../
 import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { VALIDATION_MESSAGES, SUCCESS_MESSAGES } from '../constants/errorMessages';
+import { trackEvent, EventNames } from '../utils/analytics';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Composition'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -56,13 +57,20 @@ export default function CompositionScreen({ route }: Props) {
     setIsSubmitting(true);
     try {
       // APIに作品を投稿（改行で結合）
-      await api.createWork({
+      const work = await api.createWork({
         theme_id: theme.id,
         text: `${line1.trim()}\n${line2.trim()}`,
       });
 
       // 投稿成功
       showSuccess(SUCCESS_MESSAGES.workCreated);
+
+      // Track work creation event
+      trackEvent(EventNames.WORK_CREATED, {
+        theme_id: theme.id,
+        category: theme.category,
+        text_length: line1.trim().length + line2.trim().length + 1,
+      });
 
       // Clear input
       setLine1('');

@@ -24,6 +24,7 @@ import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
+import { trackEvent, EventNames } from '../utils/analytics';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 
@@ -61,6 +62,12 @@ export default function AppreciationScreen({ route }: Props) {
       setCurrentThemeId(theme.id);
       newThemesMap.set(theme.id, theme);
 
+      // Track theme viewed event
+      trackEvent(EventNames.THEME_VIEWED, {
+        theme_id: theme.id,
+        category: theme.category,
+      });
+
       console.log('[AppreciationScreen] Fetching works for theme:', theme.id);
       const worksData = await api.getWorksByTheme(theme.id, { limit: 50, order_by: 'fair_score' });
       console.log('[AppreciationScreen] Works received:', worksData.length, 'works');
@@ -93,6 +100,13 @@ export default function AppreciationScreen({ route }: Props) {
             : work
         )
       );
+
+      // Track like event
+      trackEvent(EventNames.WORK_LIKED, {
+        work_id: workId,
+        theme_id: currentThemeId,
+        category: selectedCategory,
+      });
 
       // No toast or haptic - just visual feedback with updated count
     } catch (error: any) {

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import logger
+from app.core.analytics import track_event, EventNames
 from app.models import Like, Theme, User, Work
 from app.schemas.work import (
     WorkCreate,
@@ -145,6 +146,21 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
         except Exception as exc:
             logger.error(f"[Works] Failed to initialize Redis ranking entry for work {work.id}: {exc}")
             # Don't fail the work creation if Redis fails - data is already in PostgreSQL
+
+    # Track work creation event
+    try:
+        track_event(
+            distinct_id=user_id,
+            event_name=EventNames.WORK_CREATED,
+            properties={
+                "work_id": str(work.id),
+                "theme_id": str(theme.id),
+                "category": theme.category,
+                "text_length": len(text),
+            }
+        )
+    except Exception as exc:
+        logger.error(f"[Analytics] Failed to track work creation: {exc}")
 
     # Get user name
     user = session.get(User, user_id)

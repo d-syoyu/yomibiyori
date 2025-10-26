@@ -22,6 +22,7 @@ import CategoryIcon from '../components/CategoryIcon';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
+import { trackEvent, EventNames } from '../utils/analytics';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
@@ -55,6 +56,14 @@ export default function RankingScreen() {
       // Now fetch rankings (this might take time)
       const rankingData = await api.getRanking(themeData.id);
       setRankings(rankingData);
+
+      // Track ranking viewed event
+      trackEvent(EventNames.RANKING_VIEWED, {
+        theme_id: themeData.id,
+        category: category,
+        is_finalized: themeData.is_finalized,
+        entries_count: rankingData.length,
+      });
     } catch (err: any) {
       handleError(err, 'ranking_fetching');
       setRankings([]);

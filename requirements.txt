@@ -13,3 +13,4 @@ alembic>=1.13.1
 openai>=1.0.0
 pykakasi>=2.2.1
 anthropic>=0.40.0
+posthog>=3.0.0

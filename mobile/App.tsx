@@ -15,6 +15,7 @@ import {
 import Navigation from './src/navigation';
 import api from './src/services/api';
 import useAuthStore from './src/stores/useAuthStore';
+import { initAnalytics, identifyUser } from './src/utils/analytics';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -32,6 +33,24 @@ export default function App() {
     return () => {
       api.setTokenValidationHook(null);
     };
+  }, []);
+
+  // Initialize PostHog analytics
+  useEffect(() => {
+    initAnalytics().then((client) => {
+      if (client) {
+        console.log('[App] Analytics initialized');
+
+        // Identify user if already logged in
+        const user = useAuthStore.getState().user;
+        if (user?.user_id) {
+          identifyUser(user.user_id, {
+            email: user.email,
+            display_name: user.display_name,
+          });
+        }
+      }
+    });
   }, []);
 
   if (!fontsLoaded) {

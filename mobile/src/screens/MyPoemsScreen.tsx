@@ -23,6 +23,7 @@ import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
+import { trackEvent, EventNames } from '../utils/analytics';
 
 // Works loaded for a specific date
 interface DateWorksCache {
@@ -60,6 +61,13 @@ export default function MyPoemsScreen() {
       const summaries = await api.getMyWorksSummary();
       console.log('[MyPoemsScreen] Summaries received:', summaries.length, 'dates');
       setDateSummaries(summaries);
+
+      // Track my poems viewed event
+      trackEvent(EventNames.MY_POEMS_VIEWED, {
+        dates_count: summaries.length,
+        total_works: summaries.reduce((sum, s) => sum + s.works_count, 0),
+        total_likes: summaries.reduce((sum, s) => sum + s.total_likes, 0),
+      });
     } catch (error: any) {
       handleError(error, 'user_data');
     } finally {

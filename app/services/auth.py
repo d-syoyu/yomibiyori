@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.analytics import track_event, identify_user, EventNames
 from app.db.session import set_request_user_context
 from app.models import User
 from app.schemas.auth import (
@@ -287,6 +288,27 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
 
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
+    # Track user registration event
+    try:
+        identify_user(
+            distinct_id=str(user.id),
+            properties={
+                "email": user.email,
+                "display_name": user.name,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+            }
+        )
+        track_event(
+            distinct_id=str(user.id),
+            event_name=EventNames.USER_REGISTERED,
+            properties={
+                "email": user.email,
+                "has_display_name": bool(user.name),
+            }
+        )
+    except Exception as e:
+        print(f"[Analytics] Failed to track signup: {e}")
+
     # Supabase may return session data either nested under "session" key or at root level
     session_payload = payload_json.get("session") or payload_json
     access_token = session_payload.get("access_token")
@@ -363,6 +385,18 @@ def login_user(session: Session, *, payload: LoginRequest) -> LoginResponse:
 
     # Sync user record if needed
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+
+    # Track user login event
+    try:
+        track_event(
+            distinct_id=str(user.id),
+            event_name=EventNames.USER_LOGGED_IN,
+            properties={
+                "email": user.email,
+            }
+        )
+    except Exception as e:
+        print(f"[Analytics] Failed to track login: {e}")
 
     access_token = payload_json.get("access_token")
     session_token = (
