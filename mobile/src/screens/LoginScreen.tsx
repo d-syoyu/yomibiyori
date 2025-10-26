@@ -13,12 +13,14 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useToastStore } from '../stores/useToastStore';
 import { parseApiError } from '../utils/errorHandler';
+import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -58,135 +60,177 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <LinearGradient
+      colors={[colors.background.primary, colors.background.secondary]}
+      style={styles.gradient}
     >
-      <View style={styles.content}>
-        <Text style={styles.title}>よみびより</Text>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.content}>
+          <Text style={styles.title}>よみびより</Text>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="メールアドレス"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <View style={styles.card}>
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="メールアドレス"
+                placeholderTextColor={colors.text.tertiary}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
 
-          <TextInput
-            style={styles.input}
-            placeholder="パスワード"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={true}
-          />
+              <TextInput
+                style={styles.input}
+                placeholder="パスワード"
+                placeholderTextColor={colors.text.tertiary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={true}
+              />
 
-          {isSignUp && (
-            <TextInput
-              style={styles.input}
-              placeholder="表示名"
-              value={displayName}
-              onChangeText={setDisplayName}
-            />
-          )}
+              {isSignUp && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="表示名"
+                  placeholderTextColor={colors.text.tertiary}
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                />
+              )}
 
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleAuth}
-            disabled={isLoading}
-          >
-            <Text style={styles.buttonText}>
-              {isLoading ? '処理中...' : isSignUp ? 'サインアップ' : 'ログイン'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleAuth}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={
+                    isLoading
+                      ? ['#CBD5E0', '#A0AEC0']
+                      : [colors.accent.primary, colors.accent.gradient[1], colors.accent.gradient[2]]
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buttonGradient}
+                >
+                  <Text style={styles.buttonText}>
+                    {isLoading ? '処理中...' : isSignUp ? 'サインアップ' : 'ログイン'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.switchButton}
-            onPress={() => setIsSignUp(!isSignUp)}
-          >
-            <Text style={styles.switchButtonText}>
-              {isSignUp
-                ? 'アカウントをお持ちの方はこちら'
-                : 'アカウントをお持ちでない方はこちら'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.switchButton}
+                onPress={() => setIsSignUp(!isSignUp)}
+              >
+                <Text style={styles.switchButtonText}>
+                  {isSignUp
+                    ? 'アカウントをお持ちの方はこちら'
+                    : 'アカウントをお持ちでない方はこちら'}
+                </Text>
+              </TouchableOpacity>
 
-          {!isSignUp && (
-            <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={() => navigation.navigate('PasswordReset')}
-            >
-              <Text style={styles.forgotPasswordText}>パスワードを忘れた方はこちら</Text>
-            </TouchableOpacity>
-          )}
+              {!isSignUp && (
+                <TouchableOpacity
+                  style={styles.forgotPasswordButton}
+                  onPress={() => navigation.navigate('PasswordReset')}
+                >
+                  <Text style={styles.forgotPasswordText}>パスワードを忘れた方はこちら</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: spacing.lg,
   },
   title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginBottom: 48,
+    fontSize: fontSize.h1,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.xxl,
+    letterSpacing: 2,
+  },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    ...shadow.lg,
   },
   form: {
     width: '100%',
-    maxWidth: 400,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 16,
+    borderColor: 'rgba(107, 123, 79, 0.2)',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   button: {
-    backgroundColor: '#4A5568',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+    ...shadow.md,
   },
-  buttonDisabled: {
-    backgroundColor: '#A0AEC0',
+  buttonGradient: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
   },
   buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.text.inverse,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    letterSpacing: 1,
   },
   switchButton: {
-    marginTop: 16,
+    marginTop: spacing.md,
     alignItems: 'center',
+    paddingVertical: spacing.sm,
   },
   switchButtonText: {
-    color: '#4A5568',
-    fontSize: 14,
+    color: colors.text.secondary,
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    letterSpacing: 0.5,
   },
   forgotPasswordButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     alignItems: 'center',
+    paddingVertical: spacing.xs,
   },
   forgotPasswordText: {
-    color: '#718096',
-    fontSize: 12,
+    color: colors.text.tertiary,
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.regular,
     textDecorationLine: 'underline',
+    letterSpacing: 0.3,
   },
 });
