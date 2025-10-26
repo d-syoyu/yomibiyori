@@ -13,11 +13,13 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import type { ThemeCategory, RankingEntry, Theme } from '../types';
 import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
+import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
@@ -146,6 +148,7 @@ export default function RankingScreen() {
                   selectedCategory === category && styles.categoryButtonActive,
                 ]}
                 onPress={() => handleCategoryChange(category)}
+                activeOpacity={0.8}
               >
                 <Text style={styles.categoryIcon}>{CATEGORY_ICONS[category]}</Text>
                 <Text
@@ -162,16 +165,29 @@ export default function RankingScreen() {
 
           {/* Theme Display */}
           {theme && (
-            <View style={styles.themeCard}>
-              <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
-              <View style={styles.verticalTextContainer}>
-                <VerticalText
-                  text={theme.text}
-                  textStyle={styles.themeVerticalText}
-                  direction="rtl"
-                />
+            <LinearGradient
+              colors={[
+                colors.category[theme.category].gradient[0],
+                colors.category[theme.category].gradient[1],
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.themeCard,
+                { shadowColor: colors.category[theme.category].shadow },
+              ]}
+            >
+              <View style={styles.glassOverlay}>
+                <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
+                <View style={styles.verticalTextContainer}>
+                  <VerticalText
+                    text={theme.text}
+                    textStyle={styles.themeVerticalText}
+                    direction="rtl"
+                  />
+                </View>
               </View>
-            </View>
+            </LinearGradient>
           )}
         </View>
 
@@ -255,201 +271,214 @@ export default function RankingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: colors.background.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: colors.background.primary,
   },
   header: {
-    backgroundColor: '#F7FAFC',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.background.secondary,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 12,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2D3748',
+    fontSize: fontSize.h1,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    letterSpacing: 2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
   },
   statusBadgeFinalized: {
-    backgroundColor: '#48BB78',
+    backgroundColor: colors.status.success,
   },
   statusBadgeTemporary: {
-    backgroundColor: '#EDF2F7',
+    backgroundColor: colors.background.secondary,
     borderWidth: 1,
-    borderColor: '#CBD5E0',
+    borderColor: colors.text.tertiary,
   },
   statusBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.semiBold,
+    letterSpacing: 0.5,
   },
   statusBadgeTextFinalized: {
-    color: '#FFFFFF',
+    color: colors.text.inverse,
   },
   statusBadgeTextTemporary: {
-    color: '#718096',
+    color: colors.text.secondary,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#718096',
-    marginBottom: 20,
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
+    marginBottom: spacing.md,
+    letterSpacing: 0.5,
   },
   rankingScrollView: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
   },
   categorySelector: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   categoryButton: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
+    ...shadow.sm,
   },
   categoryButtonActive: {
-    borderColor: '#4299E1',
-    backgroundColor: '#EBF8FF',
+    borderColor: colors.text.primary,
+    backgroundColor: colors.background.secondary,
   },
   categoryIcon: {
     fontSize: 24,
     marginBottom: 4,
   },
   categoryText: {
-    fontSize: 12,
-    color: '#718096',
-    fontWeight: '500',
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.medium,
+    color: colors.text.primary,
+    letterSpacing: 0.5,
   },
   categoryTextActive: {
-    color: '#4299E1',
-    fontWeight: 'bold',
+    color: colors.text.primary,
+    fontFamily: fontFamily.semiBold,
   },
   themeCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.sm,
+    ...shadow.lg,
+    overflow: 'hidden',
+  },
+  glassOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: spacing.md,
   },
   themeLabel: {
-    fontSize: 12,
-    color: '#718096',
-    marginBottom: 12,
-    fontWeight: '600',
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+    letterSpacing: 1,
+    textAlign: 'center',
   },
   verticalTextContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 120,
-    marginVertical: 8,
+    marginVertical: spacing.sm,
   },
   themeVerticalText: {
-    fontSize: 18,
-    lineHeight: 30,
-    color: '#2D3748',
-    fontFamily: 'NotoSerifJP_500Medium',
+    fontSize: fontSize.poem,
+    lineHeight: 34,
+    color: colors.text.primary,
+    fontFamily: fontFamily.medium,
   },
   loadingContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 40,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xxl,
     alignItems: 'center',
+    ...shadow.sm,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#718096',
+    marginTop: spacing.sm,
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
   },
   emptyState: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 40,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xxl,
     alignItems: 'center',
+    ...shadow.sm,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#4A5568',
-    marginBottom: 8,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+    letterSpacing: 0.5,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#718096',
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   retryButton: {
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#4299E1',
-    borderRadius: 8,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.text.primary,
+    borderRadius: borderRadius.md,
+    ...shadow.sm,
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.text.inverse,
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.semiBold,
+    letterSpacing: 0.5,
   },
   rankingList: {
-    gap: 12,
-    paddingTop: 16,
-    paddingBottom: 24,
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   rankingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow.md,
   },
   rankBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#4A5568',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.text.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: spacing.md,
   },
   rankBadgeGold: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.status.warning,
   },
   rankBadgeSilver: {
-    backgroundColor: '#C0C0C0',
+    backgroundColor: colors.text.tertiary,
   },
   rankBadgeBronze: {
-    backgroundColor: '#CD7F32',
+    backgroundColor: colors.status.error,
   },
   rankText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: fontSize.h4,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.inverse,
   },
   workInfo: {
     flex: 1,
@@ -459,21 +488,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 60,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   workVerticalText: {
-    fontSize: 16,
-    lineHeight: 26,
-    color: '#2D3748',
-    fontFamily: 'NotoSerifJP_400Regular',
+    fontSize: fontSize.body,
+    lineHeight: 28,
+    color: colors.text.primary,
+    fontFamily: fontFamily.regular,
   },
   workAuthor: {
-    fontSize: 12,
-    color: '#718096',
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
+    letterSpacing: 0.3,
   },
   scoreText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4A5568',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.secondary,
   },
 });

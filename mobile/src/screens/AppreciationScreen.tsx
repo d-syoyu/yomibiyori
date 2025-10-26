@@ -14,12 +14,14 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
+import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 
@@ -144,6 +146,7 @@ export default function AppreciationScreen({ route }: Props) {
                   selectedCategory === category && styles.categoryButtonActive,
                 ]}
                 onPress={() => setSelectedCategory(category)}
+                activeOpacity={0.8}
               >
                 <Text style={styles.categoryIcon}>{CATEGORY_ICONS[category]}</Text>
                 <Text
@@ -160,16 +163,29 @@ export default function AppreciationScreen({ route }: Props) {
 
           {/* お題カード（固定） */}
           {currentThemeId && themesMap.has(currentThemeId) && (
-            <View style={styles.fixedThemeCard}>
-              <Text style={styles.themeCardLabel}>今日のお題（上の句）</Text>
-              <View style={styles.verticalTextContainer}>
-                <VerticalText
-                  text={themesMap.get(currentThemeId)!.text}
-                  textStyle={styles.themeCardText}
-                  direction="rtl"
-                />
+            <LinearGradient
+              colors={[
+                colors.category[themesMap.get(currentThemeId)!.category].gradient[0],
+                colors.category[themesMap.get(currentThemeId)!.category].gradient[1],
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.fixedThemeCard,
+                { shadowColor: colors.category[themesMap.get(currentThemeId)!.category].shadow },
+              ]}
+            >
+              <View style={styles.glassOverlay}>
+                <Text style={styles.themeCardLabel}>今日のお題（上の句）</Text>
+                <View style={styles.verticalTextContainer}>
+                  <VerticalText
+                    text={themesMap.get(currentThemeId)!.text}
+                    textStyle={styles.themeCardText}
+                    direction="rtl"
+                  />
+                </View>
               </View>
-            </View>
+            </LinearGradient>
           )}
         </View>
 
@@ -246,182 +262,196 @@ export default function AppreciationScreen({ route }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: colors.background.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: colors.background.primary,
   },
   header: {
-    backgroundColor: '#F7FAFC',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.background.secondary,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginBottom: 20,
+    fontSize: fontSize.h1,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+    letterSpacing: 2,
   },
   categorySelector: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   categoryButton: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
+    ...shadow.sm,
   },
   categoryButtonActive: {
-    borderColor: '#4299E1',
-    backgroundColor: '#EBF8FF',
+    borderColor: colors.text.primary,
+    backgroundColor: colors.background.secondary,
   },
   categoryIcon: {
     fontSize: 24,
     marginBottom: 4,
   },
   categoryText: {
-    fontSize: 12,
-    color: '#718096',
-    fontWeight: '500',
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.medium,
+    color: colors.text.primary,
+    letterSpacing: 0.5,
   },
   categoryTextActive: {
-    color: '#4299E1',
-    fontWeight: 'bold',
+    color: colors.text.primary,
+    fontFamily: fontFamily.semiBold,
   },
   fixedThemeCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.sm,
+    ...shadow.lg,
+    overflow: 'hidden',
+  },
+  glassOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: spacing.md,
   },
   themeCardLabel: {
-    fontSize: 12,
-    color: '#718096',
-    marginBottom: 12,
-    fontWeight: '600',
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+    letterSpacing: 1,
+    textAlign: 'center',
   },
   themeCardText: {
-    fontSize: 18,
-    lineHeight: 30,
-    color: '#2D3748',
-    fontFamily: 'NotoSerifJP_500Medium',
+    fontSize: fontSize.poem,
+    lineHeight: 34,
+    color: colors.text.primary,
+    fontFamily: fontFamily.medium,
   },
   worksScrollView: {
     flex: 1,
   },
   worksSection: {
-    padding: 24,
+    padding: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D3748',
-    marginBottom: 16,
+    fontSize: fontSize.h3,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+    letterSpacing: 1,
   },
   loadingContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 40,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xxl,
     alignItems: 'center',
+    ...shadow.sm,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#718096',
+    marginTop: spacing.md,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
   },
   emptyState: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 40,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xxl,
     alignItems: 'center',
+    ...shadow.sm,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#4A5568',
-    marginBottom: 8,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+    letterSpacing: 0.5,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#718096',
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   worksList: {
-    gap: 12,
+    gap: spacing.sm,
   },
   workCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    ...shadow.md,
   },
   workSection: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   verticalTextContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 120,
-    marginVertical: 8,
+    marginVertical: spacing.sm,
   },
   workVerticalText: {
-    fontSize: 18,
-    lineHeight: 28,
-    color: '#2D3748',
-    fontFamily: 'NotoSerifJP_400Regular',
+    fontSize: fontSize.poem,
+    lineHeight: 32,
+    color: colors.text.primary,
+    fontFamily: fontFamily.regular,
   },
   workText: {
-    fontSize: 18,
-    color: '#2D3748',
-    lineHeight: 28,
-    marginBottom: 12,
+    fontSize: fontSize.poem,
+    color: colors.text.primary,
+    lineHeight: 32,
+    marginBottom: spacing.sm,
+    fontFamily: fontFamily.regular,
   },
   workFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: 'rgba(107, 123, 79, 0.2)',
   },
   workMetaContainer: {
     flex: 1,
   },
   workAuthor: {
-    fontSize: 12,
-    color: '#718096',
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
     marginBottom: 4,
+    letterSpacing: 0.3,
   },
   workMeta: {
-    fontSize: 12,
-    color: '#A0AEC0',
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
   },
   likeButton: {
-    backgroundColor: '#EDF2F7',
-    borderRadius: 16,
-    paddingHorizontal: 12,
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 6,
   },
   likeButtonText: {
-    fontSize: 14,
-    color: '#E53E3E',
-    fontWeight: '600',
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.semiBold,
+    color: colors.status.error,
+    letterSpacing: 0.3,
   },
 });

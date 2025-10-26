@@ -49,6 +49,9 @@ coverage/
 .codex_cache/
 .codex_tasks/
 
+# Claude Code settings (contains API keys)
+.claude/settings.local.json
+
 # Secrets & Credentials (DO NOT COMMIT)
 github_secrets_setup.txt
 setup_github_secrets.ps1

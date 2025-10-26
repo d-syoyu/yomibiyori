@@ -1,14 +1,16 @@
 /**
  * Category Selection Screen
- * カテゴリ選択画面 - 今日のお題を表示
+ * カテゴリ選択画面 - 今日のお題を表示（和×モダンデザイン）
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ThemeCategory, HomeStackParamList } from '../types';
+import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList, 'CategorySelection'>;
 
@@ -29,26 +31,61 @@ export default function CategorySelectionScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>今日のお題</Text>
-        <Text style={styles.subtitle}>カテゴリを選択してください</Text>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {/* タイトル部分 */}
+          <View style={styles.header}>
+            <Text style={styles.title}>今日のお題</Text>
+            <Text style={styles.subtitle}>心に響くカテゴリを選んでください</Text>
+          </View>
 
-        <View style={styles.categoryList}>
-          {CATEGORIES.map((category) => (
-            <TouchableOpacity
-              key={category.name}
-              style={styles.categoryCard}
-              onPress={() => handleCategoryPress(category.name)}
-            >
-              <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-              <Text style={styles.categoryName}>{category.name}</Text>
-              <Text style={styles.categoryDescription}>{category.description}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* カテゴリーカード */}
+          <View style={styles.categoryList}>
+            {CATEGORIES.map((category, index) => (
+              <TouchableOpacity
+                key={category.name}
+                onPress={() => handleCategoryPress(category.name)}
+                activeOpacity={0.8}
+                style={{ marginTop: index === 0 ? 0 : spacing.md }}
+              >
+                <LinearGradient
+                  colors={[
+                    colors.category[category.name].gradient[0],
+                    colors.category[category.name].gradient[1],
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[
+                    styles.categoryCard,
+                    {
+                      shadowColor: colors.category[category.name].shadow,
+                    },
+                  ]}
+                >
+                  {/* グラスモーフィズム効果 */}
+                  <View style={styles.glassOverlay}>
+                    <View style={styles.cardContent}>
+                      <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                      <View style={styles.categoryTextContainer}>
+                        <Text style={styles.categoryName}>{category.name}</Text>
+                        <Text style={styles.categoryDescription}>{category.description}</Text>
+                      </View>
+                    </View>
+
+                    {/* 装飾的な和の要素 */}
+                    <View style={styles.decoration}>
+                      <Text style={styles.decorationText}>▸</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* フッター余白 */}
+          <View style={styles.footer} />
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -56,66 +93,81 @@ export default function CategorySelectionScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: colors.background.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F7FAFC',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#718096',
+    backgroundColor: colors.background.primary,
   },
   content: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  header: {
+    marginBottom: spacing.xl,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginBottom: 8,
+    fontSize: fontSize.h1,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    letterSpacing: 1.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#718096',
-    marginBottom: 24,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
+    letterSpacing: 0.5,
   },
   categoryList: {
-    gap: 16,
+    paddingBottom: spacing.md,
   },
   categoryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 24,
+    borderRadius: borderRadius.lg,
+    ...shadow.lg,
+    overflow: 'hidden',
+  },
+  glassOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: spacing.lg,
+  },
+  cardContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   categoryEmoji: {
-    fontSize: 48,
-    marginBottom: 12,
+    fontSize: 56,
+    marginRight: spacing.lg,
+  },
+  categoryTextContainer: {
+    flex: 1,
   },
   categoryName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2D3748',
-    marginBottom: 8,
+    fontSize: fontSize.h3,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+    letterSpacing: 2,
   },
   categoryDescription: {
-    fontSize: 14,
-    color: '#718096',
-    textAlign: 'center',
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    color: colors.text.secondary,
+    letterSpacing: 0.5,
+  },
+  decoration: {
+    position: 'absolute',
+    right: spacing.lg,
+    top: '50%',
+    transform: [{ translateY: -12 }],
+  },
+  decorationText: {
+    fontSize: 24,
+    color: colors.text.inverse,
+    opacity: 0.6,
+  },
+  footer: {
+    height: spacing.xl,
   },
 });

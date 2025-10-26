@@ -72,7 +72,7 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetResponse(BaseModel):
     """Response for password reset request."""
 
-    message: str = "パスワードリセットメールを送信しました"
+    message: str = "パスワード再設定メールを送信しました"
 
 
 class UpdatePasswordRequest(BaseModel):

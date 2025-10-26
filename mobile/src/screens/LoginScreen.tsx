@@ -63,8 +63,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>詠日和</Text>
-        <Text style={styles.subtitle}>よみびより</Text>
+        <Text style={styles.title}>よみびより</Text>
 
         <View style={styles.form}>
           <TextInput
@@ -143,11 +142,6 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     color: '#2D3748',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#718096',
     marginBottom: 48,
   },
   form: {

@@ -1,4 +1,4 @@
-# Yomibiyori Backend (詠日和)
+# Yomibiyori Backend (よみびより)
 
 Yomibiyori is a poetic social network where AI generates the **upper verse** (上の句, kami-no-ku, 5-7-5 syllables) and users compose the **lower verse** (下の句, shimo-no-ku, 7-7 syllables) to complete a tanka (短歌, 5-7-5-7-7). This repository contains the FastAPI backend, Redis integrations, and automated jobs that power the experience.
 

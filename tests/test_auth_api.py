@@ -114,7 +114,7 @@ def test_signup_supabase_error_propagates(client: TestClient, monkeypatch: pytes
         json={"email": "duplicate@example.com", "password": "SecurePass1!", "display_name": "Duplicate Poet"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User already registered"
+    assert response.json()["error"]["detail"] == "User already registered"
 
 
 def test_get_profile_success(client: TestClient, db_session: Session) -> None:
@@ -132,7 +132,7 @@ def test_get_profile_success(client: TestClient, db_session: Session) -> None:
 def test_get_profile_missing(client: TestClient) -> None:
     response = client.get("/api/v1/auth/profile", headers=_bearer(str(uuid4())))
     assert response.status_code == 404
-    assert response.json()["detail"] == "User profile not found"
+    assert response.json()["error"]["detail"] == "User profile not found"
 
 
 def test_sync_profile_updates_local_record(
@@ -170,3 +170,97 @@ def test_sync_profile_updates_local_record(
 
     updated = db_session.get(User, user.id)
     assert updated.name == "Refreshed Name"
+
+
+def test_password_reset_requests_supabase(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "supabase_anon_key", "anon-key")
+    monkeypatch.setattr(settings, "supabase_request_timeout", 1.0)
+
+    captured = SimpleNamespace(url=None, payload=None, headers=None)
+
+    def fake_post(url, json, headers, timeout):  # type: ignore[no-untyped-def]
+        captured.url = url
+        captured.payload = json
+        captured.headers = headers
+        return _DummyResponse(200, {})
+
+    monkeypatch.setattr(auth_service.requests, "post", fake_post)
+
+    response = client.post("/api/v1/auth/password-reset", json={"email": "reset@example.com"})
+    assert response.status_code == 200
+    assert response.json()["message"] == "パスワード再設定メールを送信しました"
+    assert captured.url.endswith("/auth/v1/recover")
+    assert captured.payload == {"email": "reset@example.com"}
+    assert captured.headers["apikey"] == "anon-key"
+    assert captured.headers["Authorization"] == "Bearer anon-key"
+
+
+def test_password_update_uses_bearer_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "supabase_anon_key", "anon-key")
+    monkeypatch.setattr(settings, "supabase_request_timeout", 1.0)
+
+    captured = SimpleNamespace(url=None, payload=None, headers=None)
+
+    def fake_put(url, json, headers, timeout):  # type: ignore[no-untyped-def]
+        captured.url = url
+        captured.payload = json
+        captured.headers = headers
+        return _DummyResponse(200, {})
+
+    monkeypatch.setattr(auth_service.requests, "put", fake_put)
+
+    response = client.post(
+        "/api/v1/auth/password-update",
+        headers={"Authorization": "Bearer session-token"},
+        json={"new_password": "ResetPass123"},
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "パスワードを更新しました"
+    assert captured.url.endswith("/auth/v1/user")
+    assert captured.payload == {"password": "ResetPass123"}
+    assert captured.headers["Authorization"] == "Bearer session-token"
+    assert captured.headers["apikey"] == "anon-key"
+
+
+def test_password_update_with_recovery_token_success(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "supabase_anon_key", "anon-key")
+    monkeypatch.setattr(settings, "supabase_request_timeout", 1.0)
+
+    captured = SimpleNamespace(
+        verify_url=None,
+        verify_payload=None,
+        update_url=None,
+        update_payload=None,
+        update_headers=None,
+    )
+
+    def fake_post(url, json, headers, timeout):  # type: ignore[no-untyped-def]
+        captured.verify_url = url
+        captured.verify_payload = json
+        return _DummyResponse(200, {"access_token": "verified-access-token"})
+
+    def fake_put(url, json, headers, timeout):  # type: ignore[no-untyped-def]
+        captured.update_url = url
+        captured.update_payload = json
+        captured.update_headers = headers
+        return _DummyResponse(200, {})
+
+    monkeypatch.setattr(auth_service.requests, "post", fake_post)
+    monkeypatch.setattr(auth_service.requests, "put", fake_put)
+
+    response = client.post(
+        "/api/v1/auth/password-update-with-token",
+        json={"access_token": "recovery-token-hash", "new_password": "NewPass123"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "パスワードを更新しました"
+    assert captured.verify_url.endswith("/auth/v1/verify")
+    assert captured.verify_payload == {"token_hash": "recovery-token-hash", "type": "recovery"}
+    assert captured.update_url.endswith("/auth/v1/user")
+    assert captured.update_payload == {"password": "NewPass123"}
+    assert captured.update_headers["Authorization"] == "Bearer verified-access-token"
+    assert captured.update_headers["apikey"] == "anon-key"

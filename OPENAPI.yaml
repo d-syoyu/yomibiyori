@@ -98,6 +98,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/password-reset:
+    post:
+      tags: [auth]
+      summary: Request password reset email
+      description: >
+        Request Supabase to send a recovery email. Returns success even if the address is not registered.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '200':
+          description: Password reset email dispatched (or silently ignored)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetResponse'
+        '400':
+          description: Supabase rejected the reset request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Supabase service unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/password-update:
+    post:
+      tags: [auth]
+      summary: Update password with access token
+      description: >
+        Update the authenticated user's password by forwarding the request to Supabase Auth.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePasswordResponse'
+        '400':
+          description: Supabase rejected the password update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Supabase service unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/password-update-with-token:
+    post:
+      tags: [auth]
+      summary: Verify recovery token and update password
+      description: >
+        Accept a recovery token (token_hash or access_token) from the password reset email, verify it with
+        Supabase, and update the password without requiring an authenticated session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyTokenAndUpdatePasswordRequest'
+      responses:
+        '200':
+          description: Password updated through recovery flow
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePasswordResponse'
+        '400':
+          description: Supabase rejected the token or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Supabase service unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /works:
     post:
       tags: [works]
@@ -535,6 +633,48 @@ components:
         expires_in:
           type: integer
           nullable: true
+    PasswordResetRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+    PasswordResetResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: パスワード再設定メールを送信しました
+    UpdatePasswordRequest:
+      type: object
+      required:
+        - new_password
+      properties:
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 128
+    UpdatePasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: パスワードを更新しました
+    VerifyTokenAndUpdatePasswordRequest:
+      type: object
+      required:
+        - access_token
+        - new_password
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 128
     SignUpResponse:
       type: object
       required:
