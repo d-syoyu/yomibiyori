@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   AppState,
   AppStateStatus,
 } from 'react-native';
@@ -22,6 +21,7 @@ import type { Work, Theme, WorkDateSummary } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
+import { useToastStore } from '../stores/useToastStore';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 // Works loaded for a specific date
@@ -34,6 +34,7 @@ interface DateWorksCache {
 export default function MyPoemsScreen() {
   const { user, logout } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
+  const showError = useToastStore(state => state.showError);
 
   // サマリー情報（日付ごとの作品数、いいね数）
   const [dateSummaries, setDateSummaries] = useState<WorkDateSummary[]>([]);
@@ -69,12 +70,12 @@ export default function MyPoemsScreen() {
         errorMessage = `エラー: ${error.detail}`;
       }
 
-      Alert.alert('エラー', errorMessage);
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [showError]);
 
   // Load works for a specific date (アコーディオンを開いたときに呼ばれる)
   const loadWorksForDate = useCallback(async (date: string) => {
@@ -129,9 +130,9 @@ export default function MyPoemsScreen() {
         errorMessage = `エラー: ${error.detail}`;
       }
 
-      Alert.alert('エラー', errorMessage);
+      showError(errorMessage);
     }
-  }, [dateWorksCache, getThemeById]);
+  }, [dateWorksCache, getThemeById, showError]);
 
   // Load summary on mount
   useEffect(() => {

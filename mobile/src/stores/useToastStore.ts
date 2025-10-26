@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import * as Haptics from 'expo-haptics';
 import type { ToastType } from '../components/Toast';
 
 export interface ToastConfig {
@@ -48,6 +49,9 @@ export const useToastStore = create<ToastState>((set) => ({
   },
 
   showSuccess: (message, title) => {
+    // Haptic feedback for success
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
     useToastStore.getState().showToast({
       type: 'success',
       title: title || '成功',
@@ -56,6 +60,9 @@ export const useToastStore = create<ToastState>((set) => ({
   },
 
   showError: (message, title) => {
+    // Haptic feedback for error
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
     useToastStore.getState().showToast({
       type: 'error',
       title: title || 'エラー',
@@ -64,6 +71,9 @@ export const useToastStore = create<ToastState>((set) => ({
   },
 
   showWarning: (message, title) => {
+    // Haptic feedback for warning
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
     useToastStore.getState().showToast({
       type: 'warning',
       title: title || '警告',
@@ -72,6 +82,9 @@ export const useToastStore = create<ToastState>((set) => ({
   },
 
   showInfo: (message, title) => {
+    // Light haptic feedback for info
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     useToastStore.getState().showToast({
       type: 'info',
       title: title || '情報',

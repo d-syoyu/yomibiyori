@@ -99,13 +99,13 @@ export default function Toast({
       case 'success':
         return '✓';
       case 'error':
-        return '✕';
+        return '!';
       case 'warning':
-        return '⚠';
+        return '!';
       case 'info':
-        return 'ℹ';
+        return 'i';
       default:
-        return 'ℹ';
+        return 'i';
     }
   };
 
@@ -164,18 +164,19 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    marginRight: spacing.md,
   },
   icon: {
-    fontSize: 18,
+    fontSize: 20,
     color: colors.text.inverse,
     fontFamily: fontFamily.semiBold,
+    fontWeight: 'bold',
   },
   textContainer: {
     flex: 1,

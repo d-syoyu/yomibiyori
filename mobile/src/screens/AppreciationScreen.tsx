@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +20,7 @@ import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
+import { useToastStore } from '../stores/useToastStore';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
@@ -36,6 +36,8 @@ const CATEGORY_ICONS: Record<ThemeCategory, string> = {
 
 export default function AppreciationScreen({ route }: Props) {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
+  const showError = useToastStore(state => state.showError);
+  const showSuccess = useToastStore(state => state.showSuccess);
 
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>(
     route.params?.category || '恋愛'
@@ -84,12 +86,12 @@ export default function AppreciationScreen({ route }: Props) {
         errorMessage = `エラー: ${error.detail}`;
       }
 
-      Alert.alert('エラー', errorMessage);
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedCategory, getTodayTheme]);
+  }, [selectedCategory, getTodayTheme, showError]);
 
   // Load works when category changes
   useEffect(() => {
@@ -110,7 +112,7 @@ export default function AppreciationScreen({ route }: Props) {
         )
       );
 
-      Alert.alert('成功', 'いいねを送りました！');
+      showSuccess('いいねを送りました！');
     } catch (error: any) {
       console.error('Failed to like work:', error);
 
@@ -122,7 +124,7 @@ export default function AppreciationScreen({ route }: Props) {
         errorMessage = error.detail;
       }
 
-      Alert.alert('エラー', errorMessage);
+      showError(errorMessage);
     }
   };
 

@@ -10,15 +10,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   Linking,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
+import { useToastStore } from '../stores/useToastStore';
 
 export default function PasswordResetScreen() {
   const navigation = useNavigation();
+  const showError = useToastStore(state => state.showError);
 
   // バックエンドのベースURL（またはSupabaseの直接URL）
   const API_BASE_URL =
@@ -39,14 +40,11 @@ export default function PasswordResetScreen() {
       if (supported) {
         await Linking.openURL(resetUrl);
       } else {
-        Alert.alert(
-          'エラー',
-          'ブラウザを開けませんでした。後ほど再度お試しください。'
-        );
+        showError('ブラウザを開けませんでした。後ほど再度お試しください。');
       }
     } catch (error) {
       console.error('Failed to open URL:', error);
-      Alert.alert('エラー', 'リンクを開けませんでした。');
+      showError('リンクを開けませんでした。');
     }
   };
 

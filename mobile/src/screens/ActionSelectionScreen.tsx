@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory } from '../types';
 import api from '../services/api';
 import { useThemeStore } from '../stores/useThemeStore';
+import { useToastStore } from '../stores/useToastStore';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ActionSelection'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -26,6 +27,7 @@ const CATEGORY_INFO: Record<ThemeCategory, { emoji: string; name: string }> = {
 export default function ActionSelectionScreen({ route }: Props) {
   const navigation = useNavigation<NavigationProp>();
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
+  const showError = useToastStore(state => state.showError);
   const { category } = route.params;
   const [isLoading, setIsLoading] = useState(false);
 
@@ -50,7 +52,7 @@ export default function ActionSelectionScreen({ route }: Props) {
         errorMessage = error.detail;
       }
 
-      Alert.alert('エラー', errorMessage);
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
