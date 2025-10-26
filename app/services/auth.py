@@ -580,7 +580,7 @@ def update_password(*, access_token: str, payload: UpdatePasswordRequest) -> Upd
 
 
 def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordRequest) -> UpdatePasswordResponse:
-    """Update password using access token from email link."""
+    """Verify token and update password."""
 
     settings = get_settings()
     api_key = settings.supabase_anon_key or settings.service_role_key
@@ -592,12 +592,45 @@ def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordReq
 
     supabase_url = settings.supabase_url.rstrip("/")
 
-    # Update password with access token from email
-    update_body: dict[str, Any] = {"password": payload.new_password}
-
     headers = {
         "apikey": api_key,
-        "Authorization": f"Bearer {payload.access_token}",
+        "Content-Type": "application/json",
+    }
+
+    # Step 1: Try to verify token first (in case it's a token_hash or recovery token)
+    verify_body: dict[str, Any] = {
+        "token_hash": payload.access_token,
+        "type": "recovery",
+    }
+
+    access_token = None
+
+    try:
+        verify_response = requests.post(
+            f"{supabase_url}/auth/v1/verify",
+            json=verify_body,
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+
+        if verify_response.status_code == 200:
+            # Token verification succeeded, get access_token
+            verify_data = verify_response.json()
+            access_token = verify_data.get("access_token")
+    except requests.RequestException:
+        # Verification failed, might already be an access token
+        pass
+
+    # If verification failed or didn't return token, use the provided token as-is
+    if not access_token:
+        access_token = payload.access_token
+
+    # Step 2: Update password with access token
+    update_body: dict[str, Any] = {"password": payload.new_password}
+
+    headers_with_auth = {
+        "apikey": api_key,
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
     }
 
@@ -605,7 +638,7 @@ def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordReq
         response = requests.put(
             f"{supabase_url}/auth/v1/user",
             json=update_body,
-            headers=headers,
+            headers=headers_with_auth,
             timeout=settings.supabase_request_timeout,
         )
     except requests.RequestException as exc:
