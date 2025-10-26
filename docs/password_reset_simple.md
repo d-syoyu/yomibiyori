@@ -69,9 +69,19 @@
    http://localhost:8000
    ```
 
-#### b. Email Templates（デフォルトでOK）
-- 特別な設定は不要
-- Supabaseのデフォルトテンプレートがそのまま使えます
+#### b. Email Templates（重要）
+**必須設定**: デフォルトのテンプレートでは動作しません。以下のように設定してください：
+
+1. **Authentication** → **Email Templates** → **Reset Password**
+2. テンプレートを以下のように編集：
+
+```html
+<a href="{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery">パスワードを再設定</a>
+```
+
+**重要**: `{{ .TokenHash }}` を使用してください。`{{ .Token }}` や `{{ .ConfirmationURL }}` は使用しないでください。
+
+詳細は [`docs/supabase_email_template_setup.md`](./supabase_email_template_setup.md) を参照。
 
 #### c. SMTP設定（本番環境のみ）
 開発環境では不要です。本番環境では以下のいずれかを設定:
