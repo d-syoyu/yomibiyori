@@ -37,7 +37,6 @@ const CATEGORY_ICONS: Record<ThemeCategory, string> = {
 export default function AppreciationScreen({ route }: Props) {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
   const showError = useToastStore(state => state.showError);
-  const showSuccess = useToastStore(state => state.showSuccess);
 
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>(
     route.params?.category || '恋愛'
@@ -103,7 +102,7 @@ export default function AppreciationScreen({ route }: Props) {
     try {
       const response = await api.likeWork(workId);
 
-      // Update the likes count in the local state
+      // Update the likes count in the local state (visual feedback only)
       setWorks(prevWorks =>
         prevWorks.map(work =>
           work.id === workId
@@ -112,7 +111,7 @@ export default function AppreciationScreen({ route }: Props) {
         )
       );
 
-      showSuccess('いいねを送りました！');
+      // No toast or haptic - just visual feedback with updated count
     } catch (error: any) {
       console.error('Failed to like work:', error);
 
