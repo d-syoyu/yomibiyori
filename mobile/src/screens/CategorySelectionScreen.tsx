@@ -11,14 +11,15 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ThemeCategory, HomeStackParamList } from '../types';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
+import CategoryIcon from '../components/CategoryIcon';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList, 'CategorySelection'>;
 
-const CATEGORIES: { name: ThemeCategory; emoji: string; description: string }[] = [
-  { name: '恋愛', emoji: '💕', description: '恋や愛に関するお題' },
-  { name: '季節', emoji: '🌸', description: '四季折々のお題' },
-  { name: '日常', emoji: '☕', description: '日々の暮らしのお題' },
-  { name: 'ユーモア', emoji: '😄', description: 'ユーモラスなお題' },
+const CATEGORIES: { name: ThemeCategory; description: string }[] = [
+  { name: '恋愛', description: '恋や愛に関するお題' },
+  { name: '季節', description: '四季折々のお題' },
+  { name: '日常', description: '日々の暮らしのお題' },
+  { name: 'ユーモア', description: 'ユーモラスなお題' },
 ];
 
 export default function CategorySelectionScreen() {
@@ -65,7 +66,13 @@ export default function CategorySelectionScreen() {
                   {/* グラスモーフィズム効果 */}
                   <View style={styles.glassOverlay}>
                     <View style={styles.cardContent}>
-                      <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                      <View style={styles.categoryIconContainer}>
+                        <CategoryIcon
+                          category={category.name}
+                          size={56}
+                          color={colors.text.primary}
+                        />
+                      </View>
                       <View style={styles.categoryTextContainer}>
                         <Text style={styles.categoryName}>{category.name}</Text>
                         <Text style={styles.categoryDescription}>{category.description}</Text>
@@ -136,9 +143,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  categoryEmoji: {
-    fontSize: 56,
+  categoryIconContainer: {
+    width: 64,
+    height: 64,
     marginRight: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryTextContainer: {
     flex: 1,

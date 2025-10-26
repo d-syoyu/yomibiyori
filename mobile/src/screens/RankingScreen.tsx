@@ -18,17 +18,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import type { ThemeCategory, RankingEntry, Theme } from '../types';
 import VerticalText from '../components/VerticalText';
+import CategoryIcon from '../components/CategoryIcon';
 import { useThemeStore } from '../stores/useThemeStore';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
-
-const CATEGORY_ICONS: Record<ThemeCategory, string> = {
-  '恋愛': '💕',
-  '季節': '🌸',
-  '日常': '☕',
-  'ユーモア': '😄',
-};
 
 export default function RankingScreen() {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
@@ -150,7 +144,11 @@ export default function RankingScreen() {
                 onPress={() => handleCategoryChange(category)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.categoryIcon}>{CATEGORY_ICONS[category]}</Text>
+                <CategoryIcon
+                  category={category}
+                  size={24}
+                  color={selectedCategory === category ? colors.text.primary : colors.text.secondary}
+                />
                 <Text
                   style={[
                     styles.categoryText,
@@ -352,15 +350,12 @@ const styles = StyleSheet.create({
     borderColor: colors.text.primary,
     backgroundColor: colors.background.secondary,
   },
-  categoryIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
   categoryText: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.medium,
     color: colors.text.primary,
     letterSpacing: 0.5,
+    marginTop: 4,
   },
   categoryTextActive: {
     color: colors.text.primary,

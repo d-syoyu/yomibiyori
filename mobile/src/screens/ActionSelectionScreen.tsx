@@ -13,16 +13,10 @@ import type { HomeStackParamList, ThemeCategory } from '../types';
 import api from '../services/api';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
+import CategoryIcon from '../components/CategoryIcon';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ActionSelection'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
-
-const CATEGORY_INFO: Record<ThemeCategory, { emoji: string; name: string }> = {
-  '恋愛': { emoji: '💕', name: '恋愛' },
-  '季節': { emoji: '🌸', name: '季節' },
-  '日常': { emoji: '☕', name: '日常' },
-  'ユーモア': { emoji: '😄', name: 'ユーモア' },
-};
 
 export default function ActionSelectionScreen({ route }: Props) {
   const navigation = useNavigation<NavigationProp>();
@@ -30,8 +24,6 @@ export default function ActionSelectionScreen({ route }: Props) {
   const showError = useToastStore(state => state.showError);
   const { category } = route.params;
   const [isLoading, setIsLoading] = useState(false);
-
-  const categoryInfo = CATEGORY_INFO[category];
 
   const handleCompose = async () => {
     setIsLoading(true);
@@ -68,8 +60,10 @@ export default function ActionSelectionScreen({ route }: Props) {
       <View style={styles.content}>
         {/* カテゴリ表示 */}
         <View style={styles.categoryHeader}>
-          <Text style={styles.categoryEmoji}>{categoryInfo.emoji}</Text>
-          <Text style={styles.categoryName}>{categoryInfo.name}</Text>
+          <View style={styles.categoryIconWrapper}>
+            <CategoryIcon category={category} size={72} color="#2D3748" />
+          </View>
+          <Text style={styles.categoryName}>{category}</Text>
           <Text style={styles.subtitle}>何をしますか？</Text>
         </View>
 
@@ -138,8 +132,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  categoryEmoji: {
-    fontSize: 72,
+  categoryIconWrapper: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   categoryName: {

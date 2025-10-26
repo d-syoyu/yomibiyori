@@ -19,6 +19,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
+import CategoryIcon from '../components/CategoryIcon';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
@@ -26,13 +27,6 @@ import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
-
-const CATEGORY_ICONS: Record<ThemeCategory, string> = {
-  '恋愛': '💕',
-  '季節': '🌸',
-  '日常': '☕',
-  'ユーモア': '😄',
-};
 
 export default function AppreciationScreen({ route }: Props) {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
@@ -149,7 +143,11 @@ export default function AppreciationScreen({ route }: Props) {
                 onPress={() => setSelectedCategory(category)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.categoryIcon}>{CATEGORY_ICONS[category]}</Text>
+                <CategoryIcon
+                  category={category}
+                  size={24}
+                  color={selectedCategory === category ? colors.text.primary : colors.text.secondary}
+                />
                 <Text
                   style={[
                     styles.categoryText,
@@ -304,15 +302,12 @@ const styles = StyleSheet.create({
     borderColor: colors.text.primary,
     backgroundColor: colors.background.secondary,
   },
-  categoryIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
   categoryText: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.medium,
     color: colors.text.primary,
     letterSpacing: 0.5,
+    marginTop: 4,
   },
   categoryTextActive: {
     color: colors.text.primary,
