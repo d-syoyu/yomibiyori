@@ -33,6 +33,9 @@ const config: ExpoConfig = {
     plugins: ['expo-font', 'expo-secure-store'],
     extra: {
       apiBaseUrl: API_BASE_URL,
+      eas: {
+        projectId: 'da2c3e4e-0129-4a61-8b63-1491fa1d3a1a',
+      },
     },
   },
 };
