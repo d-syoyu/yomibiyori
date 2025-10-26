@@ -20,9 +20,9 @@ def main():
     try:
         redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
         redis_client.ping()
-        print("✓ Redis connection successful")
+        print("OK: Redis connection successful")
     except Exception as e:
-        print(f"✗ Redis connection failed: {e}")
+        print(f"ERROR: Redis connection failed: {e}")
         return
 
     # List all ranking keys
