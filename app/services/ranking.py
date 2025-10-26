@@ -309,6 +309,7 @@ def get_ranking(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found")
 
     candidates = _build_candidates(redis_client, theme_id, limit)
+    logger.info(f"[Ranking] _build_candidates returned {len(candidates)} candidates for theme {theme_id}")
     if candidates:
         work_stmt: Select[tuple[Work, User]] = (
             select(Work, User)
@@ -316,13 +317,16 @@ def get_ranking(
             .where(Work.id.in_([candidate.work_id for candidate in candidates]))
         )
         rows = session.execute(work_stmt).all()
-        work_map: dict[str, tuple[Work, User]] = {work.id: (work, user) for work, user in rows}
+        logger.info(f"[Ranking] Database query returned {len(rows)} works")
+        # Convert work.id to string for consistent key type
+        work_map: dict[str, tuple[Work, User]] = {str(work.id): (work, user) for work, user in rows}
 
         # Apply time normalization and rebuild ranking
         time_adjusted_candidates: list[tuple[_Candidate, float]] = []
         for candidate in candidates:
             context = work_map.get(candidate.work_id)
             if not context:
+                logger.warning(f"[Ranking] Work {candidate.work_id} not found in database (skipping)")
                 continue
             work, user = context
             # Calculate time normalization factor based on posting time
@@ -330,6 +334,8 @@ def get_ranking(
             # Apply time normalization to the adjusted score
             time_adjusted_score = candidate.adjusted_score * time_factor
             time_adjusted_candidates.append((candidate, time_adjusted_score))
+
+        logger.info(f"[Ranking] Time-adjusted {len(time_adjusted_candidates)} works")
 
         # Re-sort by time-adjusted score
         time_adjusted_candidates.sort(key=lambda item: item[1], reverse=True)
@@ -351,6 +357,7 @@ def get_ranking(
                 )
             )
 
+        logger.info(f"[Ranking] Returning {len(entries)} ranking entries for theme {theme_id}")
         if entries:
             return entries
 
