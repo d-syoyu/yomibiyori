@@ -112,7 +112,7 @@ export default function LoginScreen() {
                   colors={
                     isLoading
                       ? ['#CBD5E0', '#A0AEC0']
-                      : [colors.accent.primary, colors.accent.gradient[1], colors.accent.gradient[2]]
+                      : [colors.text.primary, colors.text.secondary, colors.text.tertiary]
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -197,7 +197,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     overflow: 'hidden',
     marginTop: spacing.sm,
-    ...shadow.md,
+    shadowColor: colors.text.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonGradient: {
     paddingVertical: spacing.md,
