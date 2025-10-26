@@ -162,4 +162,5 @@ def test_get_ranking_without_entries(
 ) -> None:
     theme = _create_theme(db_session, date(2025, 1, 21))
     response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert response.json() == []

@@ -206,6 +206,14 @@ def finalize_rankings_for_date(
         for row in rows:
             session.add(row)
 
+        # Delete Redis key after finalizing to force fallback to DB snapshot
+        redis_key = f"{settings.redis_ranking_prefix}{normalized_theme_id}"
+        try:
+            redis_client.delete(redis_key)
+        except Exception as exc:
+            # Log but don't fail finalization if Redis deletion fails
+            print(f"Warning: Failed to delete Redis key {redis_key}: {exc}")
+
         finalised[theme.id] = rows
 
     session.commit()

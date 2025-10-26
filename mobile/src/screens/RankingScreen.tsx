@@ -24,6 +24,39 @@ import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
+// JST基準でランキング確定を判定する補助関数群
+const getCurrentJstComponents = () => {
+  const now = new Date();
+  const utcMillis = now.getTime() + now.getTimezoneOffset() * 60000;
+  const jstMillis = utcMillis + 9 * 60 * 60000;
+  const jst = new Date(jstMillis);
+
+  return {
+    year: jst.getUTCFullYear(),
+    month: jst.getUTCMonth() + 1,
+    day: jst.getUTCDate(),
+    hour: jst.getUTCHours(),
+  };
+};
+
+const formatDateString = (year: number, month: number, day: number) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const isRankingFinalizedForTheme = (themeDate: string) => {
+  const { year, month, day, hour } = getCurrentJstComponents();
+  const currentDate = formatDateString(year, month, day);
+
+  if (currentDate > themeDate) {
+    return true;
+  }
+
+  if (currentDate < themeDate) {
+    return false;
+  }
+
+  return hour >= 22;
+};
+
 export default function RankingScreen() {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
 
@@ -47,13 +80,8 @@ export default function RankingScreen() {
       // Display theme immediately
       setTheme(themeData);
 
-      // Check if ranking is finalized (theme date is before today)
-      const themeDate = new Date(themeData.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      themeDate.setHours(0, 0, 0, 0);
-      const isRankingFinalized = themeDate < today;
-      setIsFinalized(isRankingFinalized);
+      // Check if ranking is finalized (JST 22:00 cutoff)
+      setIsFinalized(isRankingFinalizedForTheme(themeData.date));
 
       // Now fetch rankings (this might take time)
       const rankingData = await api.getRanking(themeData.id);
