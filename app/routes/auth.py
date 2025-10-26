@@ -21,6 +21,7 @@ from app.schemas.auth import (
     UpdatePasswordRequest,
     UpdatePasswordResponse,
     UserProfileResponse,
+    VerifyTokenAndUpdatePasswordRequest,
 )
 from app.services.auth import (
     get_current_user_id,
@@ -31,6 +32,7 @@ from app.services.auth import (
     signup_user,
     sync_user_profile,
     update_password,
+    verify_token_and_update_password,
 )
 
 router = APIRouter()
@@ -135,3 +137,17 @@ def password_update(
 
     access_token = credentials.credentials
     return update_password(access_token=access_token, payload=payload)
+
+
+@router.post(
+    "/password-update-with-token",
+    status_code=status.HTTP_200_OK,
+    response_model=UpdatePasswordResponse,
+    summary="Verify token and update password",
+)
+def password_update_with_token(
+    payload: VerifyTokenAndUpdatePasswordRequest,
+) -> UpdatePasswordResponse:
+    """Verify token_hash from email and update password. No authentication required."""
+
+    return verify_token_and_update_password(payload=payload)

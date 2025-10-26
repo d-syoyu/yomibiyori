@@ -85,3 +85,10 @@ class UpdatePasswordResponse(BaseModel):
     """Response for password update."""
 
     message: str = "パスワードを更新しました"
+
+
+class VerifyTokenAndUpdatePasswordRequest(BaseModel):
+    """Payload for updating password with token_hash."""
+
+    token_hash: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)
