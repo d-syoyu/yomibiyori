@@ -1,4 +1,4 @@
-# Supabaseメールテンプレート設定ガイド
+# Supabaseメールテンプレート設定ガイド（よみびより）
 
 ## パスワードリセットメールテンプレートの設定
 
@@ -21,7 +21,7 @@
 ```html
 <h2>パスワード再設定</h2>
 
-<p>詠日和のパスワードをリセットするには、以下のリンクをクリックしてください：</p>
+<p>よみびよりのパスワードをリセットするには、以下のリンクをクリックしてください：</p>
 
 <p><a href="{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery">パスワードを再設定</a></p>
 
@@ -84,11 +84,11 @@ http://localhost:8000/reset-password
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>パスワード再設定 - 詠日和</title>
+    <title>パスワード再設定 - よみびより</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0;">詠日和</h1>
+        <h1 style="color: white; margin: 0;">よみびより</h1>
     </div>
 
     <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -96,7 +96,7 @@ http://localhost:8000/reset-password
 
         <p>こんにちは、</p>
 
-        <p>詠日和のパスワードリセットリクエストを受け付けました。</p>
+        <p>よみびよりのパスワードリセットリクエストを受け付けました。</p>
 
         <p>以下のボタンをクリックして、新しいパスワードを設定してください：</p>
 
@@ -125,7 +125,7 @@ http://localhost:8000/reset-password
         <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
 
         <p style="font-size: 12px; color: #999; text-align: center;">
-            このメールは詠日和から自動送信されています。<br>
+            このメールはよみびよりから自動送信されています。<br>
             返信しないでください。
         </p>
     </div>
