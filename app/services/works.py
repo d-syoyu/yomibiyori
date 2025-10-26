@@ -141,9 +141,9 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
                 "unique_viewers": 0,
             })
             pipeline.execute()
-            logger.debug(f"Initialized ranking entry for work {work.id} in Redis")
+            logger.info(f"[Works] Initialized ranking entry for work {work.id} in Redis (key: {ranking_key})")
         except Exception as exc:
-            logger.error(f"Failed to initialize Redis ranking entry for work {work.id}: {exc}")
+            logger.error(f"[Works] Failed to initialize Redis ranking entry for work {work.id}: {exc}")
             # Don't fail the work creation if Redis fails - data is already in PostgreSQL
 
     # Get user name
