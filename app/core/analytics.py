@@ -75,18 +75,21 @@ def identify_user(
     properties: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
-    Identify a user in PostHog
+    Identify a user in PostHog by setting user properties
 
     Args:
         distinct_id: Unique identifier for the user
         properties: User properties (email, name, etc.)
+
+    Note: PostHog Python SDK v6+ uses set() instead of identify()
     """
     client = get_posthog_client()
     if client is None:
         return
 
     try:
-        client.identify(
+        # Use set() to set person properties (replaces identify() in v6+)
+        client.set(
             distinct_id=distinct_id,
             properties=properties or {},
         )
