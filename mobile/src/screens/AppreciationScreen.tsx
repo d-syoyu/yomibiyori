@@ -22,6 +22,7 @@ import VerticalText from '../components/VerticalText';
 import CategoryIcon from '../components/CategoryIcon';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
+import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
@@ -30,7 +31,7 @@ const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア
 
 export default function AppreciationScreen({ route }: Props) {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
-  const showError = useToastStore(state => state.showError);
+  const { handleError } = useApiErrorHandler();
 
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>(
     route.params?.category || '恋愛'
@@ -67,24 +68,12 @@ export default function AppreciationScreen({ route }: Props) {
 
       setThemesMap(newThemesMap);
     } catch (error: any) {
-      console.error('[AppreciationScreen] Failed to load works:', error);
-
-      // Provide user-friendly error messages
-      let errorMessage = '作品の取得に失敗しました';
-      if (error?.status === 404) {
-        errorMessage = 'お題が見つかりませんでした';
-      } else if (error?.status === 0) {
-        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
-      } else if (error?.detail) {
-        errorMessage = `エラー: ${error.detail}`;
-      }
-
-      showError(errorMessage);
+      handleError(error, 'work_fetching');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedCategory, getTodayTheme, showError]);
+  }, [selectedCategory, getTodayTheme, handleError]);
 
   // Load works when category changes
   useEffect(() => {
@@ -107,17 +96,7 @@ export default function AppreciationScreen({ route }: Props) {
 
       // No toast or haptic - just visual feedback with updated count
     } catch (error: any) {
-      console.error('Failed to like work:', error);
-
-      // Provide user-friendly error messages
-      let errorMessage = 'いいねに失敗しました';
-      if (error?.status === 0) {
-        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
-      } else if (error?.detail) {
-        errorMessage = error.detail;
-      }
-
-      showError(errorMessage);
+      handleError(error, 'like_action');
     }
   };
 

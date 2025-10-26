@@ -19,7 +19,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useToastStore } from '../stores/useToastStore';
-import { parseApiError } from '../utils/errorHandler';
+import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
+import { VALIDATION_MESSAGES } from '../constants/errorMessages';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -33,15 +34,16 @@ export default function LoginScreen() {
 
   const { signUp, login, isLoading, error, clearError } = useAuthStore();
   const showError = useToastStore((state) => state.showError);
+  const { handleError } = useApiErrorHandler();
 
   const handleAuth = async () => {
     if (!email || !password) {
-      showError('メールアドレスとパスワードを入力してください');
+      showError(VALIDATION_MESSAGES.login.emptyCredentials);
       return;
     }
 
     if (isSignUp && !displayName.trim()) {
-      showError('表示名を入力してください');
+      showError(VALIDATION_MESSAGES.login.emptyDisplayName);
       return;
     }
 
@@ -52,9 +54,7 @@ export default function LoginScreen() {
         await login({ email, password });
       }
     } catch (err: any) {
-      // Parse error and show user-friendly message
-      const errorInfo = parseApiError(err);
-      showError(errorInfo.message, errorInfo.title);
+      handleError(err, 'authentication');
       clearError();
     }
   };

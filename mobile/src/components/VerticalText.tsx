@@ -1,6 +1,13 @@
 /**
  * Vertical Text Component
  * 縦書きテキスト表示コンポーネント（段組み対応）
+ *
+ * 縦書き時に回転が必要な文字：
+ * - 伸ばし棒: ー
+ * - 波ダッシュ: 〜、～
+ * - 三点リーダー: …、‥
+ * - ハイフン・ダッシュ: −、－、–、—
+ * - 括弧（一部）: 「」『』（）など
  */
 
 import React from 'react';
@@ -14,6 +21,25 @@ interface VerticalTextProps {
   direction?: 'ltr' | 'rtl';
   /** 音節数で自動分割（例: [5, 7, 5] または [7, 7]） */
   syllables?: number[];
+}
+
+/**
+ * 縦書き時に90度回転が必要な文字を判定
+ */
+function needsRotation(char: string): boolean {
+  // 伸ばし棒・ダッシュ類
+  const dashChars = ['ー', '−', '－', '–', '—', 'ｰ'];
+
+  // 波ダッシュ
+  const waveChars = ['〜', '～', '〰'];
+
+  // 三点リーダー
+  const ellipsisChars = ['…', '‥', '⋯'];
+
+  // 全ての回転対象文字
+  const rotationChars = [...dashChars, ...waveChars, ...ellipsisChars];
+
+  return rotationChars.includes(char);
 }
 
 export default function VerticalText({
@@ -51,11 +77,22 @@ export default function VerticalText({
     ]}>
       {lines.map((line, lineIndex) => (
         <View key={lineIndex} style={styles.column}>
-          {line.split('').map((char, charIndex) => (
-            <Text key={charIndex} style={[styles.character, textStyle]}>
-              {char}
-            </Text>
-          ))}
+          {line.split('').map((char, charIndex) => {
+            const shouldRotate = needsRotation(char);
+
+            return (
+              <Text
+                key={charIndex}
+                style={[
+                  styles.character,
+                  textStyle,
+                  shouldRotate && styles.rotatedCharacter
+                ]}
+              >
+                {char}
+              </Text>
+            );
+          })}
         </View>
       ))}
     </View>
@@ -82,5 +119,8 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     color: '#2D3748',
     textAlign: 'center',
+  },
+  rotatedCharacter: {
+    transform: [{ rotate: '90deg' }],
   },
 });

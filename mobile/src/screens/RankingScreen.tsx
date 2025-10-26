@@ -20,12 +20,14 @@ import type { ThemeCategory, RankingEntry, Theme } from '../types';
 import VerticalText from '../components/VerticalText';
 import CategoryIcon from '../components/CategoryIcon';
 import { useThemeStore } from '../stores/useThemeStore';
+import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
 export default function RankingScreen() {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
+  const { handleError } = useApiErrorHandler();
 
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>('恋愛');
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
@@ -54,21 +56,7 @@ export default function RankingScreen() {
       const rankingData = await api.getRanking(themeData.id);
       setRankings(rankingData);
     } catch (err: any) {
-      console.error('Failed to fetch rankings:', err);
-
-      // Provide user-friendly error messages
-      let errorMessage = 'ランキングの取得に失敗しました';
-      if (err?.status === 404 || err?.detail?.includes('not found')) {
-        errorMessage = 'まだランキングが作成されていません\n22:00以降に確定されます';
-      } else if (err?.detail === 'Ranking not available') {
-        errorMessage = 'まだランキングが作成されていません\n22:00以降に確定されます';
-      } else if (err?.status === 0) {
-        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
-      } else if (err?.message?.includes('No themes found')) {
-        errorMessage = 'このカテゴリのお題がまだありません';
-      }
-
-      setError(errorMessage);
+      handleError(err, 'ranking_fetching');
       setRankings([]);
     } finally {
       setLoading(false);

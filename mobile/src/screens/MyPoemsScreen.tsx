@@ -21,7 +21,7 @@ import type { Work, Theme, WorkDateSummary } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
-import { useToastStore } from '../stores/useToastStore';
+import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 // Works loaded for a specific date
@@ -34,7 +34,7 @@ interface DateWorksCache {
 export default function MyPoemsScreen() {
   const { user, logout } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
-  const showError = useToastStore(state => state.showError);
+  const { handleError } = useApiErrorHandler();
 
   // サマリー情報（日付ごとの作品数、いいね数）
   const [dateSummaries, setDateSummaries] = useState<WorkDateSummary[]>([]);
@@ -61,21 +61,12 @@ export default function MyPoemsScreen() {
       console.log('[MyPoemsScreen] Summaries received:', summaries.length, 'dates');
       setDateSummaries(summaries);
     } catch (error: any) {
-      console.error('[MyPoemsScreen] Failed to load works summary:', error);
-
-      let errorMessage = '作品の取得に失敗しました';
-      if (error?.status === 0) {
-        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
-      } else if (error?.detail) {
-        errorMessage = `エラー: ${error.detail}`;
-      }
-
-      showError(errorMessage);
+      handleError(error, 'user_data');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [showError]);
+  }, [handleError]);
 
   // Load works for a specific date (アコーディオンを開いたときに呼ばれる)
   const loadWorksForDate = useCallback(async (date: string) => {
@@ -121,18 +112,9 @@ export default function MyPoemsScreen() {
         return newCache;
       });
     } catch (error: any) {
-      console.error('[MyPoemsScreen] Failed to load works for date:', date, error);
-
-      let errorMessage = `${date}の作品取得に失敗しました`;
-      if (error?.status === 0) {
-        errorMessage = 'ネットワークに接続できません\n接続を確認してください';
-      } else if (error?.detail) {
-        errorMessage = `エラー: ${error.detail}`;
-      }
-
-      showError(errorMessage);
+      handleError(error, 'user_data', `${date}の作品取得に失敗しました`);
     }
-  }, [dateWorksCache, getThemeById, showError]);
+  }, [dateWorksCache, getThemeById, handleError]);
 
   // Load summary on mount
   useEffect(() => {

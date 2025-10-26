@@ -24,16 +24,17 @@ import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { useToastStore } from '../stores/useToastStore';
-import { parseApiError } from '../utils/errorHandler';
+import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
+import { VALIDATION_MESSAGES, SUCCESS_MESSAGES } from '../constants/errorMessages';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Composition'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
 export default function CompositionScreen({ route }: Props) {
   const navigation = useNavigation<NavigationProp>();
-  const showToast = useToastStore((state) => state.showToast);
   const showSuccess = useToastStore((state) => state.showSuccess);
   const showError = useToastStore((state) => state.showError);
+  const { handleError } = useApiErrorHandler();
 
   const [line1, setLine1] = useState('');
   const [line2, setLine2] = useState('');
@@ -43,12 +44,12 @@ export default function CompositionScreen({ route }: Props) {
 
   const handleSubmit = async () => {
     if (!line1.trim() || !line2.trim()) {
-      showError('下の句を両方入力してください');
+      showError(VALIDATION_MESSAGES.composition.emptyLines);
       return;
     }
 
     if (!theme) {
-      showError('お題が選択されていません');
+      showError(VALIDATION_MESSAGES.composition.noTheme);
       return;
     }
 
@@ -61,7 +62,7 @@ export default function CompositionScreen({ route }: Props) {
       });
 
       // 投稿成功
-      showSuccess('作品を投稿しました！');
+      showSuccess(SUCCESS_MESSAGES.workCreated);
 
       // Clear input
       setLine1('');
@@ -72,11 +73,7 @@ export default function CompositionScreen({ route }: Props) {
         navigation.navigate('Appreciation', { category: theme.category });
       }, 1500);
     } catch (error: any) {
-      console.error('Failed to submit work:', error);
-
-      // Parse error and show user-friendly message
-      const errorInfo = parseApiError(error);
-      showError(errorInfo.message, errorInfo.title);
+      handleError(error, 'work_creation');
     } finally {
       setIsSubmitting(false);
     }
