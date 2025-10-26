@@ -20,9 +20,13 @@ from app.models import User
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
+    PasswordResetRequest,
+    PasswordResetResponse,
     SessionToken,
     SignUpRequest,
     SignUpResponse,
+    UpdatePasswordRequest,
+    UpdatePasswordResponse,
     UserProfileResponse,
 )
 
@@ -491,3 +495,84 @@ def refresh_access_token(*, refresh_token: str) -> SessionToken:
         token_type=payload_json.get("token_type", "bearer"),
         expires_in=payload_json.get("expires_in"),
     )
+
+
+def request_password_reset(*, payload: PasswordResetRequest) -> PasswordResetResponse:
+    """Send password reset email via Supabase Auth."""
+
+    settings = get_settings()
+    api_key = settings.supabase_anon_key or settings.service_role_key
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase anon key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+    request_body: dict[str, Any] = {"email": payload.email}
+
+    headers = {
+        "apikey": api_key,
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            f"{supabase_url}/auth/v1/recover",
+            json=request_body,
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase password reset request failed",
+        ) from exc
+
+    # Supabase returns 200 even if email doesn't exist (security best practice)
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    return PasswordResetResponse()
+
+
+def update_password(*, access_token: str, payload: UpdatePasswordRequest) -> UpdatePasswordResponse:
+    """Update user password using access token."""
+
+    settings = get_settings()
+    api_key = settings.supabase_anon_key or settings.service_role_key
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase anon key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+    request_body: dict[str, Any] = {"password": payload.new_password}
+
+    headers = {
+        "apikey": api_key,
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.put(
+            f"{supabase_url}/auth/v1/user",
+            json=request_body,
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase password update failed",
+        ) from exc
+
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    return UpdatePasswordResponse()

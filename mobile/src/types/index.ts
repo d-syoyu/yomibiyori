@@ -118,6 +118,7 @@ export type RankingResponse = RankingEntry[];
 
 export type RootStackParamList = {
   Login: undefined;
+  PasswordReset: undefined;
   Main: undefined;
 };
 

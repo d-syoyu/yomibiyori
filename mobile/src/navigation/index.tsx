@@ -15,12 +15,16 @@ import type { RootStackParamList, MainTabParamList, HomeStackParamList } from '.
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
+import PasswordResetScreen from '../screens/PasswordResetScreen';
 import CategorySelectionScreen from '../screens/CategorySelectionScreen';
 import ActionSelectionScreen from '../screens/ActionSelectionScreen';
 import CompositionScreen from '../screens/CompositionScreen';
 import MyPoemsScreen from '../screens/MyPoemsScreen';
 import AppreciationScreen from '../screens/AppreciationScreen';
 import RankingScreen from '../screens/RankingScreen';
+
+// Import Toast Container
+import ToastContainer from '../components/ToastContainer';
 
 // ============================================================================
 // Navigators
@@ -140,7 +144,10 @@ function RootNavigator() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated ? (
-        <RootStack.Screen name="Login" component={LoginScreen} />
+        <>
+          <RootStack.Screen name="Login" component={LoginScreen} />
+          <RootStack.Screen name="PasswordReset" component={PasswordResetScreen} />
+        </>
       ) : (
         <RootStack.Screen name="Main" component={MainTabNavigator} />
       )}
@@ -154,8 +161,11 @@ function RootNavigator() {
 
 export default function Navigation() {
   return (
-    <NavigationContainer>
-      <RootNavigator />
-    </NavigationContainer>
+    <>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+      <ToastContainer />
+    </>
   );
 }

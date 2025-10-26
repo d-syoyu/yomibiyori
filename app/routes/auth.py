@@ -5,16 +5,21 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.db.session import get_authenticated_db_session, get_db_session
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
+    PasswordResetRequest,
+    PasswordResetResponse,
     RefreshTokenRequest,
     SessionToken,
     SignUpRequest,
     SignUpResponse,
+    UpdatePasswordRequest,
+    UpdatePasswordResponse,
     UserProfileResponse,
 )
 from app.services.auth import (
@@ -22,8 +27,10 @@ from app.services.auth import (
     get_user_profile,
     login_user,
     refresh_access_token,
+    request_password_reset,
     signup_user,
     sync_user_profile,
+    update_password,
 )
 
 router = APIRouter()
@@ -97,3 +104,34 @@ def refresh_token(payload: RefreshTokenRequest) -> SessionToken:
     """Use refresh token to obtain new access token and refresh token."""
 
     return refresh_access_token(refresh_token=payload.refresh_token)
+
+
+@router.post(
+    "/password-reset",
+    status_code=status.HTTP_200_OK,
+    response_model=PasswordResetResponse,
+    summary="Request password reset email",
+)
+def password_reset(payload: PasswordResetRequest) -> PasswordResetResponse:
+    """Send password reset email to user. Returns success even if email doesn't exist (security best practice)."""
+
+    return request_password_reset(payload=payload)
+
+
+_bearer = HTTPBearer()
+
+
+@router.post(
+    "/password-update",
+    status_code=status.HTTP_200_OK,
+    response_model=UpdatePasswordResponse,
+    summary="Update password with access token",
+)
+def password_update(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
+    payload: UpdatePasswordRequest,
+) -> UpdatePasswordResponse:
+    """Update user password. Requires valid access token (from reset email or current session)."""
+
+    access_token = credentials.credentials
+    return update_password(access_token=access_token, payload=payload)

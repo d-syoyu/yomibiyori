@@ -12,26 +12,34 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useToastStore } from '../stores/useToastStore';
+import { parseApiError } from '../utils/errorHandler';
+
+type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 export default function LoginScreen() {
+  const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
 
   const { signUp, login, isLoading, error, clearError } = useAuthStore();
+  const showError = useToastStore((state) => state.showError);
 
   const handleAuth = async () => {
     if (!email || !password) {
-      Alert.alert('エラー', 'メールアドレスとパスワードを入力してください');
+      showError('メールアドレスとパスワードを入力してください');
       return;
     }
 
     if (isSignUp && !displayName.trim()) {
-      Alert.alert('エラー', '表示名を入力してください');
+      showError('表示名を入力してください');
       return;
     }
 
@@ -41,12 +49,11 @@ export default function LoginScreen() {
       } else {
         await login({ email, password });
       }
-    } catch (err) {
-      // Error is handled by the store
-      if (error) {
-        Alert.alert('エラー', error);
-        clearError();
-      }
+    } catch (err: any) {
+      // Parse error and show user-friendly message
+      const errorInfo = parseApiError(err);
+      showError(errorInfo.message, errorInfo.title);
+      clearError();
     }
   };
 
@@ -106,6 +113,15 @@ export default function LoginScreen() {
                 : 'アカウントをお持ちでない方はこちら'}
             </Text>
           </TouchableOpacity>
+
+          {!isSignUp && (
+            <TouchableOpacity
+              style={styles.forgotPasswordButton}
+              onPress={() => navigation.navigate('PasswordReset')}
+            >
+              <Text style={styles.forgotPasswordText}>パスワードを忘れた方はこちら</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -169,5 +185,14 @@ const styles = StyleSheet.create({
   switchButtonText: {
     color: '#4A5568',
     fontSize: 14,
+  },
+  forgotPasswordButton: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  forgotPasswordText: {
+    color: '#718096',
+    fontSize: 12,
+    textDecorationLine: 'underline',
   },
 });

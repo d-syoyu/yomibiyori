@@ -41,6 +41,11 @@ const API_BASE_URL =
 // Axios Instance
 // ============================================================================
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+const RETRY_STATUS_CODES = [408, 429, 500, 502, 503, 504]; // Retryable status codes
+
 class ApiClient {
   private client: AxiosInstance;
   private accessToken: string | null = null;
@@ -75,10 +80,37 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor for error handling
+    // Response interceptor for error handling and retry logic
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError<ApiError>) => {
+      async (error: AxiosError<ApiError>) => {
+        const config = error.config as any;
+
+        // Initialize retry count
+        if (!config._retryCount) {
+          config._retryCount = 0;
+        }
+
+        // Determine if we should retry
+        const shouldRetry = this.shouldRetryRequest(error, config._retryCount);
+
+        if (shouldRetry && config._retryCount < MAX_RETRIES) {
+          config._retryCount += 1;
+
+          console.log(
+            `[API] Retrying request (${config._retryCount}/${MAX_RETRIES}):`,
+            config.url
+          );
+
+          // Wait before retrying (exponential backoff)
+          const delay = RETRY_DELAY * Math.pow(2, config._retryCount - 1);
+          await this.sleep(delay);
+
+          // Retry the request
+          return this.client(config);
+        }
+
+        // No retry - format and reject the error
         if (error.response) {
           // Server responded with error status
           const apiError: ApiError = {
@@ -112,6 +144,41 @@ class ApiClient {
         }
       }
     );
+  }
+
+  /**
+   * Determine if a request should be retried
+   */
+  private shouldRetryRequest(error: AxiosError, retryCount: number): boolean {
+    // Don't retry if we've exceeded max retries
+    if (retryCount >= MAX_RETRIES) {
+      return false;
+    }
+
+    // Don't retry if request was cancelled
+    if (axios.isCancel(error)) {
+      return false;
+    }
+
+    // Retry on network errors (no response)
+    if (!error.response) {
+      return true;
+    }
+
+    // Retry on specific status codes
+    const status = error.response.status;
+    if (RETRY_STATUS_CODES.includes(status)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Sleep utility for retry delays
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -180,6 +247,22 @@ class ApiClient {
     }
 
     return sessionToken;
+  }
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const response = await this.client.post<{ message: string }>(
+      '/auth/password-reset',
+      { email }
+    );
+    return response.data;
+  }
+
+  async updatePassword(newPassword: string): Promise<{ message: string }> {
+    const response = await this.client.post<{ message: string }>(
+      '/auth/password-update',
+      { new_password: newPassword }
+    );
+    return response.data;
   }
 
   // ==========================================================================

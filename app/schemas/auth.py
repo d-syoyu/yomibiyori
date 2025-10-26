@@ -61,3 +61,27 @@ class RefreshTokenRequest(BaseModel):
     """Payload for refreshing access token."""
 
     refresh_token: str = Field(min_length=1, description="Refresh token from previous login/signup")
+
+
+class PasswordResetRequest(BaseModel):
+    """Payload for requesting password reset email."""
+
+    email: EmailStr
+
+
+class PasswordResetResponse(BaseModel):
+    """Response for password reset request."""
+
+    message: str = "パスワードリセットメールを送信しました"
+
+
+class UpdatePasswordRequest(BaseModel):
+    """Payload for updating password."""
+
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class UpdatePasswordResponse(BaseModel):
+    """Response for password update."""
+
+    message: str = "パスワードを更新しました"
