@@ -128,7 +128,7 @@ def test_submit_work_conflict(
         headers=headers,
     )
     assert second.status_code == 409
-    assert second.json()["detail"] == "You have already submitted a work today for this category"
+    assert second.json()["error"]["detail"] == "You have already submitted a work today for this category"
 
 
 def test_submit_work_conflict_same_day_same_category(
@@ -160,7 +160,7 @@ def test_submit_work_conflict_same_day_same_category(
         headers=headers,
     )
     assert second.status_code == 409
-    assert second.json()["detail"] == "You have already submitted a work today for this category"
+    assert second.json()["error"]["detail"] == "You have already submitted a work today for this category"
 
 
 def test_submit_work_allowed_same_day_different_category(
@@ -213,7 +213,7 @@ def test_submit_work_rejected_outside_submission_window(
     )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Submissions are closed between 22:00 and 06:00 JST"
+    assert response.json()["error"]["detail"] == "Submissions are closed between 22:00 and 06:00 JST"
 
 
 def test_submit_work_allowed_next_day_same_category(
@@ -264,9 +264,9 @@ def test_submit_work_too_long(
     )
 
     assert response.status_code == 422
-    detail = response.json()["detail"]
-    assert isinstance(detail, list)
-    assert any("at most 40 characters" in issue.get("msg", "") for issue in detail)
+    error = response.json()["error"]
+    assert "text" in error["detail"]
+    assert "40" in error["detail"]
 
 
 def test_list_works_returns_likes_count(
@@ -362,7 +362,7 @@ def test_like_work_conflict(
         headers=_auth_headers(user.id),
     )
     assert second.status_code == 409
-    assert second.json()["detail"].startswith("You have already")
+    assert second.json()["error"]["detail"].startswith("You have already")
 
 
 def test_record_work_impression_updates_metrics(
@@ -461,7 +461,7 @@ def test_record_work_impression_rate_limit(
         json={"viewer_hash": viewer_hash, "count": 1},
     )
     assert second.status_code == 429
-    assert "Too many impressions" in second.json()["detail"]
+    assert "Too many impressions" in second.json()["error"]["detail"]
 
 
 def test_record_work_impression_missing_work(client: TestClient) -> None:
@@ -470,4 +470,4 @@ def test_record_work_impression_missing_work(client: TestClient) -> None:
         json={},
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Work not found"
+    assert response.json()["error"]["detail"] == "Work not found"

@@ -39,7 +39,7 @@ def test_get_today_theme_not_found(client: TestClient) -> None:
     """Test theme not found for today."""
     response = client.get("/api/v1/themes/today")
     assert response.status_code == 404
-    assert response.json()["detail"] == "No theme found for today"
+    assert response.json()["error"]["detail"] == "No theme found for today"
 
 
 def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Session) -> None:
@@ -133,4 +133,4 @@ def test_get_today_theme_category_not_found(client: TestClient, db_session: Sess
     # Request different category
     response = client.get("/api/v1/themes/today?category=恋愛")
     assert response.status_code == 404
-    assert "No theme found for today in category '恋愛'" in response.json()["detail"]
+    assert "No theme found for today in category '恋愛'" in response.json()["error"]["detail"]
