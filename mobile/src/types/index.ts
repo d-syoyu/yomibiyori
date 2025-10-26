@@ -58,6 +58,7 @@ export interface Theme {
   date: string; // ISO 8601 date (YYYY-MM-DD)
   sponsored: boolean;
   created_at: string; // ISO 8601 datetime
+  is_finalized: boolean; // Whether ranking is finalized (after 22:00 JST)
 }
 
 export interface ThemeListResponse {

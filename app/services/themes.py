@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -11,6 +11,31 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models import Theme
 from app.schemas.theme import ThemeListResponse, ThemeResponse
+
+
+def _is_theme_finalized(theme_date: date) -> bool:
+    """Check if ranking for a theme is finalized (after 22:00 JST on theme date).
+
+    Args:
+        theme_date: The date of the theme
+
+    Returns:
+        True if ranking is finalized, False otherwise
+    """
+    settings = get_settings()
+    now_jst = datetime.now(settings.timezone)
+    current_date = now_jst.date()
+
+    # If theme date is in the past, it's finalized
+    if current_date > theme_date:
+        return True
+
+    # If theme date is in the future, it's not finalized
+    if current_date < theme_date:
+        return False
+
+    # Same day: finalized if hour >= 22
+    return now_jst.hour >= 22
 
 
 def list_themes(
@@ -47,6 +72,7 @@ def list_themes(
             date=theme.date,
             sponsored=theme.sponsored,
             created_at=theme.created_at,
+            is_finalized=_is_theme_finalized(theme.date),
         )
         for theme in themes
     ]
@@ -108,6 +134,7 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
         date=theme.date,
         sponsored=theme.sponsored,
         created_at=theme.created_at,
+        is_finalized=_is_theme_finalized(theme.date),
     )
 
 
@@ -138,4 +165,5 @@ def get_theme_by_id(session: Session, theme_id: str) -> ThemeResponse:
         date=theme.date,
         sponsored=theme.sponsored,
         created_at=theme.created_at,
+        is_finalized=_is_theme_finalized(theme.date),
     )

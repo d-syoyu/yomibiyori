@@ -18,6 +18,7 @@ class ThemeResponse(BaseModel):
     date: date
     sponsored: bool
     created_at: datetime
+    is_finalized: bool = Field(description="Whether ranking for this theme is finalized (after 22:00 JST)")
 
 
 class ThemeListResponse(BaseModel):
