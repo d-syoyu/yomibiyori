@@ -88,7 +88,7 @@ class UpdatePasswordResponse(BaseModel):
 
 
 class VerifyTokenAndUpdatePasswordRequest(BaseModel):
-    """Payload for updating password with token_hash."""
+    """Payload for updating password with access token from email."""
 
-    token_hash: str = Field(min_length=1)
+    access_token: str = Field(min_length=1)
     new_password: str = Field(min_length=8, max_length=128)

@@ -580,7 +580,7 @@ def update_password(*, access_token: str, payload: UpdatePasswordRequest) -> Upd
 
 
 def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordRequest) -> UpdatePasswordResponse:
-    """Verify token_hash and update password in one step."""
+    """Update password using access token from email link."""
 
     settings = get_settings()
     api_key = settings.supabase_anon_key or settings.service_role_key
@@ -592,57 +592,20 @@ def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordReq
 
     supabase_url = settings.supabase_url.rstrip("/")
 
-    headers = {
-        "apikey": api_key,
-        "Content-Type": "application/json",
-    }
-
-    # Step 1: Verify token_hash
-    verify_body: dict[str, Any] = {
-        "token_hash": payload.token_hash,
-        "type": "recovery",
-    }
-
-    try:
-        verify_response = requests.post(
-            f"{supabase_url}/auth/v1/verify",
-            json=verify_body,
-            headers=headers,
-            timeout=settings.supabase_request_timeout,
-        )
-    except requests.RequestException as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Token verification failed",
-        ) from exc
-
-    if verify_response.status_code >= 400:
-        detail = _extract_supabase_error(verify_response)
-        raise HTTPException(status_code=verify_response.status_code, detail=detail)
-
-    try:
-        verify_data = verify_response.json()
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid verification response") from exc
-
-    access_token = verify_data.get("access_token")
-    if not access_token:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="No access token in verification response")
-
-    # Step 2: Update password with access token
+    # Update password with access token from email
     update_body: dict[str, Any] = {"password": payload.new_password}
 
-    headers_with_auth = {
+    headers = {
         "apikey": api_key,
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": f"Bearer {payload.access_token}",
         "Content-Type": "application/json",
     }
 
     try:
-        update_response = requests.put(
+        response = requests.put(
             f"{supabase_url}/auth/v1/user",
             json=update_body,
-            headers=headers_with_auth,
+            headers=headers,
             timeout=settings.supabase_request_timeout,
         )
     except requests.RequestException as exc:
@@ -651,8 +614,8 @@ def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordReq
             detail="Password update failed",
         ) from exc
 
-    if update_response.status_code >= 400:
-        detail = _extract_supabase_error(update_response)
-        raise HTTPException(status_code=update_response.status_code, detail=detail)
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
 
     return UpdatePasswordResponse()
