@@ -597,9 +597,20 @@ def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordReq
         "Content-Type": "application/json",
     }
 
+    # Check if token looks like an OTP code (short numeric token from {{ .Token }})
+    token = payload.access_token.strip()
+    if len(token) < 20 and token.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "トークンが無効です。Supabaseのメールテンプレートで {{ .Token }} ではなく "
+                "{{ .TokenHash }} を使用してください。詳細は docs/supabase_email_template_setup.md を参照してください。"
+            ),
+        )
+
     # Step 1: Try to verify token first (in case it's a token_hash or recovery token)
     verify_body: dict[str, Any] = {
-        "token_hash": payload.access_token,
+        "token_hash": token,
         "type": "recovery",
     }
 
@@ -617,13 +628,29 @@ def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordReq
             # Token verification succeeded, get access_token
             verify_data = verify_response.json()
             access_token = verify_data.get("access_token")
+        elif verify_response.status_code >= 400:
+            # Log verification error for debugging
+            error_detail = _extract_supabase_error(verify_response)
+            import logging
+
+            logging.warning(f"Token verification failed: {error_detail}")
+
+            # If it's a token format error, provide helpful message
+            if "署名" in error_detail or "segment" in error_detail.lower() or "jwt" in error_detail.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"パスワードリセットトークンの検証に失敗しました: {error_detail}\n\n"
+                        "Supabaseのメールテンプレートで {{ .TokenHash }} を使用していることを確認してください。"
+                    ),
+                )
     except requests.RequestException:
         # Verification failed, might already be an access token
         pass
 
     # If verification failed or didn't return token, use the provided token as-is
     if not access_token:
-        access_token = payload.access_token
+        access_token = token
 
     # Step 2: Update password with access token
     update_body: dict[str, Any] = {"password": payload.new_password}
