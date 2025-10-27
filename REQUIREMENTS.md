@@ -16,15 +16,17 @@
   - ユーザーごとに 1 カテゴリーあたり 1 日 1 首まで投稿可能（全カテゴリー合計で最大 4 首/日）。
   - ローカル DB の `users` テーブルに Supabase `auth.users` の `id` / `email` / `user_metadata.display_name` を同期する。
   - 認証が無いユーザーは投稿系 API を利用できない。
+  - **パスワードリセット**: メールアドレスを入力して Supabase からリカバリーメールを送信。リカバリートークンでパスワードを更新可能。
+  - **プロフィール同期**: `/auth/profile/sync` エンドポイントで Supabase から最新のプロフィール情報を取得してローカルDBに同期。
 
 ### 2. お題（上の句）生成と配信
 - **要件ID**: FR-002
-- **概要**: 毎日 21:00 に AI が各カテゴリーの上の句を生成し、カテゴリに紐づけて保存する。
+- **概要**: 毎日 21:00 に AI が各カテゴリーの上の句を生成し、翌日分としてカテゴリに紐づけて保存する。
 - **詳細**:
   - ジョブは GitHub Actions Scheduler (cron: `0 12 * * *` UTC = 21:00 JST) で実行。
   - 4 つのカテゴリー（恋愛、季節、日常、ユーモア）ごとに上の句（5-7-5）を生成。
-  - AI プロバイダー: OpenAI (gpt-4o)、Anthropic (Claude Sonnet 4.5)、または X.ai (Grok) を環境変数で選択可能。
-  - 生成された句は pykakasi で音数検証され、5-7-5 形式に適合するまで最大 3 回リトライ。
+  - AI プロバイダー: **XAI Grok** (grok-4-fast-reasoning)、Anthropic (Claude Sonnet 4.5)、または OpenAI (gpt-4o-mini) を環境変数 `THEME_AI_PROVIDER` で選択可能。
+  - 生成された句は pykakasi で音数検証され、5-7-5 形式に適合するまで最大 5 回リトライ（環境変数 `THEME_GENERATION_MAX_RETRIES` で設定可能）。
   - 生成結果は PostgreSQL の `themes` テーブルに `(date, category, text)` として保存。
   - 06:00 に Expo Push などでユーザーへ配信（未実装）。
 
@@ -38,6 +40,7 @@
   - 異なるカテゴリーであれば同日内に複数投稿可能（最大 4 首/日）。
   - 投稿内容は即時保存し、直後に鑑賞画面へ遷移。
   - 投稿済み作品はマイページおよびカテゴリー別一覧で参照可能。
+  - **作品サマリー**: `/works/me/summary` エンドポイントで、ユーザーの作品を日付ごとに集計した情報（投稿数、いいね数合計）を取得可能。
   - RLS で自身の作品のみ編集／削除可能にする（未実装）。
 
 ### 4. 感謝（いいね）・感想リアクション
@@ -94,64 +97,94 @@
   - ターゲット地域／年齢帯に応じたフィルタリングを考慮。
 
 ### 8. 通知配信
-- **要件ID**: FR-008  
-- **概要**: Expo Push 等でユーザーへ各フェーズの通知を送る。  
+- **要件ID**: FR-008
+- **概要**: Expo Push 等でユーザーへ各フェーズの通知を送る。
 - **詳細**:
-  - 06:00: お題配信通知。  
-  - 21:50: 投稿締切リマインダ。  
+  - 06:00: お題配信通知。
+  - 21:50: 投稿締切リマインダ。
   - 22:00: ランキング確定通知。
 
-### 9. モバイルアプリ UI
+### 9. 分析とユーザー行動トラッキング
 - **要件ID**: FR-009
+- **概要**: PostHog を利用してユーザー行動を分析し、プロダクト改善に活用する。
+- **詳細**:
+  - **バックエンド統合**: Python SDK (v3+) を使用してイベントを送信。
+  - **モバイルアプリ統合**: `posthog-react-native` でユーザーアクション（画面遷移、投稿、いいね等）を自動トラッキング。
+  - **プライバシー**: ユーザーIDはハッシュ化され、個人を特定できる情報は送信しない。
+  - **分析項目**:
+    - 画面遷移（Screen View）
+    - 投稿完了（Work Submitted）
+    - いいね送信（Like Sent）
+    - ランキング閲覧（Ranking Viewed）
+  - **環境変数**: `POSTHOG_API_KEY`, `POSTHOG_HOST` で設定。
+
+### 10. モバイルアプリ UI
+- **要件ID**: FR-010
 - **概要**: React Native + Expo でモバイルアプリを提供。
 - **画面構成**:
-  1. **LoginScreen** – Supabase Auth による OAuth ログイン／新規登録（email + display_name 必須）。
-  2. **CategorySelectionScreen** – 4 つのカテゴリー（恋愛、季節、日常、ユーモア）を選択。
-  3. **ActionSelectionScreen** – 選択したカテゴリーで「詠む」または「鑑賞する」を選択。
-  4. **CompositionScreen** – 選択したカテゴリーのお題（上の句）を表示し、下の句を投稿。
-  5. **AppreciationScreen** – カテゴリー別または全カテゴリーの作品一覧を表示。いいね機能付き。
-  6. **RankingScreen** – カテゴリー別のリアルタイムランキング表示（未実装）。
-  7. **MyPoemsScreen** – 自身の投稿作品一覧と履歴。
+  1. **LoginScreen** – Supabase Auth によるメール＋パスワード認証。新規登録時は email と display_name が必須。
+  2. **PasswordResetScreen** – パスワードリセット画面。メールアドレスを入力してリカバリーメールを送信。
+  3. **CategorySelectionScreen** – 4 つのカテゴリー（恋愛 💕、季節 🌸、日常 ☕、ユーモア 😄）をカード形式で選択。
+  4. **ActionSelectionScreen** – 選択したカテゴリーで「詠む」または「鑑賞する」を選択。
+  5. **CompositionScreen** – 選択したカテゴリーのお題（上の句 5-7-5）を**縦書き**で表示し、下の句（7-7）を投稿。
+  6. **AppreciationScreen** – カテゴリー別または全カテゴリーの作品一覧を**縦書き**で表示。いいね機能付き。
+  7. **RankingScreen** – カテゴリー別のリアルタイムランキングを**縦書き**で表示。
+  8. **MyPoemsScreen** – 自身の投稿作品一覧を**縦書き**で表示。日付ごとに集計された情報も表示。
 
 ---
 
 ## UI 仕様（UI Specification）
 
-### 1. 画面フロー
+### 1. 縦書き表示
+- **実装**: `VerticalText` コンポーネントで日本語の伝統的な縦書き表示を実現。
+- **対象画面**: CompositionScreen, AppreciationScreen, RankingScreen, MyPoemsScreen
+- **特徴**:
+  - 右から左へ文字を配置
+  - 約物（句読点）の回転処理
+  - 長文の自動折り返し（複数列対応）
+  - Noto Serif JP フォント使用で美しい日本語表示
+
+### 2. 画面フロー
 1. **LoginScreen**
    - Supabase Auth によるメール＋パスワード認証。
    - 新規登録時は email と display_name が必須。
+   - 「パスワードを忘れた方」リンクから PasswordResetScreen へ遷移。
    - OAuth（Google / Apple）は未実装。
 
-2. **CategorySelectionScreen**
+2. **PasswordResetScreen**
+   - メールアドレスを入力してリカバリーメールを送信。
+   - Supabase から送信されたリンクをクリックし、新しいパスワードを設定。
+
+3. **CategorySelectionScreen**
    - 4 つのカテゴリー（恋愛 💕、季節 🌸、日常 ☕、ユーモア 😄）をカード形式で表示。
    - カテゴリーをタップすると ActionSelectionScreen へ遷移。
 
-3. **ActionSelectionScreen**
+4. **ActionSelectionScreen**
    - 選択したカテゴリーで「詠む」または「鑑賞する」を選択。
    - 「詠む」: CompositionScreen へ遷移。
    - 「鑑賞する」: AppreciationScreen へ遷移。
 
-4. **CompositionScreen**
-   - 選択したカテゴリーの上の句（5-7-5）を固定表示。
-   - 下の句（7-7）を 100 文字以内で入力（実際のバリデーションは 40 文字以内）。
-   - 文字数カウンタ表示。
-   - 投稿後は AppreciationScreen へ遷移し、成功ダイアログを表示。
+5. **CompositionScreen**
+   - 選択したカテゴリーの上の句（5-7-5）を**縦書き**で固定表示。
+   - 下の句（7-7）を 40 文字以内で入力。文字数カウンタ表示。
+   - 投稿後は AppreciationScreen へ遷移し、Toast通知で成功を表示。
 
-5. **AppreciationScreen**
-   - 「すべて」タブ: 全カテゴリーの作品を新しい順に表示（最大 200 件）。
-   - カテゴリータブ: 選択したカテゴリーの作品のみ表示（最大 50 件）。
+6. **AppreciationScreen**
+   - 「すべて」タブ: 全カテゴリーの作品を新しい順に**縦書き**表示（最大 200 件）。
+   - カテゴリータブ: 選択したカテゴリーの作品のみ**縦書き**表示（最大 50 件）。
    - 各作品にいいねボタン（♥）と現在のいいね数を表示。
    - プルダウンでリフレッシュ可能。
 
-6. **RankingScreen**
-   - カテゴリー別のリアルタイムランキング表示（未実装）。
+7. **RankingScreen**
+   - カテゴリー別のリアルタイムランキングを**縦書き**で表示。
+   - 順位、作品、作者名、スコアを表示。
 
-7. **MyPoemsScreen**
-   - 自身が投稿した作品の一覧を新しい順に表示。
-   - 各作品のカテゴリー、本文、投稿日時を表示。
+8. **MyPoemsScreen**
+   - 自身が投稿した作品の一覧を新しい順に**縦書き**表示。
+   - 各作品のカテゴリー、本文、投稿日時、いいね数を表示。
+   - 日付ごとのサマリー情報（投稿数、合計いいね数）も表示可能。
 
-### 2. フェーズステータス
+### 3. フェーズステータス
 | フェーズ | 時間帯 | 機能状態 |
 | -------- | ------ | -------- |
 | 通常 | 06:00–21:49 | 投稿／いいね／閲覧が可能 |
@@ -240,13 +273,15 @@
 
 | 分類 | サービス | 用途 |
 | ---- | -------- | ---- |
-| 認証 | Supabase Auth | JWT 認証・ユーザー管理 |
+| 認証 | Supabase Auth | JWT 認証・ユーザー管理・パスワードリセット |
 | DB | PostgreSQL（Neon / Supabase） | 永続データ |
-| キャッシュ | Upstash Redis | ランキング・リアルタイム指標 |
-| ストレージ | Cloudflare R2 | 画像・スナップショット |
-| ジョブ | GitHub Actions Scheduler / Railway | お題生成・定期処理 |
-| Push 通知 | Expo Push API | モバイル通知 |
-| 監視 | Sentry / PostHog | 障害監視・利用分析 |
+| キャッシュ | Upstash Redis | ランキング・リアルタイム指標・いいね集計 |
+| ストレージ | Cloudflare R2 | 画像・スナップショット（未実装） |
+| AI | XAI Grok / Anthropic Claude / OpenAI | お題（上の句）生成 |
+| ジョブ | GitHub Actions Scheduler / Railway | お題生成・ランキング確定・定期処理 |
+| Push 通知 | Expo Push API | モバイル通知（未実装） |
+| 監視 | Sentry | エラー監視・障害検知（未実装） |
+| 分析 | PostHog | ユーザー行動分析・プロダクト改善 |
 
 ---
 
