@@ -84,22 +84,36 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     setIsOAuthLoading(true);
     try {
-      // Get OAuth URL from backend
-      const oauthData = await api.getGoogleOAuthUrl();
+      // Get OAuth URL from backend with redirect URL for mobile app
+      const oauthData = await api.getGoogleOAuthUrl('yomibiyori://');
 
       // Open browser for OAuth flow
       const result = await WebBrowser.openAuthSessionAsync(
         oauthData.url,
-        'yomibiyori://auth/callback'
+        'yomibiyori://'
       );
 
       if (result.type === 'success') {
         // Extract tokens from callback URL
+        // Supabase can return tokens in URL fragment (#) or query parameters (?)
         const url = result.url;
-        const params = new URLSearchParams(url.split('#')[1] || '');
+        console.log('[Auth] OAuth callback URL:', url);
 
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
+        // Try to parse from fragment first (#access_token=...)
+        let params = new URLSearchParams(url.split('#')[1] || '');
+        let accessToken = params.get('access_token');
+        let refreshToken = params.get('refresh_token');
+
+        // If not found in fragment, try query parameters (?access_token=...)
+        if (!accessToken) {
+          const urlObj = new URL(url);
+          params = urlObj.searchParams;
+          accessToken = params.get('access_token');
+          refreshToken = params.get('refresh_token');
+        }
+
+        console.log('[Auth] Access token found:', !!accessToken);
+        console.log('[Auth] Refresh token found:', !!refreshToken);
 
         if (!accessToken) {
           showError('Google認証に失敗しました');
