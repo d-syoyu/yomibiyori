@@ -31,6 +31,7 @@ from app.schemas.auth import (
     SignUpResponse,
     UpdatePasswordRequest,
     UpdatePasswordResponse,
+    UpdateProfileRequest,
     UserProfileResponse,
     VerifyTokenAndUpdatePasswordRequest,
 )
@@ -850,3 +851,37 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
         display_name=user.name,
         session=session_token,
     )
+
+
+def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfileRequest) -> UserProfileResponse:
+    """Update the user's profile (display name)."""
+
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+
+    # Update display name
+    user.name = payload.display_name.strip()
+    user.updated_at = datetime.now(timezone.utc)
+
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update profile") from exc
+
+    session.refresh(user)
+
+    # Track profile update event
+    try:
+        track_event(
+            distinct_id=str(user.id),
+            event_name=EventNames.PROFILE_UPDATED,
+            properties={
+                "display_name": user.name,
+            }
+        )
+    except Exception as e:
+        print(f"[Analytics] Failed to track profile update: {e}")
+
+    return UserProfileResponse(user_id=str(user.id), email=user.email, display_name=user.name)

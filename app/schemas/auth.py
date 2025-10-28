@@ -57,6 +57,12 @@ class UserProfileResponse(BaseModel):
     display_name: str | None = None
 
 
+class UpdateProfileRequest(BaseModel):
+    """Payload for updating user profile."""
+
+    display_name: str = Field(min_length=1, max_length=80, description="New display name for the user")
+
+
 class RefreshTokenRequest(BaseModel):
     """Payload for refreshing access token."""
 

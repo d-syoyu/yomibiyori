@@ -120,6 +120,7 @@ class EventNames:
     # Authentication
     USER_REGISTERED = "user_registered"
     USER_LOGGED_IN = "user_logged_in"
+    PROFILE_UPDATED = "profile_updated"
 
     # Content creation
     WORK_CREATED = "work_created"

@@ -130,6 +130,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [auth]
+      summary: Update user profile
+      description: Update the authenticated user's profile (e.g., display name)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /auth/profile/sync:
     post:
       tags: [auth]
@@ -723,6 +750,14 @@ components:
         message:
           type: string
           example: パスワードを更新しました
+    UpdateProfileRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          maxLength: 80
+          minLength: 1
+          description: New display name for the user
     VerifyTokenAndUpdatePasswordRequest:
       type: object
       required:

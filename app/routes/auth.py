@@ -23,6 +23,7 @@ from app.schemas.auth import (
     SignUpResponse,
     UpdatePasswordRequest,
     UpdatePasswordResponse,
+    UpdateProfileRequest,
     UserProfileResponse,
     VerifyTokenAndUpdatePasswordRequest,
 )
@@ -37,6 +38,7 @@ from app.services.auth import (
     signup_user,
     sync_user_profile,
     update_password,
+    update_user_profile,
     verify_token_and_update_password,
 )
 
@@ -85,6 +87,21 @@ def profile(
     """Return the locally stored profile for the authenticated user."""
 
     return get_user_profile(session=session, user_id=user_id)
+
+
+@router.patch(
+    "/profile",
+    response_model=UserProfileResponse,
+    summary="Update user profile",
+)
+def update_profile(
+    payload: UpdateProfileRequest,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> UserProfileResponse:
+    """Update the authenticated user's profile (e.g., display name)."""
+
+    return update_user_profile(session=session, user_id=user_id, payload=payload)
 
 
 @router.post(
