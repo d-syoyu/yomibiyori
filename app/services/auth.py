@@ -744,6 +744,31 @@ def get_google_oauth_url(*, redirect_to: str | None = None) -> OAuthUrlResponse:
     return OAuthUrlResponse(url=oauth_url, provider="google")
 
 
+def get_apple_oauth_url(*, redirect_to: str | None = None) -> OAuthUrlResponse:
+    """Generate Apple OAuth authorization URL."""
+
+    settings = get_settings()
+    api_key = settings.supabase_anon_key or settings.service_role_key
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase anon key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+
+    # Build OAuth URL
+    # Reference: https://supabase.com/docs/guides/auth/social-login/auth-apple
+    oauth_url = f"{supabase_url}/auth/v1/authorize?provider=apple"
+
+    # Add redirect_to parameter if provided
+    if redirect_to:
+        from urllib.parse import quote
+        oauth_url += f"&redirect_to={quote(redirect_to)}"
+
+    return OAuthUrlResponse(url=oauth_url, provider="apple")
+
+
 def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -> OAuthCallbackResponse:
     """Process OAuth callback and synchronize user to local database."""
 

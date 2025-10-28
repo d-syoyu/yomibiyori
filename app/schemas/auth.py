@@ -104,7 +104,7 @@ class OAuthUrlResponse(BaseModel):
     """Response containing OAuth authorization URL."""
 
     url: str = Field(description="OAuth authorization URL to redirect the user to")
-    provider: Literal["google"] = Field(description="OAuth provider name")
+    provider: Literal["google", "apple"] = Field(description="OAuth provider name")
 
 
 class OAuthCallbackRequest(BaseModel):

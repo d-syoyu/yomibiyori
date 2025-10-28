@@ -76,6 +76,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/oauth/apple:
+    get:
+      tags: [auth]
+      summary: Get Apple OAuth authorization URL
+      description: >
+        Returns the Supabase Auth Apple OAuth URL for client-side redirect flow.
+        Client should redirect to this URL, and after successful authentication,
+        Supabase will redirect back with access_token and refresh_token in the URL fragment.
+      parameters:
+        - name: redirect_to
+          in: query
+          required: false
+          description: Optional redirect URL after authentication
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Apple OAuth authorization URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthUrlResponse'
+        '503':
+          description: Supabase service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/oauth/callback:
     post:
       tags: [auth]
@@ -783,7 +811,7 @@ components:
           description: OAuth authorization URL to redirect the user to
         provider:
           type: string
-          enum: [google]
+          enum: [google, apple]
           description: OAuth provider name
     OAuthCallbackRequest:
       type: object

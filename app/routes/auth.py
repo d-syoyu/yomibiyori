@@ -28,6 +28,7 @@ from app.schemas.auth import (
     VerifyTokenAndUpdatePasswordRequest,
 )
 from app.services.auth import (
+    get_apple_oauth_url,
     get_current_user_id,
     get_google_oauth_url,
     get_user_profile,
@@ -185,6 +186,18 @@ def get_google_oauth_authorization_url(redirect_to: str | None = None) -> OAuthU
     """Return Google OAuth URL for client-side redirect flow."""
 
     return get_google_oauth_url(redirect_to=redirect_to)
+
+
+@router.get(
+    "/oauth/apple",
+    status_code=status.HTTP_200_OK,
+    response_model=OAuthUrlResponse,
+    summary="Get Apple OAuth authorization URL",
+)
+def get_apple_oauth_authorization_url(redirect_to: str | None = None) -> OAuthUrlResponse:
+    """Return Apple OAuth URL for client-side redirect flow."""
+
+    return get_apple_oauth_url(redirect_to=redirect_to)
 
 
 @router.post(
