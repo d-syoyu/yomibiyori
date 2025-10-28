@@ -48,6 +48,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/oauth/google:
+    get:
+      tags: [auth]
+      summary: Get Google OAuth authorization URL
+      description: >
+        Returns the Supabase Auth Google OAuth URL for client-side redirect flow.
+        Client should redirect to this URL, and after successful authentication,
+        Supabase will redirect back with access_token and refresh_token in the URL fragment.
+      parameters:
+        - name: redirect_to
+          in: query
+          required: false
+          description: Optional redirect URL after authentication
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Google OAuth authorization URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthUrlResponse'
+        '503':
+          description: Supabase service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/oauth/callback:
+    post:
+      tags: [auth]
+      summary: Process OAuth callback and sync user
+      description: >
+        Accept access_token from OAuth callback, verify it with Supabase, and synchronise
+        the user to the local database. This endpoint is optional - clients can also directly
+        use the tokens and call /auth/profile/sync.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthCallbackRequest'
+      responses:
+        '200':
+          description: OAuth authentication successful and user synchronized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthCallbackResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Supabase service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/profile:
     get:
       tags: [auth]
@@ -675,6 +736,48 @@ components:
           type: string
           minLength: 8
           maxLength: 128
+    OAuthUrlResponse:
+      type: object
+      required:
+        - url
+        - provider
+      properties:
+        url:
+          type: string
+          format: uri
+          description: OAuth authorization URL to redirect the user to
+        provider:
+          type: string
+          enum: [google]
+          description: OAuth provider name
+    OAuthCallbackRequest:
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+          description: Access token from OAuth callback
+        refresh_token:
+          type: string
+          description: Optional refresh token from OAuth callback
+    OAuthCallbackResponse:
+      type: object
+      required:
+        - user_id
+        - email
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+        session:
+          $ref: '#/components/schemas/SessionToken'
     SignUpResponse:
       type: object
       required:

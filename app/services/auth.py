@@ -21,6 +21,9 @@ from app.models import User
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
+    OAuthCallbackRequest,
+    OAuthCallbackResponse,
+    OAuthUrlResponse,
     PasswordResetRequest,
     PasswordResetResponse,
     SessionToken,
@@ -713,3 +716,137 @@ def verify_token_and_update_password(*, payload: VerifyTokenAndUpdatePasswordReq
         raise HTTPException(status_code=response.status_code, detail=detail)
 
     return UpdatePasswordResponse()
+
+
+def get_google_oauth_url(*, redirect_to: str | None = None) -> OAuthUrlResponse:
+    """Generate Google OAuth authorization URL."""
+
+    settings = get_settings()
+    api_key = settings.supabase_anon_key or settings.service_role_key
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase anon key not configured",
+        )
+
+    supabase_url = settings.supabase_url.rstrip("/")
+
+    # Build OAuth URL
+    # Reference: https://supabase.com/docs/guides/auth/social-login/auth-google
+    oauth_url = f"{supabase_url}/auth/v1/authorize?provider=google"
+
+    # Add redirect_to parameter if provided
+    if redirect_to:
+        from urllib.parse import quote
+        oauth_url += f"&redirect_to={quote(redirect_to)}"
+
+    return OAuthUrlResponse(url=oauth_url, provider="google")
+
+
+def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -> OAuthCallbackResponse:
+    """Process OAuth callback and synchronize user to local database."""
+
+    settings = get_settings()
+    service_key = settings.service_role_key
+    if not service_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service role key not configured",
+        )
+
+    # Decode the access token to get user ID
+    try:
+        token_payload: dict[str, Any] = _decode_jwt(payload.access_token)
+    except JWTError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token") from exc
+
+    user_id = token_payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token missing subject")
+
+    # Fetch user details from Supabase using admin API
+    supabase_url = settings.supabase_url.rstrip("/")
+    headers = {
+        "apikey": service_key,
+        "Authorization": f"Bearer {service_key}",
+    }
+
+    try:
+        response = requests.get(
+            f"{supabase_url}/auth/v1/admin/users/{user_id}",
+            headers=headers,
+            timeout=settings.supabase_request_timeout,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Supabase user fetch failed") from exc
+
+    if response.status_code == 404:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found in Supabase")
+
+    if response.status_code >= 400:
+        detail = _extract_supabase_error(response)
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    try:
+        user_data = response.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from Supabase") from exc
+
+    email = user_data.get("email")
+    if not email:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Supabase response missing user data")
+
+    # Extract display name from user metadata or identities
+    metadata = user_data.get("user_metadata") or {}
+    display_name = metadata.get("display_name") or metadata.get("full_name") or metadata.get("name")
+
+    # If no display name in metadata, try to get from identities (OAuth provider data)
+    if not display_name:
+        identities = user_data.get("identities", [])
+        for identity in identities:
+            identity_data = identity.get("identity_data", {})
+            display_name = identity_data.get("full_name") or identity_data.get("name")
+            if display_name:
+                break
+
+    # Synchronize user to local database
+    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+
+    # Track user OAuth login event
+    try:
+        identify_user(
+            distinct_id=str(user.id),
+            properties={
+                "email": user.email,
+                "display_name": user.name,
+            }
+        )
+        track_event(
+            distinct_id=str(user.id),
+            event_name=EventNames.USER_LOGGED_IN,
+            properties={
+                "email": user.email,
+                "auth_method": "google_oauth",
+            }
+        )
+    except Exception as e:
+        print(f"[Analytics] Failed to track OAuth login: {e}")
+
+    # Return session token
+    session_token = (
+        SessionToken(
+            access_token=payload.access_token,
+            refresh_token=payload.refresh_token,
+            token_type="bearer",
+            expires_in=3600,  # Default to 1 hour, Supabase tokens typically expire in 1 hour
+        )
+        if payload.access_token
+        else None
+    )
+
+    return OAuthCallbackResponse(
+        user_id=str(user.id),
+        email=user.email,
+        display_name=user.name,
+        session=session_token,
+    )

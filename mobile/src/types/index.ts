@@ -45,6 +45,23 @@ export interface UserProfile {
   display_name?: string;
 }
 
+export interface OAuthUrlResponse {
+  url: string;
+  provider: 'google';
+}
+
+export interface OAuthCallbackRequest {
+  access_token: string;
+  refresh_token?: string;
+}
+
+export interface OAuthCallbackResponse {
+  user_id: string;
+  email: string;
+  display_name?: string;
+  session?: SessionToken;
+}
+
 // ============================================================================
 // Theme Types
 // ============================================================================

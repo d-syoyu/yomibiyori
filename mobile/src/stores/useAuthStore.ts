@@ -11,7 +11,7 @@ import {
   getSecureItems,
   deleteSecureItems,
 } from '../utils/secureStorage';
-import type { SignUpRequest, LoginRequest, UserProfile } from '../types';
+import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest } from '../types';
 
 // ============================================================================
 // Constants
@@ -42,6 +42,7 @@ interface AuthState {
   // Actions
   signUp: (data: SignUpRequest) => Promise<void>;
   login: (data: LoginRequest) => Promise<void>;
+  loginWithOAuth: (data: OAuthCallbackRequest) => Promise<void>;
   logout: () => Promise<void>;
   loadStoredSession: () => Promise<void>;
   clearError: () => void;
@@ -144,6 +145,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (err: any) {
       const errorMessage = err.detail || 'ログインに失敗しました';
+      set({
+        isLoading: false,
+        error: errorMessage,
+        isAuthenticated: false,
+      });
+      throw err;
+    }
+  },
+
+  // Login with OAuth (Google)
+  loginWithOAuth: async (data: OAuthCallbackRequest) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.processOAuthCallback(data);
+
+      // Store access token and refresh token securely
+      if (response.session?.access_token) {
+        await setSecureItem(ACCESS_TOKEN_KEY, response.session.access_token);
+      }
+      if (response.session?.refresh_token) {
+        await setSecureItem(REFRESH_TOKEN_KEY, response.session.refresh_token);
+      }
+
+      // Calculate and store token expiration time
+      if (response.session?.expires_in) {
+        const expiresAt = Date.now() + response.session.expires_in * 1000;
+        await setSecureItem(TOKEN_EXPIRES_AT_KEY, expiresAt.toString());
+      }
+
+      // Create user profile from response
+      const userProfile: UserProfile = {
+        user_id: response.user_id,
+        email: response.email,
+        display_name: response.display_name,
+      };
+
+      // Store user profile securely
+      await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+
+      set({
+        isAuthenticated: true,
+        user: userProfile,
+        isLoading: false,
+        error: null,
+      });
+    } catch (err: any) {
+      const errorMessage = err.detail || 'OAuthログインに失敗しました';
       set({
         isLoading: false,
         error: errorMessage,

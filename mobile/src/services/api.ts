@@ -12,6 +12,9 @@ import type {
   LoginResponse,
   UserProfile,
   SessionToken,
+  OAuthUrlResponse,
+  OAuthCallbackRequest,
+  OAuthCallbackResponse,
   Theme,
   ThemeListResponse,
   ThemeCategory,
@@ -262,6 +265,21 @@ class ApiClient {
       '/auth/password-update',
       { new_password: newPassword }
     );
+    return response.data;
+  }
+
+  async getGoogleOAuthUrl(redirectTo?: string): Promise<OAuthUrlResponse> {
+    const response = await this.client.get<OAuthUrlResponse>('/auth/oauth/google', {
+      params: redirectTo ? { redirect_to: redirectTo } : undefined,
+    });
+    return response.data;
+  }
+
+  async processOAuthCallback(data: OAuthCallbackRequest): Promise<OAuthCallbackResponse> {
+    const response = await this.client.post<OAuthCallbackResponse>('/auth/oauth/callback', data);
+    if (response.data.session?.access_token) {
+      this.setAccessToken(response.data.session.access_token);
+    }
     return response.data;
   }
 

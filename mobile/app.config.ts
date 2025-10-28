@@ -11,6 +11,7 @@ const config: ExpoConfig = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
+    scheme: 'yomibiyori',
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -26,6 +27,20 @@ const config: ExpoConfig = {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
       },
+      intentFilters: [
+        {
+          action: 'VIEW',
+          autoVerify: true,
+          data: [
+            {
+              scheme: 'yomibiyori',
+              host: 'auth',
+              pathPrefix: '/callback',
+            },
+          ],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
     },
     web: {
       favicon: './assets/favicon.png',

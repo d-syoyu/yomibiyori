@@ -12,8 +12,10 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
@@ -23,6 +25,9 @@ import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { VALIDATION_MESSAGES } from '../constants/errorMessages';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { identifyUser, trackEvent, EventNames } from '../utils/analytics';
+import api from '../services/api';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -32,8 +37,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
 
-  const { signUp, login, isLoading, error, clearError } = useAuthStore();
+  const { signUp, login, loginWithOAuth, isLoading, error, clearError } = useAuthStore();
   const showError = useToastStore((state) => state.showError);
   const { handleError } = useApiErrorHandler();
 
@@ -72,6 +78,77 @@ export default function LoginScreen() {
       });
       handleError(err, 'authentication');
       clearError();
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsOAuthLoading(true);
+    try {
+      // Get OAuth URL from backend
+      const oauthData = await api.getGoogleOAuthUrl();
+
+      // Open browser for OAuth flow
+      const result = await WebBrowser.openAuthSessionAsync(
+        oauthData.url,
+        'yomibiyori://auth/callback'
+      );
+
+      if (result.type === 'success') {
+        // Extract tokens from callback URL
+        const url = result.url;
+        const params = new URLSearchParams(url.split('#')[1] || '');
+
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+
+        if (!accessToken) {
+          showError('Google認証に失敗しました');
+          trackEvent(EventNames.LOGIN_ATTEMPTED, {
+            success: false,
+            auth_method: 'google_oauth',
+            error: 'No access token in callback',
+          });
+          return;
+        }
+
+        // Process OAuth callback
+        await loginWithOAuth({
+          access_token: accessToken,
+          refresh_token: refreshToken || undefined,
+        });
+
+        trackEvent(EventNames.LOGIN_ATTEMPTED, {
+          success: true,
+          auth_method: 'google_oauth',
+        });
+
+        // Identify user after successful OAuth login
+        const user = useAuthStore.getState().user;
+        if (user?.user_id) {
+          identifyUser(user.user_id, {
+            email: user.email,
+            display_name: user.display_name,
+          });
+        }
+      } else {
+        // User cancelled or other error
+        console.log('[Auth] OAuth cancelled or failed:', result.type);
+        trackEvent(EventNames.LOGIN_ATTEMPTED, {
+          success: false,
+          auth_method: 'google_oauth',
+          error: result.type,
+        });
+      }
+    } catch (err: any) {
+      console.error('[Auth] Google OAuth error:', err);
+      trackEvent(EventNames.LOGIN_ATTEMPTED, {
+        success: false,
+        auth_method: 'google_oauth',
+        error: err?.message || 'Unknown error',
+      });
+      handleError(err, 'authentication');
+    } finally {
+      setIsOAuthLoading(false);
     }
   };
 
@@ -121,12 +198,12 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={styles.button}
                 onPress={handleAuth}
-                disabled={isLoading}
+                disabled={isLoading || isOAuthLoading}
                 activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={
-                    isLoading
+                    isLoading || isOAuthLoading
                       ? ['#CBD5E0', '#A0AEC0']
                       : [colors.text.primary, colors.text.secondary, colors.text.tertiary]
                   }
@@ -135,10 +212,27 @@ export default function LoginScreen() {
                   style={styles.buttonGradient}
                 >
                   <Text style={styles.buttonText}>
-                    {isLoading ? '処理中...' : isSignUp ? 'サインアップ' : 'ログイン'}
+                    {isLoading || isOAuthLoading ? '処理中...' : isSignUp ? 'サインアップ' : 'ログイン'}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
+
+              {!isSignUp && (
+                <TouchableOpacity
+                  style={styles.googleButton}
+                  onPress={handleGoogleLogin}
+                  disabled={isLoading || isOAuthLoading}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.googleButtonContent}>
+                    {isOAuthLoading ? (
+                      <ActivityIndicator size="small" color={colors.text.primary} />
+                    ) : (
+                      <Text style={styles.googleButtonText}>Googleでログイン</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.switchButton}
@@ -252,5 +346,27 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     textDecorationLine: 'underline',
     letterSpacing: 0.3,
+  },
+  googleButton: {
+    marginTop: spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(107, 123, 79, 0.3)',
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    ...shadow.sm,
+  },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 20,
+  },
+  googleButtonText: {
+    color: colors.text.primary,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    letterSpacing: 0.5,
   },
 });

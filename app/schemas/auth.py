@@ -92,3 +92,26 @@ class VerifyTokenAndUpdatePasswordRequest(BaseModel):
 
     access_token: str = Field(min_length=1)
     new_password: str = Field(min_length=8, max_length=128)
+
+
+class OAuthUrlResponse(BaseModel):
+    """Response containing OAuth authorization URL."""
+
+    url: str = Field(description="OAuth authorization URL to redirect the user to")
+    provider: Literal["google"] = Field(description="OAuth provider name")
+
+
+class OAuthCallbackRequest(BaseModel):
+    """Payload for OAuth callback processing."""
+
+    access_token: str = Field(min_length=1, description="Access token from OAuth callback")
+    refresh_token: str | None = Field(default=None, description="Optional refresh token from OAuth callback")
+
+
+class OAuthCallbackResponse(BaseModel):
+    """Response body for successful OAuth callback processing."""
+
+    user_id: str
+    email: EmailStr
+    display_name: str | None = None
+    session: SessionToken | None = None

@@ -12,6 +12,9 @@ from app.db.session import get_authenticated_db_session, get_db_session
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
+    OAuthCallbackRequest,
+    OAuthCallbackResponse,
+    OAuthUrlResponse,
     PasswordResetRequest,
     PasswordResetResponse,
     RefreshTokenRequest,
@@ -25,8 +28,10 @@ from app.schemas.auth import (
 )
 from app.services.auth import (
     get_current_user_id,
+    get_google_oauth_url,
     get_user_profile,
     login_user,
+    process_oauth_callback,
     refresh_access_token,
     request_password_reset,
     signup_user,
@@ -151,3 +156,30 @@ def password_update_with_token(
     """Verify token_hash from email and update password. No authentication required."""
 
     return verify_token_and_update_password(payload=payload)
+
+
+@router.get(
+    "/oauth/google",
+    status_code=status.HTTP_200_OK,
+    response_model=OAuthUrlResponse,
+    summary="Get Google OAuth authorization URL",
+)
+def get_google_oauth_authorization_url(redirect_to: str | None = None) -> OAuthUrlResponse:
+    """Return Google OAuth URL for client-side redirect flow."""
+
+    return get_google_oauth_url(redirect_to=redirect_to)
+
+
+@router.post(
+    "/oauth/callback",
+    status_code=status.HTTP_200_OK,
+    response_model=OAuthCallbackResponse,
+    summary="Process OAuth callback and sync user",
+)
+def oauth_callback(
+    payload: OAuthCallbackRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> OAuthCallbackResponse:
+    """Accept OAuth tokens and synchronize user to local database."""
+
+    return process_oauth_callback(session=session, payload=payload)
