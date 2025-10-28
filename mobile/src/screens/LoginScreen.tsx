@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
@@ -83,15 +85,32 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     setIsOAuthLoading(true);
+    console.log('[Auth] Starting Google OAuth flow...');
+
     try {
+      // Determine redirect URL based on environment
+      // Expo Go uses exp:// scheme, standalone app uses custom scheme
+      const redirectUrl = Constants.appOwnership === 'expo'
+        ? Linking.createURL('/')
+        : 'yomibiyori://';
+
+      console.log('[Auth] Redirect URL:', redirectUrl);
+      console.log('[Auth] App ownership:', Constants.appOwnership);
+
       // Get OAuth URL from backend with redirect URL for mobile app
-      const oauthData = await api.getGoogleOAuthUrl('yomibiyori://');
+      console.log('[Auth] Fetching OAuth URL from backend...');
+      const oauthData = await api.getGoogleOAuthUrl(redirectUrl);
+      console.log('[Auth] OAuth URL received:', oauthData.url);
 
       // Open browser for OAuth flow
+      console.log('[Auth] Opening browser for authentication...');
       const result = await WebBrowser.openAuthSessionAsync(
         oauthData.url,
-        'yomibiyori://'
+        redirectUrl
       );
+
+      console.log('[Auth] Browser result type:', result.type);
+      console.log('[Auth] Browser result:', JSON.stringify(result, null, 2));
 
       if (result.type === 'success') {
         // Extract tokens from callback URL
