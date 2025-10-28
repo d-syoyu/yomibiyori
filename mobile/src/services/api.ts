@@ -281,6 +281,13 @@ class ApiClient {
     return response.data;
   }
 
+  async getAppleOAuthUrl(redirectTo?: string): Promise<OAuthUrlResponse> {
+    const response = await this.client.get<OAuthUrlResponse>('/auth/oauth/apple', {
+      params: redirectTo ? { redirect_to: redirectTo } : undefined,
+    });
+    return response.data;
+  }
+
   async processOAuthCallback(data: OAuthCallbackRequest): Promise<OAuthCallbackResponse> {
     const response = await this.client.post<OAuthCallbackResponse>('/auth/oauth/callback', data);
     if (response.data.session?.access_token) {

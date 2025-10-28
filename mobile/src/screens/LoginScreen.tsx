@@ -185,6 +185,106 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    setIsOAuthLoading(true);
+    console.log('[Auth] Starting Apple OAuth flow...');
+
+    try {
+      // Determine redirect URL based on environment
+      const redirectUrl = Constants.appOwnership === 'expo'
+        ? Linking.createURL('/')
+        : 'yomibiyori://';
+
+      console.log('[Auth] Redirect URL:', redirectUrl);
+      console.log('[Auth] App ownership:', Constants.appOwnership);
+
+      // Get OAuth URL from backend
+      console.log('[Auth] Fetching Apple OAuth URL from backend...');
+      const oauthData = await api.getAppleOAuthUrl(redirectUrl);
+      console.log('[Auth] OAuth URL received:', oauthData.url);
+
+      // Open browser for OAuth flow
+      console.log('[Auth] Opening browser for authentication...');
+      const result = await WebBrowser.openAuthSessionAsync(
+        oauthData.url,
+        redirectUrl
+      );
+
+      console.log('[Auth] Browser result type:', result.type);
+      console.log('[Auth] Browser result:', JSON.stringify(result, null, 2));
+
+      if (result.type === 'success') {
+        // Extract tokens from callback URL
+        const url = result.url;
+        console.log('[Auth] OAuth callback URL:', url);
+
+        // Try to parse from fragment first (#access_token=...)
+        let params = new URLSearchParams(url.split('#')[1] || '');
+        let accessToken = params.get('access_token');
+        let refreshToken = params.get('refresh_token');
+
+        // If not found in fragment, try query parameters (?access_token=...)
+        if (!accessToken) {
+          const urlObj = new URL(url);
+          params = urlObj.searchParams;
+          accessToken = params.get('access_token');
+          refreshToken = params.get('refresh_token');
+        }
+
+        console.log('[Auth] Access token found:', !!accessToken);
+        console.log('[Auth] Refresh token found:', !!refreshToken);
+
+        if (!accessToken) {
+          showError('Apple認証に失敗しました');
+          trackEvent(EventNames.LOGIN_ATTEMPTED, {
+            success: false,
+            auth_method: 'apple_oauth',
+            error: 'No access token in callback',
+          });
+          return;
+        }
+
+        // Process OAuth callback
+        await loginWithOAuth({
+          access_token: accessToken,
+          refresh_token: refreshToken || undefined,
+        });
+
+        trackEvent(EventNames.LOGIN_ATTEMPTED, {
+          success: true,
+          auth_method: 'apple_oauth',
+        });
+
+        // Identify user after successful OAuth login
+        const user = useAuthStore.getState().user;
+        if (user?.user_id) {
+          identifyUser(user.user_id, {
+            email: user.email,
+            display_name: user.display_name,
+          });
+        }
+      } else {
+        // User cancelled or other error
+        console.log('[Auth] OAuth cancelled or failed:', result.type);
+        trackEvent(EventNames.LOGIN_ATTEMPTED, {
+          success: false,
+          auth_method: 'apple_oauth',
+          error: result.type,
+        });
+      }
+    } catch (err: any) {
+      console.error('[Auth] Apple OAuth error:', err);
+      trackEvent(EventNames.LOGIN_ATTEMPTED, {
+        success: false,
+        auth_method: 'apple_oauth',
+        error: err?.message || 'Unknown error',
+      });
+      handleError(err, 'authentication');
+    } finally {
+      setIsOAuthLoading(false);
+    }
+  };
+
   return (
     <LinearGradient
       colors={[colors.background.primary, colors.background.secondary]}
@@ -251,20 +351,37 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               {!isSignUp && (
-                <TouchableOpacity
-                  style={styles.googleButton}
-                  onPress={handleGoogleLogin}
-                  disabled={isLoading || isOAuthLoading}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.googleButtonContent}>
-                    {isOAuthLoading ? (
-                      <ActivityIndicator size="small" color={colors.text.primary} />
-                    ) : (
-                      <Text style={styles.googleButtonText}>Googleでログイン</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity
+                    style={styles.googleButton}
+                    onPress={handleGoogleLogin}
+                    disabled={isLoading || isOAuthLoading}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.googleButtonContent}>
+                      {isOAuthLoading ? (
+                        <ActivityIndicator size="small" color={colors.text.primary} />
+                      ) : (
+                        <Text style={styles.googleButtonText}>Googleでログイン</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.appleButton}
+                    onPress={handleAppleLogin}
+                    disabled={isLoading || isOAuthLoading}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.appleButtonContent}>
+                      {isOAuthLoading ? (
+                        <ActivityIndicator size="small" color={colors.text.inverse} />
+                      ) : (
+                        <Text style={styles.appleButtonText}>Appleでログイン</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                </>
               )}
 
               <TouchableOpacity
@@ -398,6 +515,26 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     color: colors.text.primary,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    letterSpacing: 0.5,
+  },
+  appleButton: {
+    marginTop: spacing.md,
+    backgroundColor: '#000000',
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    ...shadow.sm,
+  },
+  appleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 20,
+  },
+  appleButtonText: {
+    color: colors.text.inverse,
     fontSize: fontSize.body,
     fontFamily: fontFamily.semiBold,
     letterSpacing: 0.5,

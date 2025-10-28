@@ -51,7 +51,7 @@ export interface UpdateProfileRequest {
 
 export interface OAuthUrlResponse {
   url: string;
-  provider: 'google';
+  provider: 'google' | 'apple';
 }
 
 export interface OAuthCallbackRequest {
