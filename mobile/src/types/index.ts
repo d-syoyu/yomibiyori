@@ -45,6 +45,10 @@ export interface UserProfile {
   display_name?: string;
 }
 
+export interface UpdateProfileRequest {
+  display_name: string;
+}
+
 export interface OAuthUrlResponse {
   url: string;
   provider: 'google';

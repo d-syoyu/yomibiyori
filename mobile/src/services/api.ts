@@ -15,6 +15,7 @@ import type {
   OAuthUrlResponse,
   OAuthCallbackRequest,
   OAuthCallbackResponse,
+  UpdateProfileRequest,
   Theme,
   ThemeListResponse,
   ThemeCategory,
@@ -228,6 +229,11 @@ class ApiClient {
 
   async getUserProfile(): Promise<UserProfile> {
     const response = await this.client.get<UserProfile>('/auth/profile');
+    return response.data;
+  }
+
+  async updateProfile(data: UpdateProfileRequest): Promise<UserProfile> {
+    const response = await this.client.patch<UserProfile>('/auth/profile', data);
     return response.data;
   }
 

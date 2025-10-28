@@ -14,6 +14,8 @@ import {
   RefreshControl,
   AppState,
   AppStateStatus,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -33,7 +35,7 @@ interface DateWorksCache {
 }
 
 export default function MyPoemsScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateProfile, isLoading: authLoading } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
   const { handleError } = useApiErrorHandler();
 
@@ -44,6 +46,10 @@ export default function MyPoemsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+
+  // Profile edit modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState('');
 
   // Load summary of user's works (日付ごとのサマリーのみ取得)
   const loadMyWorksSummary = useCallback(async (isRefresh = false) => {
@@ -129,6 +135,33 @@ export default function MyPoemsScreen() {
     loadMyWorksSummary();
   }, [loadMyWorksSummary]);
 
+  const handleOpenEditModal = () => {
+    setEditDisplayName(user?.display_name || '');
+    setEditModalVisible(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalVisible(false);
+    setEditDisplayName('');
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editDisplayName.trim()) {
+      handleError(
+        { detail: '表示名を入力してください', status: 400 },
+        'validation'
+      );
+      return;
+    }
+
+    try {
+      await updateProfile({ display_name: editDisplayName.trim() });
+      handleCloseEditModal();
+    } catch (error: any) {
+      handleError(error, 'profile_update');
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
   };
@@ -188,10 +221,21 @@ export default function MyPoemsScreen() {
           </View>
 
           <View style={styles.userCard}>
-            <Text style={styles.userName}>
-              {user?.display_name || user?.email || 'ユーザー'}
-            </Text>
-            <Text style={styles.userEmail}>{user?.email}</Text>
+            <View style={styles.userInfo}>
+              <View style={styles.userTexts}>
+                <Text style={styles.userName}>
+                  {user?.display_name || user?.email || 'ユーザー'}
+                </Text>
+                <Text style={styles.userEmail}>{user?.email}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleOpenEditModal}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editButtonText}>編集</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.statsCard}>
@@ -331,6 +375,53 @@ export default function MyPoemsScreen() {
             )}
           </View>
         </ScrollView>
+
+        {/* Profile Edit Modal */}
+        <Modal
+          visible={editModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={handleCloseEditModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>表示名を編集</Text>
+
+              <TextInput
+                style={styles.modalInput}
+                placeholder="表示名"
+                placeholderTextColor={colors.text.tertiary}
+                value={editDisplayName}
+                onChangeText={setEditDisplayName}
+                autoFocus
+                maxLength={80}
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalCancelButton]}
+                  onPress={handleCloseEditModal}
+                  disabled={authLoading}
+                >
+                  <Text style={styles.modalCancelButtonText}>キャンセル</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalSaveButton]}
+                  onPress={handleSaveProfile}
+                  disabled={authLoading}
+                  activeOpacity={0.8}
+                >
+                  {authLoading ? (
+                    <ActivityIndicator size="small" color={colors.text.inverse} />
+                  ) : (
+                    <Text style={styles.modalSaveButtonText}>保存</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -383,6 +474,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     ...shadow.sm,
   },
+  userInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userTexts: {
+    flex: 1,
+  },
   userName: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.semiBold,
@@ -394,6 +493,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: fontFamily.regular,
     color: colors.text.tertiary,
+  },
+  editButton: {
+    backgroundColor: colors.background.secondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: borderRadius.sm,
+  },
+  editButtonText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.secondary,
   },
   statsCard: {
     backgroundColor: colors.background.card,
@@ -567,5 +677,72 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     color: colors.status.error,
     letterSpacing: 0.3,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    ...shadow.lg,
+  },
+  modalTitle: {
+    fontSize: fontSize.h3,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  modalInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(107, 123, 79, 0.2)',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.primary,
+    marginBottom: spacing.lg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  modalCancelButton: {
+    backgroundColor: colors.background.secondary,
+  },
+  modalCancelButtonText: {
+    color: colors.text.secondary,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    letterSpacing: 0.5,
+  },
+  modalSaveButton: {
+    backgroundColor: colors.text.primary,
+    ...shadow.sm,
+  },
+  modalSaveButtonText: {
+    color: colors.text.inverse,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    letterSpacing: 0.5,
   },
 });

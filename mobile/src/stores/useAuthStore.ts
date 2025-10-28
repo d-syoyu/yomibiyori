@@ -11,7 +11,7 @@ import {
   getSecureItems,
   deleteSecureItems,
 } from '../utils/secureStorage';
-import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest } from '../types';
+import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest, UpdateProfileRequest } from '../types';
 
 // ============================================================================
 // Constants
@@ -45,6 +45,7 @@ interface AuthState {
   loginWithOAuth: (data: OAuthCallbackRequest) => Promise<void>;
   logout: () => Promise<void>;
   loadStoredSession: () => Promise<void>;
+  updateProfile: (data: UpdateProfileRequest) => Promise<void>;
   clearError: () => void;
   ensureValidToken: () => Promise<void>;
 }
@@ -345,6 +346,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: any) {
       console.error('[Auth] Load session error:', err);
       set({ isLoading: false, isAuthenticated: false });
+    }
+  },
+
+  // Update user profile
+  updateProfile: async (data: UpdateProfileRequest) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updatedProfile = await api.updateProfile(data);
+
+      // Update stored profile securely
+      await setSecureItem(USER_PROFILE_KEY, JSON.stringify(updatedProfile));
+
+      set({
+        user: updatedProfile,
+        isLoading: false,
+        error: null,
+      });
+    } catch (err: any) {
+      const errorMessage = err.detail || 'プロフィールの更新に失敗しました';
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+      throw err;
     }
   },
 
