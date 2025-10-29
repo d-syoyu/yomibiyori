@@ -104,7 +104,9 @@ create table if not exists sponsors (
 );
 
 -- ========= ビュー：作品のメタ（いいね数を集約） =========
-create or replace view works_with_metrics as
+-- SECURITY INVOKER を明示してRLSポリシーを適用
+create or replace view works_with_metrics
+with (security_invoker = true) as
 select
   w.*,
   coalesce(lc.likes_count, 0) as likes_count
