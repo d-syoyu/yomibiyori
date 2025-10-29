@@ -12,7 +12,10 @@ set search_path = app_public, public;
 
 -- タイムスタンプ自動更新トリガ
 create or replace function app_public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
 begin
   new.updated_at = now();
   return new;
@@ -129,12 +132,20 @@ alter table sponsors enable row level security;
 -- ここでは存在しない環境でも動くようフォールバック関数を用意（no-op的）。
 -- ロール: authenticated（一般ユーザー）と service_role（管理ジョブ）を想定し、ポリシーで判定する。
 create or replace function app_public.current_uid()
-returns uuid language sql stable as $$
+returns uuid
+language sql
+stable
+set search_path = ''
+as $$
   select nullif(current_setting('app.current_uid', true), '')::uuid;
 $$;
 
 create or replace function app_public.is_service_role()
-returns boolean language sql stable as $$
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
   select current_setting('app.current_role', true) = 'service_role';
 $$;
 
@@ -200,7 +211,11 @@ create policy if not exists write_service_rankings on rankings
 -- ========= 便利関数：Wilson下限スコア（参考実装、アプリ側で算出推奨） =========
 -- likes_count と 表示回数等からの算出を想定。ここでは p=likes/n のWilson下限を返す。
 create or replace function app_public.wilson_lower_bound(likes int, n int, z numeric default 1.96)
-returns numeric language plpgsql immutable as $$
+returns numeric
+language plpgsql
+immutable
+set search_path = ''
+as $$
 declare
   phat numeric;
   denom numeric;
