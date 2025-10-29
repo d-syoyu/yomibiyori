@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   expo: {
     name: 'Yomibiyori',
     slug: 'yomibiyori',
-    version: '1.0.0',
+    version: '1.0.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -20,6 +20,9 @@ const config: ExpoConfig = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.yomibiyori.app',
+      config: {
+        usesNonExemptEncryption: false,
+      },
     },
     android: {
       package: 'com.yomibiyori.app',
@@ -46,6 +49,12 @@ const config: ExpoConfig = {
       favicon: './assets/favicon.png',
     },
     plugins: ['expo-font', 'expo-secure-store'],
+    updates: {
+      url: 'https://u.expo.dev/da2c3e4e-0129-4a61-8b63-1491fa1d3a1a',
+    },
+    runtimeVersion: {
+      policy: 'appVersion',
+    },
     extra: {
       apiBaseUrl: API_BASE_URL,
       eas: {

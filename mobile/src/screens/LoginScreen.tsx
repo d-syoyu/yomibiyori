@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -362,7 +363,10 @@ export default function LoginScreen() {
                       {isOAuthLoading ? (
                         <ActivityIndicator size="small" color={colors.text.primary} />
                       ) : (
-                        <Text style={styles.googleButtonText}>Googleでログイン</Text>
+                        <>
+                          <AntDesign name="google" size={20} color={colors.text.primary} style={styles.buttonIcon} />
+                          <Text style={styles.googleButtonText}>Googleでログイン</Text>
+                        </>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -377,7 +381,10 @@ export default function LoginScreen() {
                       {isOAuthLoading ? (
                         <ActivityIndicator size="small" color={colors.text.inverse} />
                       ) : (
-                        <Text style={styles.appleButtonText}>Appleでログイン</Text>
+                        <>
+                          <Ionicons name="logo-apple" size={20} color={colors.text.inverse} style={styles.buttonIcon} />
+                          <Text style={styles.appleButtonText}>Appleでログイン</Text>
+                        </>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -538,5 +545,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.semiBold,
     letterSpacing: 0.5,
+  },
+  buttonIcon: {
+    marginRight: spacing.sm,
   },
 });

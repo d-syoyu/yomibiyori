@@ -18,7 +18,9 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useTutorialStore } from '../stores/useTutorialStore';
 import type { Work, Theme, WorkDateSummary } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
@@ -26,6 +28,7 @@ import { useThemeStore } from '../stores/useThemeStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
+import TutorialModal from '../components/TutorialModal';
 
 // Works loaded for a specific date
 interface DateWorksCache {
@@ -50,6 +53,9 @@ export default function MyPoemsScreen() {
   // Profile edit modal
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState('');
+
+  // Tutorial modal
+  const [tutorialModalVisible, setTutorialModalVisible] = useState(false);
 
   // Load summary of user's works (日付ごとのサマリーのみ取得)
   const loadMyWorksSummary = useCallback(async (isRefresh = false) => {
@@ -215,9 +221,18 @@ export default function MyPoemsScreen() {
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>マイページ</Text>
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutButtonText}>ログアウト</Text>
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                style={styles.tutorialButton}
+                onPress={() => setTutorialModalVisible(true)}
+              >
+                <Ionicons name="help-circle-outline" size={20} color="#4A5568" />
+                <Text style={styles.tutorialButtonText}>使い方</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Text style={styles.logoutButtonText}>ログアウト</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.userCard}>
@@ -422,6 +437,12 @@ export default function MyPoemsScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Tutorial Modal */}
+        <TutorialModal
+          visible={tutorialModalVisible}
+          onClose={() => setTutorialModalVisible(false)}
+        />
       </View>
     </SafeAreaView>
   );
@@ -455,6 +476,25 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     color: colors.text.primary,
     letterSpacing: 2,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  tutorialButton: {
+    backgroundColor: colors.background.secondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  tutorialButtonText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.secondary,
   },
   logoutButton: {
     backgroundColor: colors.background.secondary,

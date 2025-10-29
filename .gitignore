@@ -31,6 +31,12 @@ mobile/yarn-error.log*
 mobile/.expo-shared/
 mobile/web-build/
 
+# Next.js (website)
+website/.next/
+website/out/
+website/node_modules/
+website/.vercel
+
 # OS / Editor
 .DS_Store
 Thumbs.db

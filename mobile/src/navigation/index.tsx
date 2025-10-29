@@ -3,7 +3,7 @@
  * Handles auth flow and main app navigation
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,6 +11,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '../stores/useAuthStore';
+import { useTutorialStore } from '../stores/useTutorialStore';
 import type { RootStackParamList, MainTabParamList, HomeStackParamList } from '../types';
 
 // Import screens
@@ -23,8 +24,9 @@ import MyPoemsScreen from '../screens/MyPoemsScreen';
 import AppreciationScreen from '../screens/AppreciationScreen';
 import RankingScreen from '../screens/RankingScreen';
 
-// Import Toast Container
+// Import components
 import ToastContainer from '../components/ToastContainer';
+import TutorialModal from '../components/TutorialModal';
 
 // ============================================================================
 // Navigators
@@ -160,12 +162,40 @@ function RootNavigator() {
 // ============================================================================
 
 export default function Navigation() {
+  const { isAuthenticated } = useAuthStore();
+  const { tutorialCompleted, isLoading, loadTutorialStatus, completeTutorial } =
+    useTutorialStore();
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Load tutorial status on mount
+  useEffect(() => {
+    loadTutorialStatus();
+  }, [loadTutorialStatus]);
+
+  // Show tutorial when authenticated and not completed
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && !tutorialCompleted) {
+      // Small delay to ensure smooth transition after login
+      const timer = setTimeout(() => {
+        setShowTutorial(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isAuthenticated, tutorialCompleted]);
+
+  // Handle tutorial close
+  const handleTutorialClose = () => {
+    setShowTutorial(false);
+    completeTutorial();
+  };
+
   return (
     <>
       <NavigationContainer>
         <RootNavigator />
       </NavigationContainer>
       <ToastContainer />
+      <TutorialModal visible={showTutorial} onClose={handleTutorialClose} />
     </>
   );
 }
