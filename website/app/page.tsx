@@ -56,27 +56,6 @@ export default function Home() {
               </p>
             </div>
           </section>
-
-          {/* ダウンロードセクション */}
-          <section className="text-center mt-16 py-12 bg-white rounded-lg shadow-sm border border-amber-100">
-            <h2 className="text-2xl md:text-3xl font-semibold text-amber-900 mb-6">
-              今すぐダウンロード
-            </h2>
-            <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-              <a
-                href="#"
-                className="px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
-              >
-                <span>App Store</span>
-              </a>
-              <a
-                href="#"
-                className="px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
-              >
-                <span>Google Play</span>
-              </a>
-            </div>
-          </section>
         </div>
 
         {/* フッター */}
