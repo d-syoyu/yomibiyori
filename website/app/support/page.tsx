@@ -94,8 +94,8 @@ export default function Support() {
               <h3 className="text-lg font-semibold text-amber-900 mb-3">メールでのお問い合わせ</h3>
               <p className="text-gray-700 mb-2">
                 メールアドレス：
-                <a href="mailto:support@yomibiyori.app" className="text-amber-900 underline hover:text-amber-700">
-                  support@yomibiyori.app
+                <a href="mailto:support@yomibiyori.com" className="text-amber-900 underline hover:text-amber-700">
+                  support@yomibiyori.com
                 </a>
               </p>
               <p className="text-sm text-gray-600">
