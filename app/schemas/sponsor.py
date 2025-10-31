@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -14,9 +14,9 @@ class SponsorBase(BaseModel):
     """Base sponsor information."""
 
     company_name: str = Field(..., min_length=1, max_length=200)
-    contact_email: EmailStr | None = None
-    official_url: str | None = None
-    logo_url: str | None = None
+    contact_email: Optional[EmailStr] = None
+    official_url: Optional[str] = None
+    logo_url: Optional[str] = None
     plan_tier: str = Field(default="basic", pattern="^(basic|standard|premium)$")
 
 
@@ -29,11 +29,11 @@ class SponsorCreate(SponsorBase):
 class SponsorUpdate(BaseModel):
     """Update sponsor information."""
 
-    company_name: str | None = Field(None, min_length=1, max_length=200)
-    contact_email: EmailStr | None = None
-    official_url: str | None = None
-    logo_url: str | None = None
-    plan_tier: str | None = Field(None, pattern="^(basic|standard|premium)$")
+    company_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    contact_email: Optional[EmailStr] = None
+    official_url: Optional[str] = None
+    logo_url: Optional[str] = None
+    plan_tier: Optional[str] = Field(None, pattern="^(basic|standard|premium)$")
 
 
 class SponsorResponse(SponsorBase):
@@ -63,9 +63,9 @@ class CampaignBase(BaseModel):
     """Base campaign information."""
 
     name: str = Field(..., min_length=1, max_length=200)
-    budget: Decimal | None = Field(None, ge=0)
-    start_date: date | None = None
-    end_date: date | None = None
+    budget: Optional[Decimal] = Field(None, ge=0)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     targeting: CampaignTargeting = Field(default_factory=CampaignTargeting)
 
 
@@ -78,12 +78,12 @@ class CampaignCreate(CampaignBase):
 class CampaignUpdate(BaseModel):
     """Update campaign information."""
 
-    name: str | None = Field(None, min_length=1, max_length=200)
-    status: str | None = Field(None, pattern="^(draft|active|paused|completed|cancelled)$")
-    budget: Decimal | None = Field(None, ge=0)
-    start_date: date | None = None
-    end_date: date | None = None
-    targeting: CampaignTargeting | None = None
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    status: Optional[str] = Field(None, pattern="^(draft|active|paused|completed|cancelled)$")
+    budget: Optional[Decimal] = Field(None, ge=0)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    targeting: Optional[CampaignTargeting] = None
 
 
 class CampaignResponse(CampaignBase):
@@ -127,10 +127,10 @@ class SponsorThemeCreate(SponsorThemeBase):
 class SponsorThemeUpdate(BaseModel):
     """Update sponsor theme information."""
 
-    date: date | None = None
-    category: str | None = Field(None, min_length=1, max_length=50)
-    text_575: str | None = Field(None, min_length=3, max_length=140)
-    priority: int | None = None
+    date: Optional[date] = None
+    category: Optional[str] = Field(None, min_length=1, max_length=50)
+    text_575: Optional[str] = Field(None, min_length=3, max_length=140)
+    priority: Optional[int] = None
 
 
 class SponsorThemeResponse(SponsorThemeBase):
@@ -139,9 +139,9 @@ class SponsorThemeResponse(SponsorThemeBase):
     id: str
     campaign_id: str
     status: str
-    rejection_reason: str | None = None
-    approved_at: datetime | None = None
-    approved_by: str | None = None
+    rejection_reason: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
