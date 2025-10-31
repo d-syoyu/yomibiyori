@@ -256,14 +256,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(107, 123, 79, 0.2)',
     borderRadius: borderRadius.md,
     backgroundColor: colors.background.card,
-    overflow: 'hidden',
-    ...Platform.select({
-      android: {
-        height: 50,
-      },
-    }),
-  },
-  picker: {
     ...Platform.select({
       ios: {
         height: 180,
@@ -272,6 +264,10 @@ const styles = StyleSheet.create({
         height: 50,
       },
     }),
+  },
+  picker: {
+    width: '100%',
+    height: '100%',
   },
   saveButton: {
     flexDirection: 'row',
