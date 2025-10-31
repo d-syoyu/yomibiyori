@@ -147,24 +147,32 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
             logger.error(f"[Works] Failed to initialize Redis ranking entry for work {work.id}: {exc}")
             # Don't fail the work creation if Redis fails - data is already in PostgreSQL
 
-    # Track work creation event
-    try:
-        track_event(
-            distinct_id=user_id,
-            event_name=EventNames.WORK_CREATED,
-            properties={
+    # Get user info for display name and analytics
+    user = session.get(User, user_id)
+    display_name = user.name if user and user.name else user.email if user else "Unknown"
+
+    # Track work creation event (respect opt-out preference)
+    if user and not user.analytics_opt_out:
+        try:
+            properties = {
                 "work_id": str(work.id),
                 "theme_id": str(theme.id),
                 "category": theme.category,
                 "text_length": len(text),
             }
-        )
-    except Exception as exc:
-        logger.error(f"[Analytics] Failed to track work creation: {exc}")
+            # Add user attributes if available
+            if user.birth_year:
+                properties["birth_year"] = user.birth_year
+            if user.prefecture:
+                properties["prefecture"] = user.prefecture
 
-    # Get user name
-    user = session.get(User, user_id)
-    display_name = user.name if user and user.name else user.email if user else "Unknown"
+            track_event(
+                distinct_id=user_id,
+                event_name=EventNames.WORK_CREATED,
+                properties=properties
+            )
+        except Exception as exc:
+            logger.error(f"[Analytics] Failed to track work creation: {exc}")
 
     return WorkResponse(
         id=str(work.id),
@@ -452,6 +460,21 @@ def record_impression(
                 f"Suspicious impression pattern detected for work {work_id}: "
                 f"{impressions_total} impressions from {unique_viewers} viewers (ratio: {ratio:.2f})"
             )
+
+    # Track work viewed event (use viewer_hash as distinct_id if available)
+    if viewer_hash:
+        try:
+            track_event(
+                distinct_id=viewer_hash,
+                event_name=EventNames.WORK_VIEWED,
+                properties={
+                    "work_id": work_id,
+                    "theme_id": str(work.theme_id),
+                    "impressions_count": payload.count,
+                }
+            )
+        except Exception as exc:
+            logger.error(f"[Analytics] Failed to track work view: {exc}")
 
     return WorkImpressionResponse(
         status="recorded",

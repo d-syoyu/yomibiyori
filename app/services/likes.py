@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.logging import logger
 from app.core.analytics import track_event, EventNames
-from app.models import Like, Work
+from app.models import Like, User, Work
 from app.schemas.work import WorkLikeResponse
 
 
@@ -76,18 +76,27 @@ def like_work(
         logger.error(f"Redis pipeline failed for work {work_id}: {exc}")
         # Don't fail the like operation if Redis fails - data is already in PostgreSQL
 
-    # Track like event
-    try:
-        track_event(
-            distinct_id=user_id,
-            event_name=EventNames.WORK_LIKED,
-            properties={
+    # Track like event (respect opt-out preference)
+    user = session.get(User, user_id)
+    if user and not user.analytics_opt_out:
+        try:
+            properties = {
                 "work_id": work_id,
                 "theme_id": str(work.theme_id),
                 "total_likes": likes_count,
             }
-        )
-    except Exception as exc:
-        logger.error(f"[Analytics] Failed to track like: {exc}")
+            # Add user attributes if available
+            if user.birth_year:
+                properties["birth_year"] = user.birth_year
+            if user.prefecture:
+                properties["prefecture"] = user.prefecture
+
+            track_event(
+                distinct_id=user_id,
+                event_name=EventNames.WORK_LIKED,
+                properties=properties
+            )
+        except Exception as exc:
+            logger.error(f"[Analytics] Failed to track like: {exc}")
 
     return WorkLikeResponse(status="liked", likes_count=likes_count)
