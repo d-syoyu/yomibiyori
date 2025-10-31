@@ -257,6 +257,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.background.card,
     overflow: 'hidden',
+    ...Platform.select({
+      android: {
+        height: 50,
+      },
+    }),
   },
   picker: {
     ...Platform.select({
