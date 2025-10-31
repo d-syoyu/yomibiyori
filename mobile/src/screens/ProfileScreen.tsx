@@ -62,8 +62,15 @@ export default function ProfileScreen() {
     try {
       setIsSaving(true);
 
+      // Validate display name
+      if (!displayName.trim()) {
+        showError('表示名を入力してください');
+        setIsSaving(false);
+        return;
+      }
+
       const updateData = {
-        display_name: displayName.trim() || undefined,
+        display_name: displayName.trim(),
         birth_year: birthYear,
         prefecture,
       };
@@ -131,7 +138,7 @@ export default function ProfileScreen() {
 
           {/* Birth Year */}
           <View style={styles.section}>
-            <Text style={styles.label}>生年（任意）</Text>
+            <Text style={styles.label}>生年</Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={birthYear}
@@ -149,7 +156,7 @@ export default function ProfileScreen() {
 
           {/* Prefecture */}
           <View style={styles.section}>
-            <Text style={styles.label}>都道府県（任意）</Text>
+            <Text style={styles.label}>都道府県</Text>
             <PrefecturePicker value={prefecture} onChange={setPrefecture} pickerStyle={styles.pickerContainer} />
           </View>
 
