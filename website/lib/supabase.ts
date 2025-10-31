@@ -14,6 +14,9 @@ export function getSupabase() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
+  console.log('[Supabase Init] URL:', supabaseUrl)
+  console.log('[Supabase Init] Key exists:', !!supabaseAnonKey && supabaseAnonKey !== 'placeholder-key')
+
   supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
