@@ -47,6 +47,8 @@ export default function NewThemePage() {
             id: session.user.id,
             company_name: session.user.email || 'スポンサー企業',
             contact_email: session.user.email,
+            text: 'デフォルトテキスト', // 旧フィールド（後方互換性のため）3文字以上必要
+            category: '一般', // デフォルトカテゴリ
           })
           .select()
           .single()

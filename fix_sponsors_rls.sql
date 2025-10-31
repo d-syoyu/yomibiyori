@@ -4,17 +4,21 @@
 -- 既存の古いサービスロールのみのポリシーを削除
 DROP POLICY IF EXISTS write_service_sponsors ON sponsors;
 
+-- 既存のポリシーを削除（存在する場合）
+DROP POLICY IF EXISTS insert_own_sponsor ON sponsors;
+DROP POLICY IF EXISTS update_own_sponsor ON sponsors;
+
 -- Supabase auth.uid()を使った新しいポリシーを追加
 -- (read_sponsorsポリシーは既存のため変更不要)
 
 -- スポンサーが自分のレコードを作成できるポリシー
-CREATE POLICY IF NOT EXISTS insert_own_sponsor ON sponsors
+CREATE POLICY insert_own_sponsor ON sponsors
 FOR INSERT
 TO authenticated
 WITH CHECK (auth.uid() = id);
 
 -- スポンサーが自分のレコードを更新できるポリシー
-CREATE POLICY IF NOT EXISTS update_own_sponsor ON sponsors
+CREATE POLICY update_own_sponsor ON sponsors
 FOR UPDATE
 TO authenticated
 USING (auth.uid() = id)
