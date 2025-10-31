@@ -879,14 +879,28 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
 
 
 def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfileRequest) -> UserProfileResponse:
-    """Update the user's profile (display name)."""
+    """Update the user's profile (display name, demographics, device info)."""
 
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
 
-    # Update display name
-    user.name = payload.display_name.strip()
+    # Update fields if provided
+    if payload.display_name is not None:
+        user.name = payload.display_name.strip()
+
+    if payload.birth_year is not None:
+        user.birth_year = payload.birth_year
+
+    if payload.prefecture is not None:
+        user.prefecture = payload.prefecture
+
+    if payload.device_info is not None:
+        user.device_info = payload.device_info
+
+    if payload.analytics_opt_out is not None:
+        user.analytics_opt_out = payload.analytics_opt_out
+
     user.updated_at = datetime.now(timezone.utc)
 
     try:
@@ -897,16 +911,29 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
 
     session.refresh(user)
 
-    # Track profile update event
-    try:
-        track_event(
-            distinct_id=str(user.id),
-            event_name=EventNames.PROFILE_UPDATED,
-            properties={
-                "display_name": user.name,
-            }
-        )
-    except Exception as e:
-        print(f"[Analytics] Failed to track profile update: {e}")
+    # Track profile update event (only if not opted out)
+    if not user.analytics_opt_out:
+        try:
+            track_properties = {"display_name": user.name}
+            if user.birth_year:
+                track_properties["birth_year"] = user.birth_year
+            if user.prefecture:
+                track_properties["prefecture"] = user.prefecture
 
-    return UserProfileResponse(user_id=str(user.id), email=user.email, display_name=user.name)
+            track_event(
+                distinct_id=str(user.id),
+                event_name=EventNames.PROFILE_UPDATED,
+                properties=track_properties
+            )
+        except Exception as e:
+            print(f"[Analytics] Failed to track profile update: {e}")
+
+    return UserProfileResponse(
+        user_id=str(user.id),
+        email=user.email,
+        display_name=user.name,
+        birth_year=user.birth_year,
+        prefecture=user.prefecture,
+        device_info=user.device_info,
+        analytics_opt_out=user.analytics_opt_out,
+    )
