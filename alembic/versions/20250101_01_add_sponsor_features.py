@@ -105,7 +105,7 @@ def upgrade() -> None:
             """
             CREATE TRIGGER trg_sponsors_updated_at
             BEFORE UPDATE ON sponsors
-            FOR EACH ROW EXECUTE FUNCTION app_public.set_updated_at()
+            FOR EACH ROW EXECUTE FUNCTION set_updated_at()
             """
         )
     )
@@ -165,7 +165,7 @@ def upgrade() -> None:
             """
             CREATE TRIGGER trg_sponsor_campaigns_updated_at
             BEFORE UPDATE ON sponsor_campaigns
-            FOR EACH ROW EXECUTE FUNCTION app_public.set_updated_at()
+            FOR EACH ROW EXECUTE FUNCTION set_updated_at()
             """
         )
     )
@@ -220,7 +220,7 @@ def upgrade() -> None:
             """
             CREATE TRIGGER trg_sponsor_themes_updated_at
             BEFORE UPDATE ON sponsor_themes
-            FOR EACH ROW EXECUTE FUNCTION app_public.set_updated_at()
+            FOR EACH ROW EXECUTE FUNCTION set_updated_at()
             """
         )
     )
@@ -270,8 +270,8 @@ def upgrade() -> None:
             CREATE POLICY insert_own_campaign ON sponsor_campaigns
             FOR INSERT
             WITH CHECK (
-                EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'sponsor')
-                OR app_public.is_service_role()
+                EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'sponsor')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             """
         )
@@ -284,18 +284,14 @@ def upgrade() -> None:
             CREATE POLICY update_own_campaign ON sponsor_campaigns
             FOR UPDATE
             USING (
-                sponsor_id IN (SELECT id FROM sponsors WHERE id IN (
-                    SELECT id FROM users WHERE id = app_public.current_uid() AND role IN ('sponsor', 'admin')
-                ))
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                sponsor_id = current_setting('request.jwt.claim.sub', true)::uuid
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             WITH CHECK (
-                sponsor_id IN (SELECT id FROM sponsors WHERE id IN (
-                    SELECT id FROM users WHERE id = app_public.current_uid() AND role IN ('sponsor', 'admin')
-                ))
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                sponsor_id = current_setting('request.jwt.claim.sub', true)::uuid
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             """
         )
@@ -308,11 +304,9 @@ def upgrade() -> None:
             CREATE POLICY delete_own_campaign ON sponsor_campaigns
             FOR DELETE
             USING (
-                sponsor_id IN (SELECT id FROM sponsors WHERE id IN (
-                    SELECT id FROM users WHERE id = app_public.current_uid() AND role IN ('sponsor', 'admin')
-                ))
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                sponsor_id = current_setting('request.jwt.claim.sub', true)::uuid
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             """
         )
@@ -339,12 +333,10 @@ def upgrade() -> None:
             FOR INSERT
             WITH CHECK (
                 campaign_id IN (
-                    SELECT id FROM sponsor_campaigns WHERE sponsor_id IN (
-                        SELECT id FROM users WHERE id = app_public.current_uid() AND role = 'sponsor'
-                    )
+                    SELECT id FROM sponsor_campaigns WHERE sponsor_id = current_setting('request.jwt.claim.sub', true)::uuid
                 )
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             """
         )
@@ -358,21 +350,17 @@ def upgrade() -> None:
             FOR UPDATE
             USING (
                 campaign_id IN (
-                    SELECT id FROM sponsor_campaigns WHERE sponsor_id IN (
-                        SELECT id FROM users WHERE id = app_public.current_uid() AND role IN ('sponsor', 'admin')
-                    )
+                    SELECT id FROM sponsor_campaigns WHERE sponsor_id = current_setting('request.jwt.claim.sub', true)::uuid
                 )
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             WITH CHECK (
                 campaign_id IN (
-                    SELECT id FROM sponsor_campaigns WHERE sponsor_id IN (
-                        SELECT id FROM users WHERE id = app_public.current_uid() AND role IN ('sponsor', 'admin')
-                    )
+                    SELECT id FROM sponsor_campaigns WHERE sponsor_id = current_setting('request.jwt.claim.sub', true)::uuid
                 )
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             """
         )
@@ -386,12 +374,10 @@ def upgrade() -> None:
             FOR DELETE
             USING (
                 campaign_id IN (
-                    SELECT id FROM sponsor_campaigns WHERE sponsor_id IN (
-                        SELECT id FROM users WHERE id = app_public.current_uid() AND role IN ('sponsor', 'admin')
-                    )
+                    SELECT id FROM sponsor_campaigns WHERE sponsor_id = current_setting('request.jwt.claim.sub', true)::uuid
                 )
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             """
         )
@@ -405,14 +391,14 @@ def upgrade() -> None:
             CREATE POLICY IF NOT EXISTS update_own_sponsor ON sponsors
             FOR UPDATE
             USING (
-                id = app_public.current_uid()
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                id = current_setting('request.jwt.claim.sub', true)::uuid
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             WITH CHECK (
-                id = app_public.current_uid()
-                OR EXISTS (SELECT 1 FROM users WHERE id = app_public.current_uid() AND role = 'admin')
-                OR app_public.is_service_role()
+                id = current_setting('request.jwt.claim.sub', true)::uuid
+                OR EXISTS (SELECT 1 FROM users WHERE id = current_setting('request.jwt.claim.sub', true)::uuid AND role = 'admin')
+                OR current_setting('request.jwt.claim.role', true) = 'service_role'
             )
             """
         )
