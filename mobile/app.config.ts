@@ -49,13 +49,12 @@ const config: ExpoConfig = {
       favicon: './assets/favicon.png',
     },
     plugins: ['expo-font', 'expo-secure-store'],
-    // Commented out for Expo Go development
-    // updates: {
-    //   url: 'https://u.expo.dev/da2c3e4e-0129-4a61-8b63-1491fa1d3a1a',
-    // },
-    // runtimeVersion: {
-    //   policy: 'appVersion',
-    // },
+    updates: {
+      url: 'https://u.expo.dev/da2c3e4e-0129-4a61-8b63-1491fa1d3a1a',
+    },
+    runtimeVersion: {
+      policy: 'appVersion',
+    },
     extra: {
       apiBaseUrl: API_BASE_URL,
       eas: {
