@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -19,7 +19,7 @@ interface SponsorTheme {
   created_at: string
 }
 
-export default function SponsorThemesPage() {
+function SponsorThemesContent() {
   const searchParams = useSearchParams()
   const status = searchParams.get('status')
 
@@ -216,5 +216,13 @@ export default function SponsorThemesPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function SponsorThemesPage() {
+  return (
+    <Suspense fallback={<div className="text-purple-900">読み込み中...</div>}>
+      <SponsorThemesContent />
+    </Suspense>
   )
 }
