@@ -384,11 +384,12 @@ def upgrade() -> None:
     )
 
     # sponsors テーブルの RLS を更新（既存のポリシーを考慮）
-    # 既存の read_sponsors ポリシーがあるため、書き込みポリシーのみ追加
+    # 既存の update_own_sponsor ポリシーを削除してから再作成
+    connection.execute(text("DROP POLICY IF EXISTS update_own_sponsor ON sponsors"))
     connection.execute(
         text(
             """
-            CREATE POLICY IF NOT EXISTS update_own_sponsor ON sponsors
+            CREATE POLICY update_own_sponsor ON sponsors
             FOR UPDATE
             USING (
                 id = current_setting('request.jwt.claim.sub', true)::uuid
