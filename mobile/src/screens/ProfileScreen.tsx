@@ -11,18 +11,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Switch,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { useToastStore } from '../stores/useToastStore';
 import { PrefecturePicker } from '../components/PrefecturePicker';
-import { collectDeviceInfo, formatDeviceInfo } from '../utils/deviceInfo';
 import api from '../services/api';
-import type { UserProfile, DeviceInfo } from '../types';
+import type { UserProfile } from '../types';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 export default function ProfileScreen() {
@@ -32,16 +31,13 @@ export default function ProfileScreen() {
 
   // Form fields
   const [displayName, setDisplayName] = useState('');
-  const [birthYear, setBirthYear] = useState('');
+  const [birthYear, setBirthYear] = useState<number | undefined>();
   const [prefecture, setPrefecture] = useState<string | undefined>();
-  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | undefined>();
-  const [analyticsOptOut, setAnalyticsOptOut] = useState(false);
 
   const { showSuccess, showError } = useToastStore();
 
   useEffect(() => {
     loadProfile();
-    loadDeviceInfo();
   }, []);
 
   async function loadProfile() {
@@ -52,10 +48,8 @@ export default function ProfileScreen() {
 
       // Initialize form fields with profile data
       setDisplayName(data.display_name || '');
-      setBirthYear(data.birth_year ? String(data.birth_year) : '');
+      setBirthYear(data.birth_year);
       setPrefecture(data.prefecture);
-      setDeviceInfo(data.device_info);
-      setAnalyticsOptOut(data.analytics_opt_out || false);
     } catch (error: any) {
       console.error('[Profile] Failed to load profile:', error);
       showError(error?.message || 'プロフィールの読み込みに失敗しました');
@@ -64,35 +58,14 @@ export default function ProfileScreen() {
     }
   }
 
-  async function loadDeviceInfo() {
-    try {
-      const info = await collectDeviceInfo();
-      setDeviceInfo(info);
-    } catch (error) {
-      console.error('[Profile] Failed to collect device info:', error);
-    }
-  }
-
   async function handleSave() {
     try {
       setIsSaving(true);
 
-      // Validate birth year if provided
-      let parsedBirthYear: number | undefined;
-      if (birthYear.trim()) {
-        parsedBirthYear = parseInt(birthYear, 10);
-        if (isNaN(parsedBirthYear) || parsedBirthYear < 1900 || parsedBirthYear > 2025) {
-          showError('生年は1900年から2025年の間で入力してください');
-          return;
-        }
-      }
-
       const updateData = {
         display_name: displayName.trim() || undefined,
-        birth_year: parsedBirthYear,
+        birth_year: birthYear,
         prefecture,
-        device_info: deviceInfo,
-        analytics_opt_out: analyticsOptOut,
       };
 
       const updated = await api.updateProfile(updateData);
@@ -159,49 +132,24 @@ export default function ProfileScreen() {
           {/* Birth Year */}
           <View style={styles.section}>
             <Text style={styles.label}>生年（任意）</Text>
-            <TextInput
-              style={styles.input}
-              value={birthYear}
-              onChangeText={setBirthYear}
-              placeholder="例: 1990"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="number-pad"
-              maxLength={4}
-            />
-            <Text style={styles.helpText}>より良い体験のため、生まれた年を教えてください</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={birthYear}
+                onValueChange={(itemValue) => setBirthYear(itemValue === 0 ? undefined : itemValue)}
+                style={styles.picker}
+              >
+                <Picker.Item label="選択してください" value={0} />
+                {Array.from({ length: 126 }, (_, i) => {
+                  const year = 2025 - i;
+                  return <Picker.Item key={year} label={`${year}年`} value={year} />;
+                })}
+              </Picker>
+            </View>
           </View>
 
           {/* Prefecture */}
           <View style={styles.section}>
             <PrefecturePicker value={prefecture} onChange={setPrefecture} label="都道府県（任意）" />
-            <Text style={styles.helpText}>地域に関連したコンテンツ提供のため</Text>
-          </View>
-
-          {/* Device Info (read-only) */}
-          <View style={styles.section}>
-            <Text style={styles.label}>デバイス情報</Text>
-            <View style={[styles.input, styles.readOnlyInput]}>
-              <Text style={styles.readOnlyText}>{formatDeviceInfo(deviceInfo)}</Text>
-            </View>
-            <Text style={styles.helpText}>※自動的に収集されます</Text>
-          </View>
-
-          {/* Analytics Opt-out */}
-          <View style={styles.section}>
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabel}>
-                <Text style={styles.label}>分析データの収集</Text>
-                <Text style={styles.helpText}>
-                  オフにすると、利用状況の分析データ収集を停止します
-                </Text>
-              </View>
-              <Switch
-                value={!analyticsOptOut}
-                onValueChange={(value) => setAnalyticsOptOut(!value)}
-                trackColor={{ false: colors.disabled, true: colors.primary }}
-                thumbColor={Platform.OS === 'android' ? colors.surface : undefined}
-              />
-            </View>
           </View>
 
           {/* Save Button */}
@@ -219,14 +167,6 @@ export default function ProfileScreen() {
               </>
             )}
           </TouchableOpacity>
-
-          {/* Privacy Note */}
-          <View style={styles.privacyNote}>
-            <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.privacyText}>
-              収集したデータはサービス改善のみに使用され、第三者に共有されることはありません
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -306,14 +246,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     fontFamily: fontFamily.regular,
   },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
-  switchLabel: {
-    flex: 1,
-    marginRight: spacing.md,
+  picker: {
+    ...Platform.select({
+      ios: {
+        height: 180,
+      },
+      android: {
+        height: 50,
+      },
+    }),
   },
   saveButton: {
     flexDirection: 'row',
@@ -333,21 +281,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontFamily: fontFamily.bold,
     color: colors.surface,
-  },
-  privacyNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: spacing.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: borderRadius.md,
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    fontFamily: fontFamily.regular,
   },
 });
