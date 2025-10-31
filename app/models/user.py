@@ -18,6 +18,7 @@ class User(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String(80))
     email: Mapped[str] = mapped_column(String(320), unique=True)
+    role: Mapped[str] = mapped_column(String(20), default="user")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

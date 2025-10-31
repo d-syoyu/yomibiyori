@@ -29,14 +29,17 @@ create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   name text not null check (length(name) between 1 and 80),
   email text unique not null check (position('@' in email) > 1),
+  role text not null default 'user' check (role in ('user', 'sponsor', 'admin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create trigger trg_users_updated_at
 before update on users
 for each row execute function app_public.set_updated_at();
+create index if not exists idx_users_role on users(role);
 
 comment on table users is 'アプリ内プロフィール（Supabaseのauth.usersとは独立運用可能）';
+comment on column users.role is 'ユーザーロール: user（一般） / sponsor（スポンサー） / admin（管理者）';
 
 -- ========= お題（上の句） =========
 create table if not exists themes (
@@ -46,9 +49,16 @@ create table if not exists themes (
   -- 「日」を一意に識別（JST 06:00 解禁の当日を date として扱う）
   date date not null,
   sponsored boolean not null default false,
+  sponsor_theme_id uuid references sponsor_themes(id) on delete set null,
+  sponsor_company_name text,
   created_at timestamptz not null default now()
 );
 create unique index if not exists uq_themes_category_date on themes(category, date);
+create index if not exists idx_themes_sponsor_theme_id on themes(sponsor_theme_id);
+
+comment on table themes is '日替わりお題（上の句 5-7-5）';
+comment on column themes.sponsor_theme_id is '承認されたスポンサーお題へのリンク';
+comment on column themes.sponsor_company_name is 'スポンサー企業名（表示用：「提供：企業名」）';
 
 -- ========= 作品（下の句） =========
 create table if not exists works (
@@ -90,12 +100,18 @@ create table if not exists rankings (
 create index if not exists idx_rankings_theme_score on rankings(theme_id, score desc);
 create index if not exists idx_rankings_theme_rank on rankings(theme_id, rank);
 
--- ========= スポンサーお題 =========
+-- ========= スポンサー =========
 create table if not exists sponsors (
   id uuid primary key default gen_random_uuid(),
-  company_name text not null,
-  text text not null check (length(text) between 3 and 140),
-  category text not null default 'general',
+  company_name text not null check (length(company_name) between 1 and 200),
+  contact_email text,
+  official_url text,
+  logo_url text,
+  plan_tier text not null default 'basic' check (plan_tier in ('basic', 'standard', 'premium')),
+  verified boolean not null default false,
+  -- 以下は旧フィールド（後方互換性のため残す）
+  text text check (length(text) between 3 and 140),
+  category text,
   target_regions text[] not null default '{}'::text[],
   target_age_min smallint check (target_age_min between 0 and 120),
   target_age_max smallint check (
@@ -103,8 +119,66 @@ create table if not exists sponsors (
     and (target_age_min is null or target_age_max >= target_age_min)
   ),
   budget numeric(12,2),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+create trigger trg_sponsors_updated_at
+before update on sponsors
+for each row execute function app_public.set_updated_at();
+
+comment on table sponsors is 'スポンサー企業情報';
+comment on column sponsors.plan_tier is '料金プラン: basic / standard / premium';
+comment on column sponsors.verified is 'KYC承認済みフラグ';
+
+-- ========= スポンサーキャンペーン =========
+create table if not exists sponsor_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  sponsor_id uuid not null references sponsors(id) on delete cascade,
+  name text not null check (length(name) between 1 and 200),
+  status text not null default 'draft' check (status in ('draft', 'active', 'paused', 'completed', 'cancelled')),
+  budget numeric(12,2),
+  start_date date,
+  end_date date check (end_date is null or start_date is null or end_date >= start_date),
+  targeting jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create trigger trg_sponsor_campaigns_updated_at
+before update on sponsor_campaigns
+for each row execute function app_public.set_updated_at();
+create index if not exists idx_sponsor_campaigns_sponsor_id on sponsor_campaigns(sponsor_id);
+create index if not exists idx_sponsor_campaigns_status on sponsor_campaigns(status);
+
+comment on table sponsor_campaigns is 'スポンサー広告キャンペーン';
+comment on column sponsor_campaigns.targeting is 'ターゲティング条件（region/age_band/os）';
+
+-- ========= スポンサーお題 =========
+create table if not exists sponsor_themes (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references sponsor_campaigns(id) on delete cascade,
+  date date not null,
+  category text not null check (length(category) between 1 and 50),
+  text_575 text not null check (length(text_575) between 3 and 140),
+  priority integer not null default 0,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'published')),
+  rejection_reason text,
+  approved_at timestamptz,
+  approved_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create trigger trg_sponsor_themes_updated_at
+before update on sponsor_themes
+for each row execute function app_public.set_updated_at();
+create index if not exists idx_sponsor_themes_campaign_id on sponsor_themes(campaign_id);
+create index if not exists idx_sponsor_themes_date_category on sponsor_themes(date, category);
+create index if not exists idx_sponsor_themes_status on sponsor_themes(status);
+create unique index if not exists uq_sponsor_themes_date_category_campaign on sponsor_themes(campaign_id, date, category);
+
+comment on table sponsor_themes is 'スポンサー入稿お題（審査待ち）';
+comment on column sponsor_themes.text_575 is '上の句（5-7-5）';
+comment on column sponsor_themes.priority is 'スロット優先度（高いほど優先）';
+comment on column sponsor_themes.status is 'ステータス: pending（審査待ち） / approved（承認済み） / rejected（却下） / published（配信済み）';
 
 -- ========= ビュー：作品のメタ（いいね数を集約） =========
 -- SECURITY INVOKER を明示してRLSポリシーを適用
@@ -127,6 +201,8 @@ alter table likes enable row level security;
 alter table rankings enable row level security;
 alter table themes enable row level security;
 alter table sponsors enable row level security;
+alter table sponsor_campaigns enable row level security;
+alter table sponsor_themes enable row level security;
 
 -- 役割補助（Supabase互換）。Supabaseで動作する場合は auth.uid(), auth.role() を利用可能。
 -- ここでは存在しない環境でも動くようフォールバック関数を用意（no-op的）。
@@ -161,6 +237,10 @@ create policy if not exists read_likes on likes
 create policy if not exists read_rankings on rankings
   for select using (true);
 create policy if not exists read_sponsors on sponsors
+  for select using (true);
+create policy if not exists read_sponsor_campaigns on sponsor_campaigns
+  for select using (true);
+create policy if not exists read_sponsor_themes on sponsor_themes
   for select using (true);
 
 -- users: 自分のプロフィールのみ書き込みを許可
@@ -207,6 +287,73 @@ create policy if not exists write_service_rankings on rankings
   for all
   using (app_public.is_service_role())
   with check (app_public.is_service_role());
+
+-- sponsor_campaigns: sponsorロールは自分のキャンペーンのみCRUD可能、adminは全て
+create policy if not exists insert_own_campaign on sponsor_campaigns
+  for insert
+  with check (
+    exists (select 1 from users where id = app_public.current_uid() and role in ('sponsor', 'admin'))
+    or app_public.is_service_role()
+  );
+
+create policy if not exists update_own_campaign on sponsor_campaigns
+  for update
+  using (
+    sponsor_id = app_public.current_uid()
+    or exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  )
+  with check (
+    sponsor_id = app_public.current_uid()
+    or exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  );
+
+create policy if not exists delete_own_campaign on sponsor_campaigns
+  for delete
+  using (
+    sponsor_id = app_public.current_uid()
+    or exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  );
+
+-- sponsor_themes: sponsorは自分のキャンペーンのお題のみCRUD、adminは全て
+create policy if not exists insert_own_sponsor_theme on sponsor_themes
+  for insert
+  with check (
+    campaign_id in (
+      select id from sponsor_campaigns where sponsor_id = app_public.current_uid()
+    )
+    or exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  );
+
+create policy if not exists update_own_sponsor_theme on sponsor_themes
+  for update
+  using (
+    campaign_id in (
+      select id from sponsor_campaigns where sponsor_id = app_public.current_uid()
+    )
+    or exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  )
+  with check (
+    campaign_id in (
+      select id from sponsor_campaigns where sponsor_id = app_public.current_uid()
+    )
+    or exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  );
+
+create policy if not exists delete_own_sponsor_theme on sponsor_themes
+  for delete
+  using (
+    campaign_id in (
+      select id from sponsor_campaigns where sponsor_id = app_public.current_uid()
+    )
+    or exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  );
 
 -- ========= 便利関数：Wilson下限スコア（参考実装、アプリ側で算出推奨） =========
 -- likes_count と 表示回数等からの算出を想定。ここでは p=likes/n のWilson下限を返す。

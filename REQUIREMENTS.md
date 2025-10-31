@@ -89,12 +89,31 @@
   - この時間帯は投稿・いいねを停止し、翌 06:00 まで閲覧のみ許可。
 
 ### 7. スポンサータイアップ
-- **要件ID**: FR-007  
-- **概要**: スポンサーが上の句とカテゴリを指定してタイアップを行える。  
+- **要件ID**: FR-007
+- **概要**: スポンサーが上の句とカテゴリを指定してタイアップを行える。
 - **詳細**:
-  - 管理画面からスポンサー情報を登録。  
-  - 作品一覧に「提供：スポンサー名」を表記。  
-  - ターゲット地域／年齢帯に応じたフィルタリングを考慮。
+  - **ロール管理**: `users.role` で user / sponsor / admin を識別。
+  - **スポンサー登録**: 法人情報（company_name, contact_email, official_url, logo_url）を登録し、運営審査（verified）を経て利用可能。
+  - **料金プラン**: basic / standard / premium の3段階。
+  - **キャンペーン管理**:
+    - キャンペーン作成（名称、期間、予算、ターゲティング条件）
+    - ステータス管理: draft / active / paused / completed / cancelled
+    - ターゲティング: region（都道府県）、age_band（年齢帯）、os（iOS/Android）
+  - **お題入稿**:
+    - キャンペーンに紐づいてお題（5-7-5）を入稿
+    - カテゴリと配信日を指定
+    - 優先度（priority）で配信スロットを調整
+  - **審査フロー**:
+    - スポンサーが入稿 → status: pending
+    - 管理者が審査 → approved（承認）/ rejected（却下）
+    - 承認後にお題生成スクリプトで themes テーブルに統合
+    - 却下時は却下理由を記録
+  - **表示**:
+    - お題一覧に「提供：企業名」を表記（`sponsor_company_name`）
+    - sponsored フラグで識別
+  - **API**:
+    - スポンサー用: `/sponsor/campaigns`, `/sponsor/themes`
+    - 管理者用: `/admin/review/themes`
 
 ### 8. 通知配信
 - **要件ID**: FR-008
@@ -245,14 +264,18 @@
 
 | エンティティ | 主なフィールド | 説明 |
 | ------------ | -------------- | ---- |
-| users | id (UUID), name, email, created_at | Supabase Auth と同期されたユーザー情報 |
-| themes | id (UUID), text, category, date, sponsored, created_at | カテゴリー別の日替わりお題（上の句 5-7-5）|
+| users | id (UUID), name, email, role, created_at | Supabase Auth と同期されたユーザー情報。role: user / sponsor / admin |
+| themes | id (UUID), text, category, date, sponsored, sponsor_theme_id, sponsor_company_name, created_at | カテゴリー別の日替わりお題（上の句 5-7-5）|
 | works | id (UUID), user_id, theme_id, text, created_at, updated_at | ユーザー投稿の下の句（40 文字以内）|
 | likes | id (UUID), user_id, work_id, created_at | 感謝（いいね）アクション（1 ユーザー 1 作品 1 回） |
-| rankings | id (UUID), theme_id, work_id, score, snapshot_time | 22:00 時点の確定ランキング（未実装） |
-| sponsors | - | スポンサー情報（未実装） |
+| rankings | id (UUID), theme_id, work_id, score, snapshot_time | 22:00 時点の確定ランキング |
+| sponsors | id (UUID), company_name, contact_email, plan_tier, verified, created_at | スポンサー企業情報 |
+| sponsor_campaigns | id (UUID), sponsor_id, name, status, budget, start_date, end_date, targeting, created_at | スポンサーキャンペーン |
+| sponsor_themes | id (UUID), campaign_id, date, category, text_575, priority, status, approved_at, created_at | スポンサー入稿お題（審査待ち）|
 
-**注:** 1 ユーザーは 1 カテゴリーにつき 1 日 1 首まで投稿可能。`works` テーブルには `(user_id, theme_id)` に対する一意性制約は無いが、`works.create_work` サービスでカテゴリーごとの重複投稿を防止。
+**注:**
+- 1 ユーザーは 1 カテゴリーにつき 1 日 1 首まで投稿可能。`works` テーブルには `(user_id, theme_id)` に対する一意性制約は無いが、`works.create_work` サービスでカテゴリーごとの重複投稿を防止。
+- スポンサーお題は `sponsor_themes` で管理され、管理者の承認後に `themes` テーブルに統合される。
 
 ---
 

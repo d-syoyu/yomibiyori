@@ -6,5 +6,16 @@ from app.models.theme import Theme
 from app.models.ranking import Ranking
 from app.models.user import User
 from app.models.work import Work
+from app.models.sponsor import Sponsor, SponsorCampaign, SponsorTheme
 
-__all__ = ["Base", "User", "Theme", "Work", "Like", "Ranking"]
+__all__ = [
+    "Base",
+    "User",
+    "Theme",
+    "Work",
+    "Like",
+    "Ranking",
+    "Sponsor",
+    "SponsorCampaign",
+    "SponsorTheme",
+]

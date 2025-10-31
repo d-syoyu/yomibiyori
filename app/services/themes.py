@@ -71,6 +71,7 @@ def list_themes(
             category=theme.category,
             date=theme.date,
             sponsored=theme.sponsored,
+            sponsor_company_name=theme.sponsor_company_name,
             created_at=theme.created_at,
             is_finalized=_is_theme_finalized(theme.date),
         )
@@ -133,6 +134,7 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
         category=theme.category,
         date=theme.date,
         sponsored=theme.sponsored,
+        sponsor_company_name=theme.sponsor_company_name,
         created_at=theme.created_at,
         is_finalized=_is_theme_finalized(theme.date),
     )
@@ -164,6 +166,7 @@ def get_theme_by_id(session: Session, theme_id: str) -> ThemeResponse:
         category=theme.category,
         date=theme.date,
         sponsored=theme.sponsored,
+        sponsor_company_name=theme.sponsor_company_name,
         created_at=theme.created_at,
         is_finalized=_is_theme_finalized(theme.date),
     )
