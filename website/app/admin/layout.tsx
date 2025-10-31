@@ -18,7 +18,7 @@ interface User {
 export default function AdminLayout({
   children,
 }: {
-  children: React.Node
+  children: React.ReactNode
 }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
