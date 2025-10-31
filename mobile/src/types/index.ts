@@ -39,14 +39,29 @@ export interface LoginResponse {
   session?: SessionToken;
 }
 
+export interface DeviceInfo {
+  platform: string;
+  os_version?: string;
+  timezone?: string;
+  locale?: string;
+}
+
 export interface UserProfile {
   user_id: string;
   email: string;
   display_name?: string;
+  birth_year?: number;
+  prefecture?: string;
+  device_info?: DeviceInfo;
+  analytics_opt_out: boolean;
 }
 
 export interface UpdateProfileRequest {
-  display_name: string;
+  display_name?: string;
+  birth_year?: number;
+  prefecture?: string;
+  device_info?: DeviceInfo;
+  analytics_opt_out?: boolean;
 }
 
 export interface OAuthUrlResponse {
