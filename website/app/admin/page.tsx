@@ -4,8 +4,7 @@
 
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface Stats {
@@ -15,8 +14,7 @@ interface Stats {
   rejectedThemes: number
 }
 
-function DashboardContent() {
-  const searchParams = useSearchParams()
+export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     totalThemes: 0,
     pendingThemes: 0,
@@ -27,7 +25,7 @@ function DashboardContent() {
 
   useEffect(() => {
     loadStats()
-  }, [searchParams])
+  }, [])
 
   async function loadStats() {
     try {
@@ -151,13 +149,5 @@ function DashboardContent() {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function AdminDashboard() {
-  return (
-    <Suspense fallback={<div className="text-amber-900">読み込み中...</div>}>
-      <DashboardContent />
-    </Suspense>
   )
 }
