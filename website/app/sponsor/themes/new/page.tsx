@@ -49,8 +49,9 @@ export default function NewThemePage() {
           .select()
           .single()
 
-        if (sponsorError) {
+        if (sponsorError || !newSponsor) {
           console.error('Failed to create sponsor:', sponsorError)
+          setError('スポンサー情報の作成に失敗しました')
           return
         }
         sponsor = newSponsor
@@ -78,7 +79,7 @@ export default function NewThemePage() {
           .select()
           .single()
 
-        if (campaignError) {
+        if (campaignError || !newCampaign) {
           console.error('Failed to create campaign:', campaignError)
           setError('キャンペーンの作成に失敗しました')
           return
