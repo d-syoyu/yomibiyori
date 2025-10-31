@@ -19,9 +19,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useTutorialStore } from '../stores/useTutorialStore';
-import type { Work, Theme, WorkDateSummary } from '../types';
+import type { Work, Theme, WorkDateSummary, MyPoemsStackParamList } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import { useThemeStore } from '../stores/useThemeStore';
@@ -29,6 +31,8 @@ import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
 import TutorialModal from '../components/TutorialModal';
+
+type MyPoemsScreenNavigationProp = NativeStackNavigationProp<MyPoemsStackParamList, 'MyPoemsList'>;
 
 // Works loaded for a specific date
 interface DateWorksCache {
@@ -38,6 +42,7 @@ interface DateWorksCache {
 }
 
 export default function MyPoemsScreen() {
+  const navigation = useNavigation<MyPoemsScreenNavigationProp>();
   const { user, logout, updateProfile, isLoading: authLoading } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
   const { handleError } = useApiErrorHandler();
@@ -222,6 +227,13 @@ export default function MyPoemsScreen() {
           <View style={styles.titleRow}>
             <Text style={styles.title}>マイページ</Text>
             <View style={styles.headerButtons}>
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={() => navigation.navigate('Profile')}
+              >
+                <Ionicons name="settings-outline" size={20} color="#4A5568" />
+                <Text style={styles.profileButtonText}>設定</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.tutorialButton}
                 onPress={() => setTutorialModalVisible(true)}
@@ -481,6 +493,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     alignItems: 'center',
+  },
+  profileButton: {
+    backgroundColor: colors.background.secondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  profileButtonText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.secondary,
   },
   tutorialButton: {
     backgroundColor: colors.background.secondary,

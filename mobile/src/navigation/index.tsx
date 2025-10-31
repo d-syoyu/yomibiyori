@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '../stores/useAuthStore';
 import { useTutorialStore } from '../stores/useTutorialStore';
-import type { RootStackParamList, MainTabParamList, HomeStackParamList } from '../types';
+import type { RootStackParamList, MainTabParamList, HomeStackParamList, MyPoemsStackParamList } from '../types';
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
@@ -23,6 +23,7 @@ import CompositionScreen from '../screens/CompositionScreen';
 import MyPoemsScreen from '../screens/MyPoemsScreen';
 import AppreciationScreen from '../screens/AppreciationScreen';
 import RankingScreen from '../screens/RankingScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 // Import components
 import ToastContainer from '../components/ToastContainer';
@@ -35,6 +36,7 @@ import TutorialModal from '../components/TutorialModal';
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const MyPoemsStack = createNativeStackNavigator<MyPoemsStackParamList>();
 
 // ============================================================================
 // Home Stack Navigator (Nested in Home Tab)
@@ -64,6 +66,44 @@ function HomeStackNavigator() {
         component={AppreciationScreen}
       />
     </HomeStack.Navigator>
+  );
+}
+
+// ============================================================================
+// MyPoems Stack Navigator (Nested in MyPoems Tab)
+// ============================================================================
+
+function MyPoemsStackNavigator() {
+  return (
+    <MyPoemsStack.Navigator
+      screenOptions={{
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTintColor: '#4A5568',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      <MyPoemsStack.Screen
+        name="MyPoemsList"
+        component={MyPoemsScreen}
+        options={{
+          title: 'マイページ',
+          headerShown: false,
+        }}
+      />
+      <MyPoemsStack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          title: 'プロフィール設定',
+          headerBackTitle: '戻る',
+        }}
+      />
+    </MyPoemsStack.Navigator>
   );
 }
 
@@ -109,7 +149,7 @@ function MainTabNavigator() {
       />
       <MainTab.Screen
         name="MyPoems"
-        component={MyPoemsScreen}
+        component={MyPoemsStackNavigator}
         options={{
           title: 'マイページ',
           tabBarLabel: 'マイページ',

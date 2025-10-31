@@ -172,6 +172,11 @@ export type HomeStackParamList = {
   Appreciation: { category: ThemeCategory };
 };
 
+export type MyPoemsStackParamList = {
+  MyPoemsList: undefined;
+  Profile: undefined;
+};
+
 // ============================================================================
 // API Response Types
 // ============================================================================
