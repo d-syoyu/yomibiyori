@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
         height: 180,
       },
       android: {
-        height: 50,
+        minHeight: 56,
       },
     }),
   },
