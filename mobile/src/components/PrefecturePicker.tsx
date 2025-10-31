@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, Platform } from 'react-native';
+import { View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { PREFECTURES } from '../constants/prefectures';
 
@@ -23,16 +23,7 @@ export function PrefecturePicker({ value, onChange, pickerStyle }: PrefecturePic
           // Empty string means "not selected"
           onChange(itemValue === '' ? undefined : itemValue);
         }}
-        style={{
-          ...Platform.select({
-            ios: {
-              height: 180,
-            },
-            android: {
-              height: 50,
-            },
-          }),
-        }}
+        style={{ height: 56 }}
       >
         <Picker.Item label="選択してください" value="" />
         {PREFECTURES.map((prefecture) => (
