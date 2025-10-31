@@ -12,6 +12,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging import logger
 from app.models import Theme
 from app.services.theme_ai_client import ThemeAIClient, ThemeAIClientError, resolve_theme_ai_client
 
@@ -70,8 +71,11 @@ def upsert_theme(
     category: str,
     target_date: date,
     text: str,
-) -> Theme:
-    """Insert or update a theme for the supplied category and date."""
+) -> Theme | None:
+    """Insert or update a theme for the supplied category and date.
+
+    Returns None if a sponsor theme already exists for this slot.
+    """
 
     stripped = _validate_theme_text(text)
     stmt: Select[Theme] = (
@@ -82,6 +86,15 @@ def upsert_theme(
     existing = session.execute(stmt).scalars().first()
 
     if existing:
+        if existing.sponsored:
+            # Don't overwrite sponsor themes with AI themes
+            logger.info(
+                f"Skipping AI theme generation for {category} on {target_date}: "
+                f"sponsor theme already exists"
+            )
+            return None
+
+        # Update existing AI theme
         existing.text = stripped
         session.add(existing)
         return existing
@@ -132,9 +145,29 @@ def generate_all_categories(
     }
 
     for category in settings.theme_categories_list:
+        # Check if sponsor theme already exists
+        existing = session.execute(
+            select(Theme).where(
+                Theme.category == category,
+                Theme.date == resolved_date
+            )
+        ).scalars().first()
+
+        if existing and existing.sponsored:
+            logger.info(
+                f"Skipping {category} on {resolved_date}: sponsor theme exists"
+            )
+            continue
+
+        # Generate AI theme
         text = _generate_with_retry(client, category=category, target_date=resolved_date)
         existing_id = themes_before.get((category, resolved_date))
         theme = upsert_theme(session, category=category, target_date=resolved_date, text=text)
+
+        # upsert_theme returns None if sponsor theme exists
+        if theme is None:
+            continue
+
         was_created = existing_id is None
         results.append(
             ThemeGenerationResult(
