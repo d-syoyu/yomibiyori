@@ -34,7 +34,7 @@ export default function SponsorLayout({
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
-        router.push('/sponsor/login')
+        router.push('/sponsor-login')
         return
       }
 
@@ -48,14 +48,14 @@ export default function SponsorLayout({
       if (userError) {
         console.error('Failed to fetch user data:', userError)
         alert('ユーザー情報の取得に失敗しました')
-        router.push('/sponsor/login')
+        router.push('/sponsor-login')
         return
       }
 
       // Check if user is sponsor
       if (userData.role !== 'sponsor') {
         alert('スポンサー権限が必要です')
-        router.push('/sponsor/login')
+        router.push('/sponsor-login')
         return
       }
 
@@ -75,7 +75,7 @@ export default function SponsorLayout({
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    router.push('/sponsor/login')
+    router.push('/sponsor-login')
   }
 
   if (loading) {
