@@ -84,7 +84,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.text.primary} />
           <Text style={styles.loadingText}>読み込み中...</Text>
         </View>
       </SafeAreaView>
@@ -149,7 +149,8 @@ export default function ProfileScreen() {
 
           {/* Prefecture */}
           <View style={styles.section}>
-            <PrefecturePicker value={prefecture} onChange={setPrefecture} label="都道府県（任意）" />
+            <Text style={styles.label}>都道府県（任意）</Text>
+            <PrefecturePicker value={prefecture} onChange={setPrefecture} pickerStyle={styles.pickerContainer} />
           </View>
 
           {/* Save Button */}
@@ -159,10 +160,10 @@ export default function ProfileScreen() {
             disabled={isSaving}
           >
             {isSaving ? (
-              <ActivityIndicator color={colors.surface} />
+              <ActivityIndicator color={colors.text.inverse} />
             ) : (
               <>
-                <Ionicons name="checkmark-circle-outline" size={20} color={colors.surface} />
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.text.inverse} />
                 <Text style={styles.saveButtonText}>保存する</Text>
               </>
             )}
@@ -176,7 +177,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background.primary,
   },
   flex: {
     flex: 1,
@@ -188,8 +189,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
+    fontSize: fontSize.body,
+    color: colors.text.tertiary,
     fontFamily: fontFamily.regular,
   },
   scrollView: {
@@ -199,58 +200,62 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: fontSize.xxl,
-    fontFamily: fontFamily.bold,
-    color: colors.text,
+    fontSize: fontSize.h1,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
     marginBottom: spacing.xs,
+    letterSpacing: 2,
   },
   subtitle: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
+    fontSize: fontSize.body,
+    color: colors.text.secondary,
     fontFamily: fontFamily.regular,
+    letterSpacing: 0.5,
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: fontSize.md,
-    fontFamily: fontFamily.semibold,
-    color: colors.text,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
     marginBottom: spacing.sm,
+    letterSpacing: 0.5,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(107, 123, 79, 0.2)',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.text,
-    backgroundColor: colors.surface,
+    fontSize: fontSize.body,
+    color: colors.text.primary,
+    backgroundColor: colors.background.card,
     fontFamily: fontFamily.regular,
   },
   readOnlyInput: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background.secondary,
   },
   readOnlyText: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
+    fontSize: fontSize.body,
+    color: colors.text.secondary,
     fontFamily: fontFamily.regular,
   },
   helpText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    fontSize: fontSize.bodySmall,
+    color: colors.text.tertiary,
     marginTop: spacing.xs,
     fontFamily: fontFamily.regular,
+    letterSpacing: 0.3,
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(107, 123, 79, 0.2)',
     borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background.card,
     overflow: 'hidden',
   },
   picker: {
@@ -267,10 +272,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.text.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
     gap: spacing.sm,
     ...shadow.md,
   },
@@ -278,8 +283,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    fontSize: fontSize.lg,
-    fontFamily: fontFamily.bold,
-    color: colors.surface,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.inverse,
+    letterSpacing: 0.5,
   },
 });
