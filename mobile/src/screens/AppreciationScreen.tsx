@@ -154,31 +154,46 @@ export default function AppreciationScreen({ route }: Props) {
           </View>
 
           {/* お題カード（固定） */}
-          {currentThemeId && themesMap.has(currentThemeId) && (
-            <LinearGradient
-              colors={[
-                colors.category[themesMap.get(currentThemeId)!.category].gradient[0],
-                colors.category[themesMap.get(currentThemeId)!.category].gradient[1],
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.fixedThemeCard,
-                { shadowColor: colors.category[themesMap.get(currentThemeId)!.category].shadow },
-              ]}
-            >
-              <View style={styles.glassOverlay}>
-                <Text style={styles.themeCardLabel}>今日のお題（上の句）</Text>
-                <View style={styles.verticalTextContainer}>
-                  <VerticalText
-                    text={themesMap.get(currentThemeId)!.text}
-                    textStyle={styles.themeCardText}
-                    direction="rtl"
-                  />
+          {currentThemeId && themesMap.has(currentThemeId) && (() => {
+            const theme = themesMap.get(currentThemeId)!;
+            return (
+              <LinearGradient
+                colors={[
+                  colors.category[theme.category].gradient[0],
+                  colors.category[theme.category].gradient[1],
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                  styles.fixedThemeCard,
+                  { shadowColor: colors.category[theme.category].shadow },
+                ]}
+              >
+                <View style={styles.glassOverlay}>
+                  {theme.sponsored && theme.sponsor_company_name && (
+                    <View style={styles.sponsorBadge}>
+                      <Text style={styles.sponsorBadgeText}>
+                        スポンサー提供
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.themeCardLabel}>今日のお題（上の句）</Text>
+                  <View style={styles.verticalTextContainer}>
+                    <VerticalText
+                      text={theme.text}
+                      textStyle={styles.themeCardText}
+                      direction="rtl"
+                    />
+                  </View>
+                  {theme.sponsored && theme.sponsor_company_name && (
+                    <Text style={styles.sponsorInfo}>
+                      {theme.sponsor_company_name}
+                    </Text>
+                  )}
                 </View>
-              </View>
-            </LinearGradient>
-          )}
+              </LinearGradient>
+            );
+          })()}
         </View>
 
         {/* 作品リスト（スクロール可能） */}
@@ -316,6 +331,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     padding: spacing.md,
   },
+  sponsorBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+    ...shadow.sm,
+  },
+  sponsorBadgeText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    letterSpacing: 0.5,
+  },
   themeCardLabel: {
     fontSize: fontSize.caption,
     fontFamily: fontFamily.medium,
@@ -329,6 +359,14 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     color: colors.text.primary,
     fontFamily: fontFamily.medium,
+  },
+  sponsorInfo: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   worksScrollView: {
     flex: 1,

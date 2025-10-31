@@ -111,6 +111,13 @@ export default function CompositionScreen({ route }: Props) {
                 ]}
               >
                 <View style={styles.glassOverlay}>
+                  {theme.sponsored && theme.sponsor_company_name && (
+                    <View style={styles.sponsorBadge}>
+                      <Text style={styles.sponsorBadgeText}>
+                        スポンサー提供
+                      </Text>
+                    </View>
+                  )}
                   <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
                   <View style={styles.verticalTextContainer}>
                     <VerticalText
@@ -120,6 +127,11 @@ export default function CompositionScreen({ route }: Props) {
                     />
                   </View>
                   <Text style={styles.themeCategory}>{theme.category}</Text>
+                  {theme.sponsored && theme.sponsor_company_name && (
+                    <Text style={styles.sponsorInfo}>
+                      {theme.sponsor_company_name}
+                    </Text>
+                  )}
                 </View>
               </LinearGradient>
             ) : (
@@ -265,6 +277,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     padding: spacing.lg,
   },
+  sponsorBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+    ...shadow.sm,
+  },
+  sponsorBadgeText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    letterSpacing: 0.5,
+  },
   themeLabel: {
     fontSize: fontSize.caption,
     fontFamily: fontFamily.medium,
@@ -292,6 +319,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlign: 'center',
     letterSpacing: 2,
+  },
+  sponsorInfo: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   noThemeCard: {
     backgroundColor: colors.background.secondary,
