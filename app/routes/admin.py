@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.auth_helpers import get_current_admin
-from app.db.session import get_session
+from app.db.session import get_db_session
 from app.models import SponsorTheme, User
 from app.schemas.sponsor import (
     SponsorThemeListResponse,
@@ -27,7 +27,7 @@ def list_themes_for_review(
     status_filter: str = Query("pending", description="Filter by status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     _current_admin: User = Depends(get_current_admin),
 ) -> SponsorThemeListResponse:
     """List sponsor themes pending review."""
@@ -56,7 +56,7 @@ def list_themes_for_review(
 def approve_theme(
     theme_id: str,
     _payload: ThemeReviewApproveRequest,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_admin: User = Depends(get_current_admin),
 ) -> ThemeReviewResponse:
     """Approve a sponsor theme."""
@@ -93,7 +93,7 @@ def approve_theme(
 def reject_theme(
     theme_id: str,
     payload: ThemeReviewRejectRequest,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_admin: User = Depends(get_current_admin),
 ) -> ThemeReviewResponse:
     """Reject a sponsor theme."""
@@ -128,7 +128,7 @@ def reject_theme(
 @router.post("/review/themes/{theme_id}/reset", response_model=ThemeReviewResponse)
 def reset_theme_review(
     theme_id: str,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     _current_admin: User = Depends(get_current_admin),
 ) -> ThemeReviewResponse:
     """Reset a theme's review status back to pending."""

@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.auth_helpers import get_current_sponsor
-from app.db.session import get_session
+from app.db.session import get_db_session
 from app.models import SponsorCampaign, SponsorTheme, User
 from app.schemas.sponsor import (
     CampaignCreate,
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/sponsor", tags=["sponsor"])
 @router.post("/campaigns", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 def create_campaign(
     payload: CampaignCreate,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> CampaignResponse:
     """Create a new campaign."""
@@ -62,7 +62,7 @@ def list_campaigns(
     status_filter: str | None = Query(None, description="Filter by status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> CampaignListResponse:
     """List campaigns for the current sponsor."""
@@ -90,7 +90,7 @@ def list_campaigns(
 @router.get("/campaigns/{campaign_id}", response_model=CampaignResponse)
 def get_campaign(
     campaign_id: str,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> CampaignResponse:
     """Get a specific campaign."""
@@ -115,7 +115,7 @@ def get_campaign(
 def update_campaign(
     campaign_id: str,
     payload: CampaignUpdate,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> CampaignResponse:
     """Update a campaign."""
@@ -158,7 +158,7 @@ def update_campaign(
 @router.delete("/campaigns/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_campaign(
     campaign_id: str,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> None:
     """Delete a campaign."""
@@ -186,7 +186,7 @@ def delete_campaign(
 @router.post("/themes", response_model=SponsorThemeResponse, status_code=status.HTTP_201_CREATED)
 def create_sponsor_theme(
     payload: SponsorThemeCreate,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> SponsorThemeResponse:
     """Create a new sponsor theme (theme submission)."""
@@ -244,7 +244,7 @@ def list_sponsor_themes(
     status_filter: str | None = Query(None, description="Filter by status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> SponsorThemeListResponse:
     """List sponsor themes for the current sponsor."""
@@ -287,7 +287,7 @@ def list_sponsor_themes(
 @router.get("/themes/{theme_id}", response_model=SponsorThemeResponse)
 def get_sponsor_theme(
     theme_id: str,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> SponsorThemeResponse:
     """Get a specific sponsor theme."""
@@ -313,7 +313,7 @@ def get_sponsor_theme(
 def update_sponsor_theme(
     theme_id: str,
     payload: SponsorThemeUpdate,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> SponsorThemeResponse:
     """Update a sponsor theme."""
@@ -360,7 +360,7 @@ def update_sponsor_theme(
 @router.delete("/themes/{theme_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_sponsor_theme(
     theme_id: str,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_sponsor),
 ) -> None:
     """Delete a sponsor theme."""

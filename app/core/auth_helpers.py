@@ -5,14 +5,14 @@ from __future__ import annotations
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_session
+from app.db.session import get_db_session
 from app.models import User
 from app.services.auth import get_current_user_id
 
 
 def get_current_user(
     user_id: str = Depends(get_current_user_id),
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db_session),
 ) -> User:
     """Get the current authenticated user object from the database."""
     user = session.get(User, user_id)
