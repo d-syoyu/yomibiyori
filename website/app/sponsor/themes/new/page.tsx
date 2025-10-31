@@ -17,7 +17,9 @@ export default function NewThemePage() {
   const [formData, setFormData] = useState({
     date: '',
     category: '恋愛',
-    text_575: '',
+    line1: '', // 5文字
+    line2: '', // 7文字
+    line3: '', // 5文字
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -108,9 +110,18 @@ export default function NewThemePage() {
       return
     }
 
-    // Validate text_575 length
-    if (formData.text_575.length < 3 || formData.text_575.length > 140) {
-      setError('お題は3文字以上、140文字以内で入力してください')
+    // Validate each line
+    if (!formData.line1.trim() || !formData.line2.trim() || !formData.line3.trim()) {
+      setError('すべての句を入力してください')
+      return
+    }
+
+    // Combine lines
+    const text_575 = `${formData.line1} ${formData.line2} ${formData.line3}`
+
+    // Validate combined length
+    if (text_575.length > 140) {
+      setError('お題が長すぎます。140文字以内にしてください。')
       return
     }
 
@@ -132,7 +143,7 @@ export default function NewThemePage() {
           campaign_id: campaignId,
           date: formData.date,
           category: formData.category,
-          text_575: formData.text_575,
+          text_575: text_575,
           status: 'pending',
         })
 
@@ -174,7 +185,7 @@ export default function NewThemePage() {
           <div>
             <label
               htmlFor="date"
-              className="block text-sm font-medium text-purple-900 mb-2"
+              className="block text-sm font-medium text-gray-800 mb-2"
             >
               配信予定日 <span className="text-red-500">*</span>
             </label>
@@ -185,9 +196,9 @@ export default function NewThemePage() {
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               min={minDate}
               required
-              className="w-full px-4 py-3 rounded-lg border border-purple-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
             />
-            <p className="mt-1 text-sm text-purple-600">
+            <p className="mt-1 text-sm text-gray-600">
               お題が配信される日付を選択してください
             </p>
           </div>
@@ -196,7 +207,7 @@ export default function NewThemePage() {
           <div>
             <label
               htmlFor="category"
-              className="block text-sm font-medium text-purple-900 mb-2"
+              className="block text-sm font-medium text-gray-800 mb-2"
             >
               カテゴリ <span className="text-red-500">*</span>
             </label>
@@ -205,7 +216,7 @@ export default function NewThemePage() {
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               required
-              className="w-full px-4 py-3 rounded-lg border border-purple-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -215,27 +226,79 @@ export default function NewThemePage() {
             </select>
           </div>
 
-          {/* Text 575 */}
+          {/* 5-7-5 Input */}
           <div>
-            <label
-              htmlFor="text_575"
-              className="block text-sm font-medium text-purple-900 mb-2"
-            >
+            <label className="block text-sm font-medium text-gray-800 mb-2">
               上の句（5-7-5） <span className="text-red-500">*</span>
             </label>
-            <textarea
-              id="text_575"
-              value={formData.text_575}
-              onChange={(e) => setFormData({ ...formData, text_575: e.target.value })}
-              required
-              rows={4}
-              maxLength={140}
-              placeholder="例：春の風 桜舞い散る 花の道"
-              className="w-full px-4 py-3 rounded-lg border border-purple-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all resize-none"
-            />
-            <p className="mt-1 text-sm text-purple-600">
-              {formData.text_575.length} / 140文字
-            </p>
+            <div className="space-y-3">
+              {/* 第一句（5文字） */}
+              <div>
+                <label htmlFor="line1" className="block text-xs text-gray-600 mb-1">
+                  第一句（5音）
+                </label>
+                <input
+                  id="line1"
+                  type="text"
+                  value={formData.line1}
+                  onChange={(e) => setFormData({ ...formData, line1: e.target.value })}
+                  required
+                  placeholder="例：春の風"
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.line1.length}文字
+                </p>
+              </div>
+
+              {/* 第二句（7文字） */}
+              <div>
+                <label htmlFor="line2" className="block text-xs text-gray-600 mb-1">
+                  第二句（7音）
+                </label>
+                <input
+                  id="line2"
+                  type="text"
+                  value={formData.line2}
+                  onChange={(e) => setFormData({ ...formData, line2: e.target.value })}
+                  required
+                  placeholder="例：桜舞い散る"
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.line2.length}文字
+                </p>
+              </div>
+
+              {/* 第三句（5文字） */}
+              <div>
+                <label htmlFor="line3" className="block text-xs text-gray-600 mb-1">
+                  第三句（5音）
+                </label>
+                <input
+                  id="line3"
+                  type="text"
+                  value={formData.line3}
+                  onChange={(e) => setFormData({ ...formData, line3: e.target.value })}
+                  required
+                  placeholder="例：花の道"
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.line3.length}文字
+                </p>
+              </div>
+            </div>
+
+            {/* Preview */}
+            {(formData.line1 || formData.line2 || formData.line3) && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                <p className="text-xs text-gray-600 mb-2">プレビュー:</p>
+                <p className="text-lg font-medium text-gray-900 text-center">
+                  {formData.line1 || '＿＿＿'} {formData.line2 || '＿＿＿＿＿'} {formData.line3 || '＿＿＿'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Error */}
