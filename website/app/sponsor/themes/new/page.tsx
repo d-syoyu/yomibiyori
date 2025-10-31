@@ -49,6 +49,7 @@ export default function NewThemePage() {
             contact_email: session.user.email,
             text: 'デフォルトテキスト', // 旧フィールド（後方互換性のため）3文字以上必要
             category: '一般', // デフォルトカテゴリ
+            target_regions: [], // 空配列（デフォルト値）
           })
           .select()
           .single()
