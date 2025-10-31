@@ -50,6 +50,8 @@ export default function NewThemePage() {
             text: 'デフォルトテキスト', // 旧フィールド（後方互換性のため）3文字以上必要
             category: '一般', // デフォルトカテゴリ
             target_regions: [], // 空配列（デフォルト値）
+            plan_tier: 'basic', // 料金プラン（basic/standard/premium）
+            verified: false, // KYC未承認
           })
           .select()
           .single()
