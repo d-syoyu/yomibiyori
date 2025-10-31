@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8
 
 const config: ExpoConfig = {
   expo: {
-    name: 'Yomibiyori',
+    name: 'よみびより',
     slug: 'yomibiyori',
     version: '1.0.1',
     orientation: 'portrait',
