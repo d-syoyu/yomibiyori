@@ -13,7 +13,7 @@ export function getSupabase() {
 
   // Temporary: Use hardcoded values for deployment testing
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://avpymookdzjovwxirkpq.supabase.co'
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHltb29rZHpqb3Z3eGlya3BxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1NTcyNzcsImV4cCI6MjA1MTEzMzI3N30.UzEGafPjMvt6J7QeZoggVjvfDhc-hKrCnT7o_uDJYdA'
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHltb29rZHpqb3Z3eGlya3BxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyNjQ2NzksImV4cCI6MjA3Njg0MDY3OX0.IPqFJ0LR8UmT7NOlA4r6M8QQJtoL4X3heXe5GtHhlXo'
 
   console.log('[Supabase Init] URL:', supabaseUrl)
   console.log('[Supabase Init] Key exists:', !!supabaseAnonKey && supabaseAnonKey.length > 20)
