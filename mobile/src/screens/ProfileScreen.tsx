@@ -256,10 +256,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(107, 123, 79, 0.2)',
     borderRadius: borderRadius.md,
     backgroundColor: colors.background.card,
-    overflow: 'hidden',
+    justifyContent: 'center',
   },
   picker: {
-    height: 50,
+    height: 56,
   },
   saveButton: {
     flexDirection: 'row',
