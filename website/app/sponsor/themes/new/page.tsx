@@ -57,6 +57,12 @@ export default function NewThemePage() {
         sponsor = newSponsor
       }
 
+      // At this point, sponsor cannot be null
+      if (!sponsor) {
+        setError('スポンサー情報が取得できませんでした')
+        return
+      }
+
       // Get or create default campaign
       let { data: campaigns } = await supabase
         .from('sponsor_campaigns')
