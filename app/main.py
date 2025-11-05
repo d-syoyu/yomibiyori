@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app.core.exceptions import (
@@ -15,6 +16,19 @@ from app.db.session import clear_request_user_context
 from app.routes.api import api_router
 
 app = FastAPI(title="Yomibiyori API", version="1.0.0")
+
+# CORS configuration for local development and production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8081",  # Expo web dev server
+        "http://localhost:19006",  # Alternative Expo port
+        "https://yomibiyori-production.up.railway.app",  # Production domain
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Register global error handlers
 app.add_exception_handler(HTTPException, http_exception_handler)

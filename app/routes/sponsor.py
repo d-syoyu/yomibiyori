@@ -155,7 +155,7 @@ def update_campaign(
     return CampaignResponse.model_validate(campaign)
 
 
-@router.delete("/campaigns/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/campaigns/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 def delete_campaign(
     campaign_id: str,
     session: Session = Depends(get_db_session),
@@ -357,7 +357,7 @@ def update_sponsor_theme(
     return SponsorThemeResponse.model_validate(theme)
 
 
-@router.delete("/themes/{theme_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/themes/{theme_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 def delete_sponsor_theme(
     theme_id: str,
     session: Session = Depends(get_db_session),
