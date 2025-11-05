@@ -202,7 +202,7 @@ export default function CompositionScreen({ route }: Props) {
                     <VerticalText
                       text={`${line1}\n${line2}`}
                       textStyle={styles.previewWorkText}
-                      direction="ltr"
+                      direction="rtl"
                     />
                   </View>
                 </View>

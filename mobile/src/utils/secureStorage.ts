@@ -1,16 +1,28 @@
 /**
  * Secure Storage Wrapper
  * Uses expo-secure-store for encrypted storage on iOS Keychain and Android Keystore
+ * Falls back to localStorage for web
  */
 
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+
+// Check if we're running on web
+const isWeb = Platform.OS === 'web';
 
 /**
  * Securely store a value
  */
 export async function setSecureItem(key: string, value: string): Promise<void> {
   try {
-    await SecureStore.setItemAsync(key, value);
+    if (isWeb) {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
   } catch (error) {
     console.error(`[SecureStorage] Failed to store ${key}:`, error);
     throw error;
@@ -22,7 +34,15 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
  */
 export async function getSecureItem(key: string): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(key);
+    if (isWeb) {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+      return null;
+    } else {
+      return await SecureStore.getItemAsync(key);
+    }
   } catch (error) {
     console.error(`[SecureStorage] Failed to retrieve ${key}:`, error);
     return null;
@@ -34,7 +54,14 @@ export async function getSecureItem(key: string): Promise<string | null> {
  */
 export async function deleteSecureItem(key: string): Promise<void> {
   try {
-    await SecureStore.deleteItemAsync(key);
+    if (isWeb) {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
   } catch (error) {
     console.error(`[SecureStorage] Failed to delete ${key}:`, error);
     throw error;
@@ -46,7 +73,14 @@ export async function deleteSecureItem(key: string): Promise<void> {
  */
 export async function deleteSecureItems(keys: string[]): Promise<void> {
   try {
-    await Promise.all(keys.map((key) => SecureStore.deleteItemAsync(key)));
+    if (isWeb) {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        keys.forEach(key => window.localStorage.removeItem(key));
+      }
+    } else {
+      await Promise.all(keys.map((key) => SecureStore.deleteItemAsync(key)));
+    }
   } catch (error) {
     console.error(`[SecureStorage] Failed to delete items:`, error);
     throw error;
@@ -60,13 +94,21 @@ export async function getSecureItems(
   keys: string[]
 ): Promise<Array<[string, string | null]>> {
   try {
-    const values = await Promise.all(
-      keys.map(async (key) => {
-        const value = await SecureStore.getItemAsync(key);
-        return [key, value] as [string, string | null];
-      })
-    );
-    return values;
+    if (isWeb) {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return keys.map(key => [key, window.localStorage.getItem(key)] as [string, string | null]);
+      }
+      return keys.map(key => [key, null] as [string, string | null]);
+    } else {
+      const values = await Promise.all(
+        keys.map(async (key) => {
+          const value = await SecureStore.getItemAsync(key);
+          return [key, value] as [string, string | null];
+        })
+      );
+      return values;
+    }
   } catch (error) {
     console.error(`[SecureStorage] Failed to retrieve items:`, error);
     throw error;

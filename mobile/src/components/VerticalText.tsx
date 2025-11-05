@@ -75,26 +75,33 @@ export default function VerticalText({
       direction === 'rtl' ? styles.containerRTL : styles.containerLTR,
       style
     ]}>
-      {lines.map((line, lineIndex) => (
-        <View key={lineIndex} style={styles.column}>
-          {line.split('').map((char, charIndex) => {
-            const shouldRotate = needsRotation(char);
+      {lines.map((line, lineIndex) => {
+        // Skip empty lines
+        if (!line || line.trim().length === 0) {
+          return null;
+        }
 
-            return (
-              <Text
-                key={charIndex}
-                style={[
-                  styles.character,
-                  textStyle,
-                  shouldRotate && styles.rotatedCharacter
-                ]}
-              >
-                {char}
-              </Text>
-            );
-          })}
-        </View>
-      ))}
+        return (
+          <View key={lineIndex} style={styles.column}>
+            {line.split('').map((char, charIndex) => {
+              const shouldRotate = needsRotation(char);
+
+              return (
+                <Text
+                  key={charIndex}
+                  style={[
+                    styles.character,
+                    textStyle,
+                    shouldRotate && styles.rotatedCharacter
+                  ]}
+                >
+                  {char}
+                </Text>
+              );
+            })}
+          </View>
+        );
+      })}
     </View>
   );
 }
