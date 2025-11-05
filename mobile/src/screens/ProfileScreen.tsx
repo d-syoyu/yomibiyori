@@ -221,9 +221,8 @@ export default function ProfileScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Danger Zone */}
+          {/* Account Deletion */}
           <View style={styles.dangerZone}>
-            <Text style={styles.dangerZoneTitle}>危険な操作</Text>
             <Text style={styles.dangerZoneDescription}>
               アカウントを削除すると、すべてのデータが完全に削除されます。
             </Text>
@@ -364,13 +363,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl, // Add bottom margin for spacing
     borderTopWidth: 1,
     borderTopColor: 'rgba(229, 62, 62, 0.2)',
-  },
-  dangerZoneTitle: {
-    fontSize: fontSize.h3,
-    fontFamily: fontFamily.semiBold,
-    color: colors.status.error,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.5,
   },
   dangerZoneDescription: {
     fontSize: fontSize.bodySmall,
