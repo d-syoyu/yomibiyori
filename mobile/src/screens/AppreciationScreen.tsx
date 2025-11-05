@@ -230,7 +230,7 @@ export default function AppreciationScreen({ route }: Props) {
                         <VerticalText
                           text={work.text}
                           textStyle={styles.workVerticalText}
-                          direction="ltr"
+                          direction="rtl"
                         />
                       </View>
                     </View>

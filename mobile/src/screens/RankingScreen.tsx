@@ -240,7 +240,7 @@ export default function RankingScreen() {
                     <VerticalText
                       text={entry.text}
                       textStyle={styles.workVerticalText}
-                      direction="ltr"
+                      direction="rtl"
                     />
                   </View>
                   <Text style={styles.workAuthor}>by {entry.display_name}</Text>
