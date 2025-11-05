@@ -28,6 +28,7 @@ from app.schemas.auth import (
     VerifyTokenAndUpdatePasswordRequest,
 )
 from app.services.auth import (
+    delete_user_account,
     get_apple_oauth_url,
     get_current_user_id,
     get_google_oauth_url,
@@ -213,3 +214,17 @@ def oauth_callback(
     """Accept OAuth tokens and synchronize user to local database."""
 
     return process_oauth_callback(session=session, payload=payload)
+
+
+@router.delete(
+    "/profile",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete user account",
+)
+def delete_account(
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> None:
+    """Delete the authenticated user's account and all associated data."""
+
+    delete_user_account(session=session, user_id=user_id)

@@ -41,7 +41,7 @@ interface DateWorksCache {
 
 export default function MyPoemsScreen() {
   const navigation = useNavigation<MyPoemsScreenNavigationProp>();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
   const { handleError } = useApiErrorHandler();
 
@@ -135,10 +135,12 @@ export default function MyPoemsScreen() {
     }
   }, [dateWorksCache, getThemeById, handleError]);
 
-  // Load summary on mount
+  // Load summary on mount (only if authenticated)
   useEffect(() => {
-    loadMyWorksSummary();
-  }, [loadMyWorksSummary]);
+    if (isAuthenticated) {
+      loadMyWorksSummary();
+    }
+  }, [loadMyWorksSummary, isAuthenticated]);
 
   const handleLogout = async () => {
     await logout();
@@ -185,6 +187,34 @@ export default function MyPoemsScreen() {
       subscription.remove();
     };
   }, []);
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>マイページ</Text>
+          </View>
+          <View style={styles.loginPromptContainer}>
+            <View style={styles.loginPromptCard}>
+              <Ionicons name="person-circle-outline" size={80} color="#6B7B4F" />
+              <Text style={styles.loginPromptTitle}>ログインが必要です</Text>
+              <Text style={styles.loginPromptText}>
+                マイページを表示するには{'\n'}ログインしてください
+              </Text>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => navigation.navigate('Login')}
+              >
+                <Text style={styles.loginButtonText}>ログイン / 新規登録</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -646,5 +676,50 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     color: colors.status.error,
     letterSpacing: 0.3,
+  },
+  loginPromptContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  loginPromptCard: {
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 400,
+    ...shadow.md,
+  },
+  loginPromptTitle: {
+    fontSize: fontSize.h2,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    letterSpacing: 1,
+  },
+  loginPromptText: {
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 24,
+    letterSpacing: 0.5,
+  },
+  loginButton: {
+    backgroundColor: colors.text.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+    ...shadow.sm,
+  },
+  loginButtonText: {
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.inverse,
+    letterSpacing: 0.5,
   },
 });

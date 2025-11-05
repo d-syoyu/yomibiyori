@@ -974,3 +974,66 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
         device_info=user.device_info,
         analytics_opt_out=user.analytics_opt_out,
     )
+
+
+def delete_user_account(session: Session, *, user_id: str) -> None:
+    """Delete the user's account and all associated data."""
+    settings = get_settings()
+
+    # Get user record
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Track account deletion event (before deletion, if not opted out)
+    if not user.analytics_opt_out:
+        try:
+            track_event(
+                distinct_id=str(user.id),
+                event_name=EventNames.ACCOUNT_DELETED,
+                properties={"email": user.email}
+            )
+        except Exception as e:
+            print(f"[Analytics] Failed to track account deletion: {e}")
+
+    # Delete user from local database (CASCADE will handle related data)
+    # The database schema should have CASCADE delete configured for:
+    # - works
+    # - work_likes
+    # - follows
+    # - notifications
+    session.delete(user)
+
+    try:
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user account"
+        ) from exc
+
+    # Delete user from Supabase (using admin API)
+    # This requires service role key
+    try:
+        admin_headers = {
+            "apikey": settings.supabase_service_role_key,
+            "Authorization": f"Bearer {settings.supabase_service_role_key}",
+            "Content-Type": "application/json",
+        }
+
+        delete_url = f"{settings.supabase_url}/auth/v1/admin/users/{user_id}"
+
+        response = requests.delete(
+            delete_url,
+            headers=admin_headers,
+            timeout=settings.supabase_request_timeout,
+        )
+
+        # 404 is acceptable (user may have already been deleted from Supabase)
+        if response.status_code not in (200, 204, 404):
+            print(f"[Auth] Warning: Failed to delete user from Supabase: {response.status_code} {response.text}")
+            # Don't raise exception here - local deletion succeeded
+    except requests.RequestException as exc:
+        print(f"[Auth] Warning: Failed to delete user from Supabase: {exc}")
+        # Don't raise exception - local deletion succeeded

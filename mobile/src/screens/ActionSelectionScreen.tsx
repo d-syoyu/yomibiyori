@@ -9,10 +9,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { HomeStackParamList, ThemeCategory } from '../types';
+import type { HomeStackParamList, RootStackParamList, ThemeCategory } from '../types';
 import api from '../services/api';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import CategoryIcon from '../components/CategoryIcon';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ActionSelection'>;
@@ -22,10 +23,20 @@ export default function ActionSelectionScreen({ route }: Props) {
   const navigation = useNavigation<NavigationProp>();
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
   const showError = useToastStore(state => state.showError);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const { category } = route.params;
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCompose = async () => {
+    // Check authentication before allowing composition
+    if (!isAuthenticated) {
+      showError('投稿するにはログインが必要です');
+      // Navigate to login screen
+      // @ts-ignore - navigation typing issue with nested navigators
+      navigation.navigate('Login');
+      return;
+    }
+
     setIsLoading(true);
     try {
       // お題を取得（キャッシュから）

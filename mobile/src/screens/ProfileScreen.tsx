@@ -14,20 +14,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import { useNavigation } from '@react-navigation/native';
 import { useToastStore } from '../stores/useToastStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { PrefecturePicker } from '../components/PrefecturePicker';
 import api from '../services/api';
 import type { UserProfile } from '../types';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
+  const logout = useAuthStore(state => state.logout);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form fields
   const [displayName, setDisplayName] = useState('');
@@ -87,6 +93,43 @@ export default function ProfileScreen() {
     }
   }
 
+  function handleDeleteAccount() {
+    Alert.alert(
+      'アカウント削除の確認',
+      'アカウントを削除すると、すべてのデータ（投稿した作品、いいね、フォローなど）が完全に削除されます。この操作は取り消せません。\n\n本当に削除しますか？',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: '削除する',
+          style: 'destructive',
+          onPress: confirmDeleteAccount,
+        },
+      ]
+    );
+  }
+
+  async function confirmDeleteAccount() {
+    try {
+      setIsDeleting(true);
+      await api.deleteAccount();
+      showSuccess('アカウントを削除しました');
+
+      // Logout and clear session
+      await logout();
+
+      // Navigate back to login
+      navigation.goBack();
+    } catch (error: any) {
+      console.error('[Profile] Failed to delete account:', error);
+      showError(error?.message || 'アカウントの削除に失敗しました');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -103,11 +146,13 @@ export default function ProfileScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
             <Text style={styles.title}>プロフィール設定</Text>
@@ -175,6 +220,28 @@ export default function ProfileScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {/* Danger Zone */}
+          <View style={styles.dangerZone}>
+            <Text style={styles.dangerZoneTitle}>危険な操作</Text>
+            <Text style={styles.dangerZoneDescription}>
+              アカウントを削除すると、すべてのデータが完全に削除されます。
+            </Text>
+            <TouchableOpacity
+              style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+              onPress={handleDeleteAccount}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <ActivityIndicator color={colors.status.error} />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={20} color={colors.status.error} />
+                  <Text style={styles.deleteButtonText}>アカウントを削除</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -205,6 +272,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxl * 2, // Extra padding at bottom to prevent content overlap
   },
   header: {
     marginBottom: spacing.lg,
@@ -264,9 +332,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.background.card,
     justifyContent: 'center',
+    minHeight: 56,
   },
   picker: {
-    height: 56,
+    height: Platform.select({ ios: 180, android: 56 }),
   },
   saveButton: {
     flexDirection: 'row',
@@ -276,6 +345,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     marginTop: spacing.xl,
+    marginBottom: spacing.md, // Add margin to prevent overlap
     gap: spacing.sm,
     ...shadow.md,
   },
@@ -286,6 +356,47 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.semiBold,
     color: colors.text.inverse,
+    letterSpacing: 0.5,
+  },
+  dangerZone: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    marginBottom: spacing.xl, // Add bottom margin for spacing
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(229, 62, 62, 0.2)',
+  },
+  dangerZoneTitle: {
+    fontSize: fontSize.h3,
+    fontFamily: fontFamily.semiBold,
+    color: colors.status.error,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.5,
+  },
+  dangerZoneDescription: {
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+    letterSpacing: 0.3,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(229, 62, 62, 0.1)',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.status.error,
+    gap: spacing.sm,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.6,
+  },
+  deleteButtonText: {
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.status.error,
     letterSpacing: 0.5,
   },
 });

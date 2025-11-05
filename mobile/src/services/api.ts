@@ -237,6 +237,10 @@ class ApiClient {
     return response.data;
   }
 
+  async deleteAccount(): Promise<void> {
+    await this.client.delete('/auth/profile');
+  }
+
   async refreshToken(refreshToken: string): Promise<SessionToken> {
     const response = await this.client.post<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>(
       '/auth/refresh',

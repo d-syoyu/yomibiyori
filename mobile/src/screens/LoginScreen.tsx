@@ -74,6 +74,9 @@ export default function LoginScreen() {
           display_name: user.display_name,
         });
       }
+
+      // Close modal and return to previous screen
+      navigation.goBack();
     } catch (err: any) {
       trackEvent(isSignUp ? EventNames.SIGNUP_ATTEMPTED : EventNames.LOGIN_ATTEMPTED, {
         success: false,
@@ -164,6 +167,9 @@ export default function LoginScreen() {
             display_name: user.display_name,
           });
         }
+
+        // Close modal and return to previous screen
+        navigation.goBack();
       } else {
         // User cancelled or other error
         console.log('[Auth] OAuth cancelled or failed:', result.type);
@@ -264,6 +270,9 @@ export default function LoginScreen() {
             display_name: user.display_name,
           });
         }
+
+        // Close modal and return to previous screen
+        navigation.goBack();
       } else {
         // User cancelled or other error
         console.log('[Auth] OAuth cancelled or failed:', result.type);

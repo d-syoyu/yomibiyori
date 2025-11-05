@@ -163,11 +163,11 @@ function MainTabNavigator() {
 }
 
 // ============================================================================
-// Root Navigator (Auth Flow)
+// Root Navigator (Guest Mode Support)
 // ============================================================================
 
 function RootNavigator() {
-  const { isAuthenticated, isLoading, loadStoredSession } = useAuthStore();
+  const { isLoading, loadStoredSession } = useAuthStore();
 
   // Load stored session on mount
   useEffect(() => {
@@ -185,14 +185,19 @@ function RootNavigator() {
 
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        <>
-          <RootStack.Screen name="Login" component={LoginScreen} />
-          <RootStack.Screen name="PasswordReset" component={PasswordResetScreen} />
-        </>
-      ) : (
-        <RootStack.Screen name="Main" component={MainTabNavigator} />
-      )}
+      {/* Main app is always accessible */}
+      <RootStack.Screen name="Main" component={MainTabNavigator} />
+      {/* Login/Auth screens presented as modal */}
+      <RootStack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ presentation: 'modal' }}
+      />
+      <RootStack.Screen
+        name="PasswordReset"
+        component={PasswordResetScreen}
+        options={{ presentation: 'modal' }}
+      />
     </RootStack.Navigator>
   );
 }
