@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useTutorialStore } from '../stores/useTutorialStore';
@@ -205,7 +205,14 @@ export default function MyPoemsScreen() {
               </Text>
               <TouchableOpacity
                 style={styles.loginButton}
-                onPress={() => navigation.navigate('Login')}
+                onPress={() => {
+                  // Navigate to Login screen in root navigator
+                  navigation.dispatch(
+                    CommonActions.navigate({
+                      name: 'Login',
+                    })
+                  );
+                }}
               >
                 <Text style={styles.loginButtonText}>ログイン / 新規登録</Text>
               </TouchableOpacity>

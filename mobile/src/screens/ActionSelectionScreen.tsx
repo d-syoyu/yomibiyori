@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, RootStackParamList, ThemeCategory } from '../types';
@@ -31,9 +31,12 @@ export default function ActionSelectionScreen({ route }: Props) {
     // Check authentication before allowing composition
     if (!isAuthenticated) {
       showError('投稿するにはログインが必要です');
-      // Navigate to login screen
-      // @ts-ignore - navigation typing issue with nested navigators
-      navigation.navigate('Login');
+      // Navigate to login screen in root navigator
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Login',
+        })
+      );
       return;
     }
 

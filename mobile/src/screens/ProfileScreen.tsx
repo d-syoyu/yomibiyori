@@ -120,8 +120,10 @@ export default function ProfileScreen() {
       // Logout and clear session
       await logout();
 
-      // Navigate back to login
-      navigation.goBack();
+      // Navigate back if possible, otherwise user will be redirected to login by auth state
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (error: any) {
       console.error('[Profile] Failed to delete account:', error);
       showError(error?.message || 'アカウントの削除に失敗しました');
