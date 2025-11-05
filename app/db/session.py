@@ -51,7 +51,8 @@ def _set_session_context(session: Session, user_id: str | None, role: str | None
         user_id: The authenticated user's identifier
         role: The user's role (authenticated or service_role)
     """
-    if not settings.database_url.startswith("postgresql"):
+    bind = session.get_bind()
+    if bind is None or bind.dialect.name != "postgresql":
         # RLS only works with PostgreSQL
         return
 

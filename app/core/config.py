@@ -1,6 +1,7 @@
 """Application configuration for Yomibiyori backend."""
 
 from functools import lru_cache
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from pydantic import Field, field_validator
@@ -180,6 +181,11 @@ class Settings(BaseSettings):
         description="Timeout in seconds for X.ai API calls.",
         ge=1.0,
     )
+    oauth_allowed_redirect_hosts: str = Field(
+        default="localhost,127.0.0.1",
+        alias="OAUTH_ALLOWED_REDIRECT_HOSTS",
+        description="Comma-separated list of hostnames allowed in OAuth redirect_to parameters.",
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -192,6 +198,23 @@ class Settings(BaseSettings):
     def timezone(self) -> ZoneInfo:
         """Return the configured application timezone."""
         return ZoneInfo(self.timezone_name)
+
+    @property
+    def oauth_allowed_redirect_entries(self) -> list[tuple[str | None, str | None]]:
+        """Return allowed OAuth redirect (scheme, host) pairs."""
+        entries: list[tuple[str | None, str | None]] = []
+        for raw_entry in self.oauth_allowed_redirect_hosts.split(","):
+            token = raw_entry.strip()
+            if not token:
+                continue
+            if "://" in token:
+                parsed = urlparse(token)
+                scheme = parsed.scheme.lower() if parsed.scheme else None
+                host = parsed.hostname.lower() if parsed.hostname else None
+                entries.append((scheme, host))
+            else:
+                entries.append((None, token.lower()))
+        return entries
 
 
 @lru_cache(maxsize=1)

@@ -35,6 +35,7 @@ def configure_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure required Supabase settings are populated for tests."""
 
     settings = get_settings()
+    monkeypatch.setattr(settings, "database_url", TEST_DATABASE_URL)
     monkeypatch.setattr(settings, "supabase_anon_key", "test-anon-key")
     monkeypatch.setattr(settings, "service_role_key", "test-service-role")
     monkeypatch.setattr(settings, "supabase_url", "https://test.supabase.co")

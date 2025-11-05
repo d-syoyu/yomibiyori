@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -11,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth_helpers import get_current_admin
 from app.core.logging import logger
-from app.db.session import get_db_session
+from app.db.session import get_authenticated_db_session
 from app.models import Sponsor, SponsorCampaign, SponsorTheme, Theme, User
 from app.schemas.sponsor import (
     SponsorThemeListResponse,
@@ -26,11 +27,11 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/review/themes", response_model=SponsorThemeListResponse)
 def list_themes_for_review(
+    _current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
     status_filter: str = Query("pending", description="Filter by status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    session: Session = Depends(get_db_session),
-    _current_admin: User = Depends(get_current_admin),
 ) -> SponsorThemeListResponse:
     """List sponsor themes pending review."""
     stmt = select(SponsorTheme)
@@ -58,8 +59,8 @@ def list_themes_for_review(
 def approve_theme(
     theme_id: str,
     _payload: ThemeReviewApproveRequest,
-    session: Session = Depends(get_db_session),
-    current_admin: User = Depends(get_current_admin),
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> ThemeReviewResponse:
     """Approve a sponsor theme and register it to themes table for distribution."""
     sponsor_theme = session.get(SponsorTheme, theme_id)
@@ -157,8 +158,8 @@ def approve_theme(
 def reject_theme(
     theme_id: str,
     payload: ThemeReviewRejectRequest,
-    session: Session = Depends(get_db_session),
-    current_admin: User = Depends(get_current_admin),
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> ThemeReviewResponse:
     """Reject a sponsor theme and remove it from themes table if registered."""
     sponsor_theme = session.get(SponsorTheme, theme_id)
@@ -203,8 +204,8 @@ def reject_theme(
 @router.post("/review/themes/{theme_id}/reset", response_model=ThemeReviewResponse)
 def reset_theme_review(
     theme_id: str,
-    session: Session = Depends(get_db_session),
-    _current_admin: User = Depends(get_current_admin),
+    _current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> ThemeReviewResponse:
     """Reset a theme's review status back to pending and remove from themes table."""
     sponsor_theme = session.get(SponsorTheme, theme_id)

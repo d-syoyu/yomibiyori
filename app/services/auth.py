@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from time import monotonic
 from typing import Any
+from urllib.parse import quote, urlparse
 
 import requests
 from fastapi import Depends, HTTPException, status
@@ -146,6 +147,42 @@ def _decode_jwt(token: str) -> dict[str, Any]:
             pass
 
     return _decode_with_jwks(token, settings)
+
+
+def _validate_redirect_target(redirect_to: str | None, *, settings):  # type: ignore[no-untyped-def]
+    """Validate and sanitise redirect_to parameter against allow list."""
+
+    if redirect_to is None:
+        return None
+
+    target = redirect_to.strip()
+    if not target:
+        return None
+
+    if target.startswith("/"):
+        if target.startswith("//"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect target")
+        return target
+
+    parsed = urlparse(target)
+    if not parsed.scheme or (not parsed.netloc and not parsed.path):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect target")
+
+    allowed_entries = list(settings.oauth_allowed_redirect_entries)
+    supabase_host = urlparse(settings.supabase_url).hostname
+    if supabase_host:
+        allowed_entries.append((None, supabase_host.lower()))
+
+    hostname = parsed.hostname.lower() if parsed.hostname else None
+    scheme = parsed.scheme.lower() if parsed.scheme else None
+
+    for allowed_scheme, allowed_host in allowed_entries:
+        scheme_ok = allowed_scheme is None or (scheme is not None and scheme == allowed_scheme)
+        host_ok = allowed_host is None or (hostname is not None and hostname == allowed_host)
+        if scheme_ok and host_ok:
+            return target
+
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect target")
 
 
 def get_current_user_id(
@@ -737,9 +774,9 @@ def get_google_oauth_url(*, redirect_to: str | None = None) -> OAuthUrlResponse:
     oauth_url = f"{supabase_url}/auth/v1/authorize?provider=google"
 
     # Add redirect_to parameter if provided
-    if redirect_to:
-        from urllib.parse import quote
-        oauth_url += f"&redirect_to={quote(redirect_to)}"
+    sanitised_redirect = _validate_redirect_target(redirect_to, settings=settings)
+    if sanitised_redirect:
+        oauth_url += f"&redirect_to={quote(sanitised_redirect)}"
 
     return OAuthUrlResponse(url=oauth_url, provider="google")
 
@@ -762,9 +799,9 @@ def get_apple_oauth_url(*, redirect_to: str | None = None) -> OAuthUrlResponse:
     oauth_url = f"{supabase_url}/auth/v1/authorize?provider=apple"
 
     # Add redirect_to parameter if provided
-    if redirect_to:
-        from urllib.parse import quote
-        oauth_url += f"&redirect_to={quote(redirect_to)}"
+    sanitised_redirect = _validate_redirect_target(redirect_to, settings=settings)
+    if sanitised_redirect:
+        oauth_url += f"&redirect_to={quote(sanitised_redirect)}"
 
     return OAuthUrlResponse(url=oauth_url, provider="apple")
 

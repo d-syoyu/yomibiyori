@@ -7,10 +7,11 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.db.types import JSONBType
 
 
 class Sponsor(Base):
@@ -27,7 +28,7 @@ class Sponsor(Base):
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     text: Mapped[str | None] = mapped_column(Text)
     category: Mapped[str | None] = mapped_column(String(50))
-    target_regions: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    target_regions: Mapped[list[str]] = mapped_column(JSONBType, default=list)
     target_age_min: Mapped[int | None] = mapped_column(Integer)
     target_age_max: Mapped[int | None] = mapped_column(Integer)
     budget: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
@@ -57,7 +58,7 @@ class SponsorCampaign(Base):
     budget: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
-    targeting: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    targeting: Mapped[dict[str, Any]] = mapped_column(JSONBType, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

@@ -122,11 +122,13 @@ def test_get_profile_success(client: TestClient, db_session: Session) -> None:
     response = client.get("/api/v1/auth/profile", headers=_bearer(user.id))
     assert response.status_code == 200
     payload = response.json()
-    assert payload == {
-        "user_id": user.id,
-        "email": "existing@example.com",
-        "display_name": "Existing Poet",
-    }
+    assert payload["user_id"] == user.id
+    assert payload["email"] == "existing@example.com"
+    assert payload["display_name"] == "Existing Poet"
+    assert payload["analytics_opt_out"] is False
+    assert payload["birth_year"] is None
+    assert payload["prefecture"] is None
+    assert payload["device_info"] is None
 
 
 def test_get_profile_missing(client: TestClient) -> None:
@@ -162,11 +164,9 @@ def test_sync_profile_updates_local_record(
     response = client.post("/api/v1/auth/profile/sync", headers=_bearer(user.id))
     assert response.status_code == 200
     payload = response.json()
-    assert payload == {
-        "user_id": user.id,
-        "email": "sync@example.com",
-        "display_name": "Refreshed Name",
-    }
+    assert payload["user_id"] == user.id
+    assert payload["email"] == "sync@example.com"
+    assert payload["display_name"] == "Refreshed Name"
 
     updated = db_session.get(User, user.id)
     assert updated.name == "Refreshed Name"
