@@ -44,15 +44,26 @@ export default function CompositionScreen({ route }: Props) {
   const theme = route.params?.theme;
 
   const handleSubmit = async () => {
+    console.log('[CompositionScreen] handleSubmit called');
+
+    // 入力バリデーション
     if (!line1.trim() || !line2.trim()) {
+      console.log('[CompositionScreen] Validation failed: empty lines');
       showError(VALIDATION_MESSAGES.composition.emptyLines);
       return;
     }
 
     if (!theme) {
+      console.log('[CompositionScreen] Validation failed: no theme');
       showError(VALIDATION_MESSAGES.composition.noTheme);
       return;
     }
+
+    console.log('[CompositionScreen] Starting work submission', {
+      theme_id: theme.id,
+      category: theme.category,
+      text_length: line1.trim().length + line2.trim().length + 1,
+    });
 
     setIsSubmitting(true);
     try {
@@ -62,15 +73,22 @@ export default function CompositionScreen({ route }: Props) {
         text: `${line1.trim()}\n${line2.trim()}`,
       });
 
+      console.log('[CompositionScreen] Work created successfully', { work_id: work.id });
+
       // 投稿成功
       showSuccess(SUCCESS_MESSAGES.workCreated);
 
       // Track work creation event
-      trackEvent(EventNames.WORK_CREATED, {
-        theme_id: theme.id,
-        category: theme.category,
-        text_length: line1.trim().length + line2.trim().length + 1,
-      });
+      try {
+        trackEvent(EventNames.WORK_CREATED, {
+          theme_id: theme.id,
+          category: theme.category,
+          text_length: line1.trim().length + line2.trim().length + 1,
+        });
+      } catch (trackError) {
+        console.error('[CompositionScreen] Failed to track event:', trackError);
+        // トラッキングエラーは無視（ユーザー体験に影響しない）
+      }
 
       // Clear input
       setLine1('');
@@ -81,7 +99,18 @@ export default function CompositionScreen({ route }: Props) {
         navigation.navigate('Appreciation', { category: theme.category });
       }, 1500);
     } catch (error: any) {
-      handleError(error, 'work_creation');
+      console.error('[CompositionScreen] Work creation failed:', error);
+      try {
+        handleError(error, 'work_creation');
+      } catch (handlerError) {
+        console.error('[CompositionScreen] Error handler failed:', handlerError);
+        // エラーハンドラーが失敗した場合のフォールバック
+        try {
+          showError('投稿に失敗しました\nもう一度お試しください');
+        } catch (fallbackError) {
+          console.error('[CompositionScreen] Fallback error display failed:', fallbackError);
+        }
+      }
     } finally {
       setIsSubmitting(false);
     }

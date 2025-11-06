@@ -163,18 +163,45 @@ export function canRetry(type: ErrorType): boolean {
 /**
  * ApiErrorからErrorInfoを生成
  */
-export function parseApiError(error: ApiError): ErrorInfo {
-  const type = getErrorType(error.status);
-  const message = translateErrorMessage(error.detail, type);
-  const title = getErrorTitle(type);
-  const retry = canRetry(type);
+export function parseApiError(error: any): ErrorInfo {
+  try {
+    // エラーオブジェクトのバリデーション
+    if (!error) {
+      return {
+        type: ErrorType.UNKNOWN,
+        title: 'エラー',
+        message: 'エラーが発生しました',
+        canRetry: false,
+      };
+    }
 
-  return {
-    type,
-    title,
-    message,
-    canRetry: retry,
-  };
+    // statusの取得（デフォルト: -1）
+    const status = typeof error.status === 'number' ? error.status : -1;
+
+    // detailの取得（デフォルト: エラーメッセージまたは'Unknown error'）
+    const detail = error.detail || error.message || 'Unknown error occurred';
+
+    const type = getErrorType(status);
+    const message = translateErrorMessage(detail, type);
+    const title = getErrorTitle(type);
+    const retry = canRetry(type);
+
+    return {
+      type,
+      title,
+      message,
+      canRetry: retry,
+    };
+  } catch (parseError) {
+    console.error('[parseApiError] Failed to parse error:', parseError);
+    // パースに失敗した場合のフォールバック
+    return {
+      type: ErrorType.UNKNOWN,
+      title: 'エラー',
+      message: 'エラーが発生しました',
+      canRetry: false,
+    };
+  }
 }
 
 /**

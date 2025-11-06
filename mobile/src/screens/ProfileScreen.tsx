@@ -15,6 +15,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,8 @@ import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const logout = useAuthStore(state => state.logout);
+  const { width, height } = useWindowDimensions();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,34 +45,47 @@ export default function ProfileScreen() {
 
   const { showSuccess, showError } = useToastStore();
 
+  // デバイスサイズの判定（タブレット: 幅が768px以上）
+  const isTablet = width >= 768;
+  const isLandscape = width > height;
+
   useEffect(() => {
     loadProfile();
   }, []);
 
   async function loadProfile() {
+    console.log('[ProfileScreen] Loading profile');
     try {
       setIsLoading(true);
       const data = await api.getUserProfile();
       setProfile(data);
+
+      console.log('[ProfileScreen] Profile loaded successfully');
 
       // Initialize form fields with profile data
       setDisplayName(data.display_name || '');
       setBirthYear(data.birth_year);
       setPrefecture(data.prefecture);
     } catch (error: any) {
-      console.error('[Profile] Failed to load profile:', error);
-      showError(error?.message || 'プロフィールの読み込みに失敗しました');
+      console.error('[ProfileScreen] Failed to load profile:', error);
+      try {
+        showError(error?.message || 'プロフィールの読み込みに失敗しました');
+      } catch (toastError) {
+        console.error('[ProfileScreen] Failed to show error toast:', toastError);
+      }
     } finally {
       setIsLoading(false);
     }
   }
 
   async function handleSave() {
+    console.log('[ProfileScreen] Saving profile');
     try {
       setIsSaving(true);
 
       // Validate display name
       if (!displayName.trim()) {
+        console.log('[ProfileScreen] Validation failed: empty display name');
         showError('表示名を入力してください');
         setIsSaving(false);
         return;
@@ -81,13 +97,21 @@ export default function ProfileScreen() {
         prefecture,
       };
 
+      console.log('[ProfileScreen] Updating profile with data:', updateData);
+
       const updated = await api.updateProfile(updateData);
       setProfile(updated);
 
+      console.log('[ProfileScreen] Profile updated successfully');
+
       showSuccess('プロフィールを更新しました');
     } catch (error: any) {
-      console.error('[Profile] Failed to update profile:', error);
-      showError(error?.message || 'プロフィールの更新に失敗しました');
+      console.error('[ProfileScreen] Failed to update profile:', error);
+      try {
+        showError(error?.message || 'プロフィールの更新に失敗しました');
+      } catch (toastError) {
+        console.error('[ProfileScreen] Failed to show error toast:', toastError);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -112,21 +136,33 @@ export default function ProfileScreen() {
   }
 
   async function confirmDeleteAccount() {
+    console.log('[ProfileScreen] Deleting account');
     try {
       setIsDeleting(true);
       await api.deleteAccount();
+
+      console.log('[ProfileScreen] Account deleted successfully');
+
       showSuccess('アカウントを削除しました');
 
       // Logout and clear session
-      await logout();
+      try {
+        await logout();
+      } catch (logoutError) {
+        console.error('[ProfileScreen] Logout failed after account deletion:', logoutError);
+      }
 
       // Navigate back if possible, otherwise user will be redirected to login by auth state
       if (navigation.canGoBack()) {
         navigation.goBack();
       }
     } catch (error: any) {
-      console.error('[Profile] Failed to delete account:', error);
-      showError(error?.message || 'アカウントの削除に失敗しました');
+      console.error('[ProfileScreen] Failed to delete account:', error);
+      try {
+        showError(error?.message || 'アカウントの削除に失敗しました');
+      } catch (toastError) {
+        console.error('[ProfileScreen] Failed to show error toast:', toastError);
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -143,6 +179,18 @@ export default function ProfileScreen() {
     );
   }
 
+  // 動的なコンテンツスタイル
+  const scrollContentStyle = [
+    styles.scrollContent,
+    {
+      paddingHorizontal: isTablet ? spacing.xl * 2 : spacing.lg,
+      paddingBottom: isTablet ? spacing.xxl * 4 : spacing.xxl * 2,
+      maxWidth: isTablet ? 600 : undefined,
+      alignSelf: isTablet ? 'center' : undefined,
+      width: isTablet ? '100%' : undefined,
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
@@ -152,7 +200,7 @@ export default function ProfileScreen() {
       >
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={scrollContentStyle}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -273,10 +321,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2, // Extra padding at bottom to prevent content overlap
+    paddingBottom: spacing.xxl * 3, // Extra padding at bottom to prevent content overlap on all devices
   },
   header: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    zIndex: 1,
   },
   title: {
     fontSize: fontSize.h1,
@@ -292,7 +341,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   section: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl, // Increased margin for better separation
+    zIndex: 1,
   },
   label: {
     fontSize: fontSize.body,
@@ -300,6 +350,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.sm,
     letterSpacing: 0.5,
+    zIndex: 2,
   },
   input: {
     borderWidth: 1,
@@ -334,9 +385,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.card,
     justifyContent: 'center',
     minHeight: 56,
+    overflow: 'hidden', // Prevent picker overflow
+    zIndex: 1,
   },
   picker: {
     height: Platform.select({ ios: 180, android: 56 }),
+    zIndex: 1,
   },
   saveButton: {
     flexDirection: 'row',
@@ -345,10 +399,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    marginTop: spacing.xl,
-    marginBottom: spacing.md, // Add margin to prevent overlap
+    marginTop: spacing.xl * 2, // Increased margin for better separation
+    marginBottom: spacing.xl, // Increased margin to prevent overlap
     gap: spacing.sm,
     ...shadow.md,
+    zIndex: 10, // High z-index to ensure it's on top
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -360,18 +415,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   dangerZone: {
-    marginTop: spacing.xl,
-    paddingTop: spacing.lg,
-    marginBottom: spacing.xl, // Add bottom margin for spacing
+    marginTop: spacing.xl * 2, // Increased top margin for better separation
+    paddingTop: spacing.xl,
+    marginBottom: spacing.xxl, // Increased bottom margin for better spacing
     borderTopWidth: 1,
     borderTopColor: 'rgba(229, 62, 62, 0.2)',
+    zIndex: 5,
   },
   dangerZoneDescription: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.regular,
     color: colors.text.secondary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg, // Increased margin
     letterSpacing: 0.3,
+    lineHeight: 20, // Added line height for better readability
   },
   deleteButton: {
     flexDirection: 'row',
@@ -383,6 +440,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.status.error,
     gap: spacing.sm,
+    zIndex: 6,
   },
   deleteButtonDisabled: {
     opacity: 0.6,

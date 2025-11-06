@@ -118,57 +118,73 @@ export function useApiErrorHandler() {
    */
   const handleError = useCallback(
     (error: any, context: ErrorContext = 'generic', customMessage?: string) => {
-      console.error(`[${context}] Error:`, error);
+      try {
+        console.error(`[${context}] Error:`, error);
 
-      // ネットワークエラーの場合は優先的に表示
-      if (isNetworkError(error)) {
-        showError(NETWORK_ERROR.message, NETWORK_ERROR.title);
-        return;
-      }
+        // ネットワークエラーの場合は優先的に表示
+        if (isNetworkError(error)) {
+          showError(NETWORK_ERROR.message, NETWORK_ERROR.title);
+          return;
+        }
 
-      // コンテキスト固有のカスタム条件をチェック
-      const customConditions = contextCustomConditions[context];
-      if (customConditions) {
-        for (const condition of customConditions) {
-          if (condition.check(error)) {
-            showError(condition.message, condition.title);
-            return;
+        // コンテキスト固有のカスタム条件をチェック
+        const customConditions = contextCustomConditions[context];
+        if (customConditions) {
+          for (const condition of customConditions) {
+            try {
+              if (condition.check(error)) {
+                showError(condition.message, condition.title);
+                return;
+              }
+            } catch (conditionError) {
+              console.error(`[${context}] Error in custom condition check:`, conditionError);
+              // Continue to next condition
+            }
           }
         }
+
+        // カスタムメッセージが指定されている場合
+        if (customMessage) {
+          showError(formatErrorMessage(customMessage));
+          return;
+        }
+
+        // HTTPステータスコードから適切なメッセージを取得
+        if (error?.status && HTTP_STATUS_MESSAGES[error.status]) {
+          const statusMessage = HTTP_STATUS_MESSAGES[error.status];
+          showError(statusMessage);
+          return;
+        }
+
+        // API エラーレスポンスをパース
+        const errorInfo = parseApiError(error);
+
+        // コンテキストメッセージを取得
+        const contextMsg = CONTEXT_MESSAGES[context] || CONTEXT_MESSAGES.generic;
+
+        // パースされたメッセージが汎用的すぎる場合、コンテキストメッセージを使用
+        let finalMessage: string;
+        if (
+          errorInfo.message === 'エラーが発生しました' ||
+          errorInfo.message.includes('失敗しました')
+        ) {
+          finalMessage = withHint(contextMsg.default, contextMsg.hint);
+        } else {
+          // サーバーからの具体的なメッセージを整形して使用
+          finalMessage = formatErrorMessage(errorInfo.message);
+        }
+
+        showError(finalMessage, errorInfo.title);
+      } catch (handlerError) {
+        // エラーハンドラー自体がエラーを起こした場合のフォールバック
+        console.error(`[${context}] Critical error in error handler:`, handlerError);
+        try {
+          showError('エラーが発生しました\nもう一度お試しください', 'エラー');
+        } catch (fallbackError) {
+          // これも失敗した場合はコンソールログのみ
+          console.error(`[${context}] Failed to show error message:`, fallbackError);
+        }
       }
-
-      // カスタムメッセージが指定されている場合
-      if (customMessage) {
-        showError(formatErrorMessage(customMessage));
-        return;
-      }
-
-      // HTTPステータスコードから適切なメッセージを取得
-      if (error?.status && HTTP_STATUS_MESSAGES[error.status]) {
-        const statusMessage = HTTP_STATUS_MESSAGES[error.status];
-        showError(statusMessage);
-        return;
-      }
-
-      // API エラーレスポンスをパース
-      const errorInfo = parseApiError(error);
-
-      // コンテキストメッセージを取得
-      const contextMsg = CONTEXT_MESSAGES[context] || CONTEXT_MESSAGES.generic;
-
-      // パースされたメッセージが汎用的すぎる場合、コンテキストメッセージを使用
-      let finalMessage: string;
-      if (
-        errorInfo.message === 'エラーが発生しました' ||
-        errorInfo.message.includes('失敗しました')
-      ) {
-        finalMessage = withHint(contextMsg.default, contextMsg.hint);
-      } else {
-        // サーバーからの具体的なメッセージを整形して使用
-        finalMessage = formatErrorMessage(errorInfo.message);
-      }
-
-      showError(finalMessage, errorInfo.title);
     },
     [showError]
   );
