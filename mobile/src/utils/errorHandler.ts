@@ -86,6 +86,8 @@ export function translateErrorMessage(detail: string, type: ErrorType): string {
     'Invalid credentials': 'メールアドレスまたはパスワードが正しくありません',
     'Email already registered': 'このメールアドレスは既に登録されています',
     'Request failed': 'リクエストに失敗しました',
+    'Missing bearer token': 'ログインが必要です',
+    'Token has expired': 'セッションが期限切れです\n再度ログインしてください',
   };
 
   // 完全一致する翻訳があれば使用

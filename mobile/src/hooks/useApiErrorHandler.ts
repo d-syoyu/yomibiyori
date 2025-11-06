@@ -149,15 +149,20 @@ export function useApiErrorHandler() {
           return;
         }
 
-        // HTTPステータスコードから適切なメッセージを取得
-        if (error?.status && HTTP_STATUS_MESSAGES[error.status]) {
+        // API エラーレスポンスをパース（バックエンドの詳細メッセージを取得）
+        const errorInfo = parseApiError(error);
+
+        // バックエンドから具体的なメッセージがある場合は優先
+        // 汎用的なメッセージの場合のみHTTPステータスコードを使用
+        const isGenericMessage =
+          errorInfo.message === 'エラーが発生しました' ||
+          errorInfo.message === 'Unknown error occurred';
+
+        if (isGenericMessage && error?.status && HTTP_STATUS_MESSAGES[error.status]) {
           const statusMessage = HTTP_STATUS_MESSAGES[error.status];
           showError(statusMessage);
           return;
         }
-
-        // API エラーレスポンスをパース
-        const errorInfo = parseApiError(error);
 
         // コンテキストメッセージを取得
         const contextMsg = CONTEXT_MESSAGES[context] || CONTEXT_MESSAGES.generic;
