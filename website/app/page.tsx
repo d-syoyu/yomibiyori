@@ -22,6 +22,20 @@ export default function Home() {
               <br />
               短歌で紡ぐ、言葉の世界。
             </p>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/sponsors"
+                className="inline-flex items-center justify-center rounded-full bg-amber-600 px-6 py-3 text-white font-semibold shadow-lg shadow-amber-200/60 hover:bg-amber-700 transition-colors"
+              >
+                お題(上の句)を投稿する(スポンサー)
+              </Link>
+              <Link
+                href="/sponsor-login"
+                className="inline-flex items-center justify-center rounded-full border border-amber-300 px-6 py-3 text-amber-900 font-semibold bg-white/80 hover:border-amber-400"
+              >
+                スポンサーログイン
+              </Link>
+            </div>
           </section>
 
           {/* 特徴 */}
