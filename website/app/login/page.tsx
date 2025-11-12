@@ -57,21 +57,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-pink-50">
-      <div className="w-full max-w-md p-8">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-amber-100">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-amber-900 mb-2">
-              よみびより
-            </h1>
-            <p className="text-amber-700">管理画面</p>
+    <div className="page-wrapper">
+      <div className="page-container flex justify-center">
+        <div className="content-card w-full max-w-md">
+          <div className="text-center space-y-2 mb-6">
+            <span className="badge">管理者ログイン</span>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">よみびより</h1>
+            <p className="text-[var(--color-text-secondary)]">管理画面</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-800 mb-2"
+                className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2"
               >
                 メールアドレス
               </label>
@@ -81,7 +80,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none transition-all"
                 placeholder="admin@example.com"
               />
             </div>
@@ -89,7 +88,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-800 mb-2"
+                className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2"
               >
                 パスワード
               </label>
@@ -99,7 +98,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -113,16 +112,15 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-pink-500 text-white font-medium rounded-lg hover:from-amber-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full btn-primary justify-center"
             >
               {loading ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
+          <p className="text-center text-sm text-[var(--color-text-muted)] mt-6">
+            管理者アカウントでログインしてください
+          </p>
         </div>
-
-        <p className="text-center text-sm text-amber-700 mt-6">
-          管理者アカウントでログインしてください
-        </p>
       </div>
     </div>
   )

@@ -8,19 +8,17 @@ export const metadata: Metadata = {
 
 export default function Support() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-amber-50">
-      <main className="mx-auto max-w-4xl px-6 py-16">
-        <div className="mb-8">
-          <Link href="/" className="text-amber-900 hover:text-amber-700 transition-colors">
+    <div className="page-wrapper">
+      <main className="page-container space-y-8">
+        <div>
+          <Link href="/" className="text-[var(--color-text-primary)] hover:underline">
             ← ホームに戻る
           </Link>
         </div>
 
-        <h1 className="text-4xl md:text-5xl font-bold text-amber-900 mb-8 font-serif">
-          サポート
-        </h1>
+        <h1 className="section-heading">サポート</h1>
 
-        <div className="prose prose-amber max-w-none bg-white rounded-lg p-8 shadow-sm border border-amber-100">
+        <div className="content-card prose prose-amber max-w-none">
           <section className="mb-8">
             <p className="text-gray-700 leading-relaxed">
               よみびよりをご利用いただき、ありがとうございます。

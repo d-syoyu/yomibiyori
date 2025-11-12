@@ -110,71 +110,48 @@ export default function SponsorDashboard() {
   ]
 
   if (loading) {
-    return <div className="text-purple-900">読み込み中...</div>
+    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-purple-900 mb-2">
-          ダッシュボード
-        </h1>
-        <p className="text-purple-700">
-          投稿したお題の管理状況を確認できます
-        </p>
-      </div>
+    <div className="page-wrapper">
+      <div className="page-container space-y-10">
+        <header className="space-y-2 text-center md:text-left">
+          <span className="badge">スポンサー</span>
+          <h1 className="section-heading text-3xl">ダッシュボード</h1>
+          <p className="section-subheading text-left">
+            投稿したお題の管理状況と審査ステータスを確認できます。
+          </p>
+        </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        {statCards.map((card) => (
-          <a
-            key={card.label}
-            href={card.href}
-            className="block group"
-          >
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-purple-100 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {statCards.map((card) => (
+            <a key={card.label} href={card.href} className="card group">
               <div
-                className={`inline-flex p-3 rounded-xl bg-gradient-to-r ${card.color} mb-4`}
+                className={`inline-flex p-3 rounded-xl text-white text-2xl font-bold bg-gradient-to-r ${card.color}`}
               >
-                <span className="text-white text-2xl font-bold">
-                  {card.value}
-                </span>
+                {card.value}
               </div>
-              <h3 className="text-lg font-semibold text-purple-900 group-hover:text-purple-700 transition-colors">
+              <h3 className="mt-4 text-lg font-semibold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent)]">
                 {card.label}
               </h3>
-            </div>
-          </a>
-        ))}
-      </div>
+            </a>
+          ))}
+        </section>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-purple-100 shadow-lg">
-        <h2 className="text-xl font-bold text-purple-900 mb-4">
-          クイックアクション
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <a
-            href="/sponsor/themes/new"
-            className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 hover:border-purple-300 transition-all group"
-          >
-            <span className="font-medium text-purple-900">
-              新しいお題を投稿
-            </span>
-            <span className="text-purple-600 group-hover:translate-x-1 transition-transform">
-              →
-            </span>
-          </a>
-          <a
-            href="/sponsor/themes?status=pending"
-            className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 hover:border-yellow-300 transition-all group"
-          >
-            <span className="font-medium text-yellow-900">
-              審査待ちお題を確認
-            </span>
-            <span className="text-yellow-600 group-hover:translate-x-1 transition-transform">
-              →
-            </span>
-          </a>
-        </div>
+        <section className="card space-y-4">
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">クイックアクション</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a href="/sponsor/themes/new" className="btn-secondary w-full justify-between">
+              <span>新しいお題を投稿</span>
+              <span>→</span>
+            </a>
+            <a href="/sponsor/themes?status=pending" className="btn-secondary w-full justify-between">
+              <span>審査待ちお題を確認</span>
+              <span>→</span>
+            </a>
+          </div>
+        </section>
       </div>
     </div>
   )

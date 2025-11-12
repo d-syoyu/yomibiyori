@@ -1,93 +1,75 @@
 import Link from "next/link";
 
+const highlights = [
+  {
+    icon: "🎋",
+    title: "日替わりのお題",
+    body: "恋愛、季節、日常、ユーモア。毎朝6時、新しい上の句が届きます。",
+  },
+  {
+    icon: "✨",
+    title: "リアルタイム評価",
+    body: "感謝(いいね)とランキングで、短歌の響きを共有できます。",
+  },
+  {
+    icon: "📱",
+    title: "縦書きの美",
+    body: "モバイルアプリの縦書きUIを踏襲した、美しい鑑賞体験。",
+  },
+];
+
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-amber-50">
-      <main className="mx-auto max-w-4xl px-6 py-16 md:py-24">
-        {/* ヘッダー */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-7xl font-bold text-amber-900 mb-4 font-serif">
-            よみびより
-          </h1>
-          <p className="text-xl md:text-2xl text-amber-800 font-light">
-            毎日新しいお題で、言葉を紡ぐ喜びを
+    <div className="page-wrapper">
+      <main className="page-container space-y-16">
+        <header className="text-center space-y-6">
+          <span className="badge">AIと詠む、日々のことば</span>
+          <h1 className="section-heading">よみびより</h1>
+          <p className="section-subheading">
+            毎日届く上の句に、あなたの下の句で応える。和の質感とモダンUIを融合した、短歌SNSです。
           </p>
-        </div>
-
-        {/* メインコンテンツ */}
-        <div className="space-y-12">
-          <section className="text-center">
-            <p className="text-lg md:text-xl text-gray-700 leading-relaxed">
-              毎日届く上の句に、あなたの下の句で応える。
-              <br />
-              短歌で紡ぐ、言葉の世界。
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/sponsors"
-                className="inline-flex items-center justify-center rounded-full bg-amber-600 px-6 py-3 text-white font-semibold shadow-lg shadow-amber-200/60 hover:bg-amber-700 transition-colors"
-              >
-                お題(上の句)を投稿する(スポンサー)
-              </Link>
-              <Link
-                href="/sponsor-login"
-                className="inline-flex items-center justify-center rounded-full border border-amber-300 px-6 py-3 text-amber-900 font-semibold bg-white/80 hover:border-amber-400"
-              >
-                スポンサーログイン
-              </Link>
-            </div>
-          </section>
-
-          {/* 特徴 */}
-          <section className="grid md:grid-cols-3 gap-8 mt-12">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-amber-100">
-              <div className="text-4xl mb-4">🎋</div>
-              <h3 className="text-lg font-semibold text-amber-900 mb-2">
-                日替わりのお題
-              </h3>
-              <p className="text-gray-600 text-sm">
-                恋愛、季節、日常、ユーモア。毎日新しい上の句が届きます。
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-amber-100">
-              <div className="text-4xl mb-4">✨</div>
-              <h3 className="text-lg font-semibold text-amber-900 mb-2">
-                リアルタイム評価
-              </h3>
-              <p className="text-gray-600 text-sm">
-                他のユーザーの作品を鑑賞し、いいねで評価。ランキングも楽しめます。
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-amber-100">
-              <div className="text-4xl mb-4">📱</div>
-              <h3 className="text-lg font-semibold text-amber-900 mb-2">
-                縦書きの美
-              </h3>
-              <p className="text-gray-600 text-sm">
-                日本の伝統的な縦書き表示で、短歌本来の美しさを体験できます。
-              </p>
-            </div>
-          </section>
-        </div>
-
-        {/* フッター */}
-        <footer className="mt-24 pt-8 border-t border-amber-200">
-          <nav className="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
-            <Link href="/privacy" className="hover:text-amber-900 transition-colors">
-              プライバシーポリシー
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/sponsors" className="btn-primary">
+              お題(上の句)を投稿する (スポンサー)
             </Link>
-            <Link href="/terms" className="hover:text-amber-900 transition-colors">
-              利用規約
+            <Link href="/sponsor-login" className="btn-secondary">
+              スポンサーログイン
             </Link>
-            <Link href="/support" className="hover:text-amber-900 transition-colors">
-              サポート
+          </div>
+        </header>
+
+        <section className="grid gap-6 md:grid-cols-3">
+          {highlights.map((item) => (
+            <div key={item.title} className="card space-y-3 text-center">
+              <div className="text-4xl">{item.icon}</div>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{item.title}</h3>
+              <p>{item.body}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="card space-y-6 text-center">
+          <h2 className="section-heading text-3xl">スポンサータイアップ</h2>
+          <p className="section-subheading">
+            和の世界観を大切にしたまま、ブランドメッセージを短歌の形で届けられます。 verified スポンサーには、お題投稿・配信管理ダッシュボードを提供しています。
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/sponsors" className="btn-primary">
+              スポンサー登録ページへ
             </Link>
+            <Link href="/support" className="btn-secondary">
+              導入相談をする
+            </Link>
+          </div>
+        </section>
+
+        <footer className="text-center space-y-4 py-8 border-t border-[var(--color-border)]">
+          <nav className="flex flex-wrap justify-center gap-6 text-sm text-[var(--color-text-secondary)]">
+            <Link href="/privacy">プライバシーポリシー</Link>
+            <Link href="/terms">利用規約</Link>
+            <Link href="/support">サポート</Link>
           </nav>
-          <p className="text-center mt-6 text-sm text-gray-500">
-            © 2024 Yomibiyori. All rights reserved.
-          </p>
+          <p className="text-sm text-[var(--color-text-muted)]">© 2024 Yomibiyori. All rights reserved.</p>
         </footer>
       </main>
     </div>

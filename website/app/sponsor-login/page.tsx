@@ -57,21 +57,20 @@ export default function SponsorLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      <div className="w-full max-w-md p-8">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-purple-100">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-purple-900 mb-2">
-              よみびより
-            </h1>
-            <p className="text-purple-700">スポンサー管理画面</p>
+    <div className="page-wrapper">
+      <div className="page-container flex justify-center">
+        <div className="content-card w-full max-w-md">
+          <div className="text-center space-y-2 mb-6">
+            <span className="badge">スポンサー向け</span>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">よみびより</h1>
+            <p className="text-[var(--color-text-secondary)]">スポンサー管理画面</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-800 mb-2"
+                className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2"
               >
                 メールアドレス
               </label>
@@ -81,7 +80,7 @@ export default function SponsorLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none transition-all"
                 placeholder="sponsor@example.com"
               />
             </div>
@@ -89,7 +88,7 @@ export default function SponsorLoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-800 mb-2"
+                className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2"
               >
                 パスワード
               </label>
@@ -99,7 +98,7 @@ export default function SponsorLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -113,16 +112,15 @@ export default function SponsorLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-medium rounded-lg hover:from-purple-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full btn-primary justify-center"
             >
               {loading ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
+          <p className="text-center text-sm text-[var(--color-text-muted)] mt-6">
+            スポンサーアカウントでログインしてください
+          </p>
         </div>
-
-        <p className="text-center text-sm text-purple-700 mt-6">
-          スポンサーアカウントでログインしてください
-        </p>
       </div>
     </div>
   )
