@@ -24,6 +24,7 @@ app.add_middleware(
         "http://localhost:8081",  # Expo web dev server
         "http://localhost:19006",  # Alternative Expo port
         "https://yomibiyori-production.up.railway.app",  # Production domain
+        "https://www.yomibiyori.com",  # Marketing/admin site
     ],
     allow_credentials=True,
     allow_methods=["*"],
