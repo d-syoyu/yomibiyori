@@ -12,8 +12,11 @@ from sqlalchemy.orm import Session
 
 from app.core.auth_helpers import get_current_sponsor
 from app.db.session import get_authenticated_db_session
-from app.models import SponsorCampaign, SponsorTheme, User
+from app.models import Sponsor, SponsorCampaign, SponsorTheme, User
 from app.schemas.sponsor import (
+    SponsorCreate,
+    SponsorResponse,
+    SponsorUpdate,
     CampaignCreate,
     CampaignListResponse,
     CampaignResponse,
@@ -27,6 +30,98 @@ from app.schemas.sponsor import (
 router = APIRouter(prefix="/sponsor", tags=["sponsor"])
 
 
+def _get_sponsor_record(session: Session, user_id: str) -> Sponsor | None:
+    """Return the sponsor profile for the current user if it exists."""
+
+    return session.get(Sponsor, user_id)
+
+
+@router.get("/profile", response_model=SponsorResponse)
+def get_sponsor_profile(
+    current_user: Annotated[User, Depends(get_current_sponsor)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> SponsorResponse:
+    """Return the sponsor profile associated with the authenticated sponsor."""
+
+    sponsor = _get_sponsor_record(session, current_user.id)
+    if not sponsor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sponsor profile not found",
+        )
+
+    return SponsorResponse.model_validate(sponsor)
+
+
+@router.post("/profile", response_model=SponsorResponse, status_code=status.HTTP_201_CREATED)
+def create_sponsor_profile(
+    payload: SponsorCreate,
+    current_user: Annotated[User, Depends(get_current_sponsor)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> SponsorResponse:
+    """Create a sponsor profile bound to the authenticated sponsor's user ID."""
+
+    existing = _get_sponsor_record(session, current_user.id)
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Sponsor profile already exists",
+        )
+
+    now = datetime.now(timezone.utc)
+    sponsor = Sponsor(
+        id=current_user.id,
+        company_name=payload.company_name,
+        contact_email=payload.contact_email or current_user.email,
+        official_url=payload.official_url,
+        logo_url=payload.logo_url,
+        plan_tier=payload.plan_tier,
+        verified=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+    session.add(sponsor)
+    session.commit()
+    session.refresh(sponsor)
+
+    return SponsorResponse.model_validate(sponsor)
+
+
+@router.patch("/profile", response_model=SponsorResponse)
+def update_sponsor_profile(
+    payload: SponsorUpdate,
+    current_user: Annotated[User, Depends(get_current_sponsor)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> SponsorResponse:
+    """Update the authenticated sponsor's profile details."""
+
+    sponsor = _get_sponsor_record(session, current_user.id)
+    if not sponsor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sponsor profile not found",
+        )
+
+    if payload.company_name is not None:
+        sponsor.company_name = payload.company_name
+    if payload.contact_email is not None:
+        sponsor.contact_email = payload.contact_email
+    if payload.official_url is not None:
+        sponsor.official_url = payload.official_url
+    if payload.logo_url is not None:
+        sponsor.logo_url = payload.logo_url
+    if payload.plan_tier is not None:
+        sponsor.plan_tier = payload.plan_tier
+
+    sponsor.updated_at = datetime.now(timezone.utc)
+
+    session.commit()
+    session.refresh(sponsor)
+
+    return SponsorResponse.model_validate(sponsor)
+
+
 @router.post("/campaigns", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 def create_campaign(
     payload: CampaignCreate,
@@ -34,6 +129,19 @@ def create_campaign(
     session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> CampaignResponse:
     """Create a new campaign."""
+    sponsor = _get_sponsor_record(session, current_user.id)
+    if not sponsor:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sponsor profile not found. Please create a profile before creating campaigns.",
+        )
+
+    if not sponsor.verified and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sponsor profile is pending verification",
+        )
+
     now = datetime.now(timezone.utc)
 
     # Convert targeting to JSONB format
@@ -41,7 +149,7 @@ def create_campaign(
 
     campaign = SponsorCampaign(
         id=str(uuid4()),
-        sponsor_id=current_user.id,
+        sponsor_id=sponsor.id,
         name=payload.name,
         budget=payload.budget,
         start_date=payload.start_date,

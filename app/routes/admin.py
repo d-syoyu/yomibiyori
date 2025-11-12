@@ -7,7 +7,7 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 from sqlalchemy.orm import Session
 
 from app.core.auth_helpers import get_current_admin
@@ -15,6 +15,9 @@ from app.core.logging import logger
 from app.db.session import get_authenticated_db_session
 from app.models import Sponsor, SponsorCampaign, SponsorTheme, Theme, User
 from app.schemas.sponsor import (
+    SponsorListResponse,
+    SponsorResponse,
+    SponsorVerificationRequest,
     SponsorThemeListResponse,
     SponsorThemeResponse,
     ThemeReviewApproveRequest,
@@ -23,6 +26,94 @@ from app.schemas.sponsor import (
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/sponsors", response_model=SponsorListResponse)
+def list_sponsors(
+    _current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+    verified: bool | None = Query(None, description="Filter by verification status"),
+    search: str | None = Query(None, description="Search by company name or email"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> SponsorListResponse:
+    """Return sponsor profiles for administrative review."""
+
+    filtered_stmt = select(Sponsor)
+
+    if verified is not None:
+        filtered_stmt = filtered_stmt.where(Sponsor.verified.is_(verified))
+
+    if search:
+        pattern = f"%{search.lower()}%"
+        search_clause = or_(
+            func.lower(Sponsor.company_name).like(pattern),
+            func.lower(Sponsor.contact_email).like(pattern),
+        )
+        filtered_stmt = filtered_stmt.where(search_clause)
+
+    total = session.scalar(
+        select(func.count()).select_from(filtered_stmt.subquery())
+    ) or 0
+
+    sponsors = session.scalars(
+        filtered_stmt.order_by(Sponsor.created_at.desc()).offset(offset).limit(limit)
+    ).all()
+
+    return SponsorListResponse(
+        sponsors=[SponsorResponse.model_validate(s) for s in sponsors],
+        total=total,
+    )
+
+
+@router.get("/sponsors/{sponsor_id}", response_model=SponsorResponse)
+def get_sponsor_profile(
+    sponsor_id: str,
+    _current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> SponsorResponse:
+    """Return details for a single sponsor profile."""
+
+    sponsor = session.get(Sponsor, sponsor_id)
+    if not sponsor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sponsor not found",
+        )
+
+    return SponsorResponse.model_validate(sponsor)
+
+
+@router.patch("/sponsors/{sponsor_id}/verification", response_model=SponsorResponse)
+def update_sponsor_verification(
+    sponsor_id: str,
+    payload: SponsorVerificationRequest,
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> SponsorResponse:
+    """Toggle sponsor verification status."""
+
+    sponsor = session.get(Sponsor, sponsor_id)
+    if not sponsor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sponsor not found",
+        )
+
+    sponsor.verified = payload.verified
+    sponsor.updated_at = datetime.now(timezone.utc)
+
+    session.commit()
+    session.refresh(sponsor)
+
+    logger.info(
+        "[Admin] Sponsor %s verification updated to %s by admin %s",
+        sponsor_id,
+        payload.verified,
+        current_admin.id,
+    )
+
+    return SponsorResponse.model_validate(sponsor)
 
 
 @router.get("/review/themes", response_model=SponsorThemeListResponse)

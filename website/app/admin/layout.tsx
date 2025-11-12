@@ -133,6 +133,12 @@ export default function AdminLayout({
             >
               お題審査
             </a>
+            <a
+              href="/admin/sponsors"
+              className="px-3 py-2 text-sm font-medium text-amber-900 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+            >
+              スポンサー承認
+            </a>
           </div>
         </div>
       </nav>

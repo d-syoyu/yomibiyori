@@ -48,6 +48,13 @@ class SponsorResponse(SponsorBase):
         from_attributes = True
 
 
+class SponsorListResponse(BaseModel):
+    """Paginated sponsor list."""
+
+    sponsors: list[SponsorResponse]
+    total: int
+
+
 # ===== Campaign Schemas =====
 
 
@@ -177,3 +184,9 @@ class ThemeReviewResponse(BaseModel):
     id: str
     status: str
     message: str
+
+
+class SponsorVerificationRequest(BaseModel):
+    """Admin request payload for toggling sponsor verification."""
+
+    verified: bool
