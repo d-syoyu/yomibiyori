@@ -23,7 +23,6 @@ export default function Home() {
     <div className="page-wrapper">
       <main className="page-container space-y-16">
         <header className="text-center space-y-6">
-          <span className="badge">AIと詠む、日々のことば</span>
           <h1 className="section-heading">よみびより</h1>
           <p className="section-subheading">
             毎日届く上の句に、あなたの下の句で応える。和の質感とモダンUIを融合した、短歌SNSです。
