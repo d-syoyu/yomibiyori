@@ -51,6 +51,9 @@ export default function Home() {
             <Link href="/support" className="btn-secondary">
               導入相談をする
             </Link>
+            <Link href="/sponsor-login" className="btn-secondary">
+              スポンサーログイン
+            </Link>
           </div>
         </section>
 
