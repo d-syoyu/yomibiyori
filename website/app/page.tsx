@@ -28,14 +28,6 @@ export default function Home() {
           <p className="section-subheading">
             毎日届く上の句に、あなたの下の句で応える。和の質感とモダンUIを融合した、短歌SNSです。
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/sponsors" className="btn-primary">
-              お題(上の句)を投稿する (スポンサー)
-            </Link>
-            <Link href="/sponsor-login" className="btn-secondary">
-              スポンサーログイン
-            </Link>
-          </div>
         </header>
 
         <section className="grid gap-6 md:grid-cols-3">
