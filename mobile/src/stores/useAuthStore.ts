@@ -12,6 +12,7 @@ import {
   deleteSecureItems,
 } from '../utils/secureStorage';
 import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest, UpdateProfileRequest } from '../types';
+import { resetAnalytics } from '../utils/analytics';
 
 // ============================================================================
 // Constants
@@ -216,6 +217,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Clear API token
       api.setAccessToken(null);
+      resetAnalytics();
 
       set({
         isAuthenticated: false,

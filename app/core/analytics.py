@@ -3,12 +3,28 @@ Analytics Module
 PostHog integration for event tracking and user behavior analysis
 """
 
+import hashlib
 import os
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
+
 from posthog import Posthog
 
 # PostHog client initialization
 _posthog_client: Optional[Posthog] = None
+
+
+def _hash_distinct_id(value: str) -> str:
+    """Return a stable SHA-256 hex digest for the supplied value."""
+
+    if not value:
+        value = "anonymous"
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _prepare_distinct_id(distinct_id: str, *, prehashed: bool) -> str:
+    """Return a hashed distinct_id unless the caller already hashed it."""
+
+    return distinct_id if prehashed else _hash_distinct_id(distinct_id)
 
 
 def get_posthog_client() -> Optional[Posthog]:
@@ -47,6 +63,8 @@ def track_event(
     distinct_id: str,
     event_name: str,
     properties: Optional[Dict[str, Any]] = None,
+    *,
+    prehashed_distinct_id: bool = False,
 ) -> None:
     """
     Track an event to PostHog
@@ -55,6 +73,7 @@ def track_event(
         distinct_id: Unique identifier for the user (typically user_id)
         event_name: Name of the event to track
         properties: Additional properties to attach to the event
+        prehashed_distinct_id: Set to True when the supplied identifier is already anonymized
     """
     client = get_posthog_client()
     if client is None:
@@ -62,7 +81,7 @@ def track_event(
 
     try:
         client.capture(
-            distinct_id=distinct_id,
+            distinct_id=_prepare_distinct_id(distinct_id, prehashed=prehashed_distinct_id),
             event=event_name,
             properties=properties or {},
         )
@@ -73,6 +92,8 @@ def track_event(
 def identify_user(
     distinct_id: str,
     properties: Optional[Dict[str, Any]] = None,
+    *,
+    prehashed_distinct_id: bool = False,
 ) -> None:
     """
     Identify a user in PostHog by setting user properties
@@ -90,7 +111,7 @@ def identify_user(
     try:
         # Use set() to set person properties (replaces identify() in v6+)
         client.set(
-            distinct_id=distinct_id,
+            distinct_id=_prepare_distinct_id(distinct_id, prehashed=prehashed_distinct_id),
             properties=properties or {},
         )
     except Exception as e:
@@ -121,6 +142,7 @@ class EventNames:
     USER_REGISTERED = "user_registered"
     USER_LOGGED_IN = "user_logged_in"
     PROFILE_UPDATED = "profile_updated"
+    ACCOUNT_DELETED = "account_deleted"
 
     # Content creation
     WORK_CREATED = "work_created"
@@ -134,6 +156,7 @@ class EventNames:
     THEME_VIEWED = "theme_viewed"
     RANKING_VIEWED = "ranking_viewed"
     MY_POEMS_VIEWED = "my_poems_viewed"
+    RANKING_FINALIZED = "ranking_finalized"
 
     # Errors
     API_ERROR = "api_error"

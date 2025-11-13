@@ -3,18 +3,38 @@
  * PostHog integration for event tracking
  */
 
+import Constants from 'expo-constants';
+import * as Crypto from 'expo-crypto';
 import PostHog from 'posthog-react-native';
 
 let posthogClient: PostHog | null = null;
+const extra = (Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {}) as {
+  posthogApiKey?: string;
+  posthogHost?: string;
+};
+
+const resolvePosthogApiKey = (): string =>
+  extra.posthogApiKey ?? process.env.EXPO_PUBLIC_POSTHOG_API_KEY ?? '';
+
+const resolvePosthogHost = (): string =>
+  extra.posthogHost ?? process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com';
+
+const sanitizeProperties = (properties?: Record<string, any>): Record<string, any> | undefined => {
+  if (!properties) {
+    return undefined;
+  }
+
+  const { email, ...rest } = properties;
+  return rest;
+};
 
 /**
  * Initialize PostHog client
  * Call this once at app startup
  */
 export const initAnalytics = async (): Promise<PostHog | null> => {
-  // TODO: Replace with your actual PostHog API key and host
-  const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY || '';
-  const POSTHOG_HOST = process.env.POSTHOG_HOST || 'https://app.posthog.com';
+  const POSTHOG_API_KEY = resolvePosthogApiKey();
+  const POSTHOG_HOST = resolvePosthogHost();
 
   if (!POSTHOG_API_KEY) {
     console.log('[Analytics] PostHog not configured (POSTHOG_API_KEY missing)');
@@ -54,7 +74,7 @@ export const trackEvent = (
   }
 
   try {
-    posthogClient.capture(eventName, properties);
+    posthogClient.capture(eventName, sanitizeProperties(properties));
   } catch (error) {
     console.error(`[Analytics] Failed to track event '${eventName}':`, error);
   }
@@ -63,16 +83,21 @@ export const trackEvent = (
 /**
  * Identify a user
  */
-export const identifyUser = (
+export const identifyUser = async (
   userId: string,
   properties?: Record<string, any>
-): void => {
+): Promise<void> => {
   if (!posthogClient) {
     return;
   }
 
   try {
-    posthogClient.identify(userId, properties);
+    const distinctId = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      userId,
+      { encoding: Crypto.CryptoEncoding.HEX }
+    );
+    posthogClient.identify(distinctId, sanitizeProperties(properties));
   } catch (error) {
     console.error(`[Analytics] Failed to identify user '${userId}':`, error);
   }

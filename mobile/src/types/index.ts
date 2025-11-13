@@ -136,6 +136,12 @@ export interface WorkDateSummary {
   total_likes: number;
 }
 
+export interface WorkImpressionResponse {
+  status: 'recorded';
+  impressions_count: number;
+  unique_viewers_count: number;
+}
+
 // Ranking Types
 // ============================================================================
 

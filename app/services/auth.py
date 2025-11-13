@@ -165,7 +165,7 @@ def _validate_redirect_target(redirect_to: str | None, *, settings):  # type: ig
         return target
 
     parsed = urlparse(target)
-    if not parsed.scheme or (not parsed.netloc and not parsed.path):
+    if not parsed.scheme:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect target")
 
     allowed_entries = list(settings.oauth_allowed_redirect_entries)
@@ -329,26 +329,26 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
 
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
-    # Track user registration event
-    try:
-        identify_user(
-            distinct_id=str(user.id),
-            properties={
-                "email": user.email,
-                "display_name": user.name,
-                "created_at": user.created_at.isoformat() if user.created_at else None,
-            }
-        )
-        track_event(
-            distinct_id=str(user.id),
-            event_name=EventNames.USER_REGISTERED,
-            properties={
-                "email": user.email,
-                "has_display_name": bool(user.name),
-            }
-        )
-    except Exception as e:
-        print(f"[Analytics] Failed to track signup: {e}")
+    if not user.analytics_opt_out:
+        try:
+            identify_user(
+                distinct_id=str(user.id),
+                properties={
+                    "display_name": user.name,
+                    "created_at": user.created_at.isoformat() if user.created_at else None,
+                    "has_display_name": bool(user.name),
+                },
+            )
+            track_event(
+                distinct_id=str(user.id),
+                event_name=EventNames.USER_REGISTERED,
+                properties={
+                    "has_display_name": bool(user.name),
+                    "registration_method": "email_password",
+                },
+            )
+        except Exception as e:
+            print(f"[Analytics] Failed to track signup: {e}")
 
     # Supabase may return session data either nested under "session" key or at root level
     session_payload = payload_json.get("session") or payload_json
@@ -427,17 +427,17 @@ def login_user(session: Session, *, payload: LoginRequest) -> LoginResponse:
     # Sync user record if needed
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
-    # Track user login event
-    try:
-        track_event(
-            distinct_id=str(user.id),
-            event_name=EventNames.USER_LOGGED_IN,
-            properties={
-                "email": user.email,
-            }
-        )
-    except Exception as e:
-        print(f"[Analytics] Failed to track login: {e}")
+    if not user.analytics_opt_out:
+        try:
+            track_event(
+                distinct_id=str(user.id),
+                event_name=EventNames.USER_LOGGED_IN,
+                properties={
+                    "auth_method": "email_password",
+                },
+            )
+        except Exception as e:
+            print(f"[Analytics] Failed to track login: {e}")
 
     access_token = payload_json.get("access_token")
     session_token = (
@@ -875,25 +875,24 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
     # Synchronize user to local database
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
-    # Track user OAuth login event
-    try:
-        identify_user(
-            distinct_id=str(user.id),
-            properties={
-                "email": user.email,
-                "display_name": user.name,
-            }
-        )
-        track_event(
-            distinct_id=str(user.id),
-            event_name=EventNames.USER_LOGGED_IN,
-            properties={
-                "email": user.email,
-                "auth_method": "google_oauth",
-            }
-        )
-    except Exception as e:
-        print(f"[Analytics] Failed to track OAuth login: {e}")
+    if not user.analytics_opt_out:
+        try:
+            identify_user(
+                distinct_id=str(user.id),
+                properties={
+                    "display_name": user.name,
+                    "has_display_name": bool(user.name),
+                },
+            )
+            track_event(
+                distinct_id=str(user.id),
+                event_name=EventNames.USER_LOGGED_IN,
+                properties={
+                    "auth_method": "google_oauth",
+                },
+            )
+        except Exception as e:
+            print(f"[Analytics] Failed to track OAuth login: {e}")
 
     # Return session token
     session_token = (
@@ -991,7 +990,7 @@ def delete_user_account(session: Session, *, user_id: str) -> None:
             track_event(
                 distinct_id=str(user.id),
                 event_name=EventNames.ACCOUNT_DELETED,
-                properties={"email": user.email}
+                properties=None,
             )
         except Exception as e:
             print(f"[Analytics] Failed to track account deletion: {e}")

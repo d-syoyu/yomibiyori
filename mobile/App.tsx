@@ -45,8 +45,9 @@ export default function App() {
         const user = useAuthStore.getState().user;
         if (user?.user_id) {
           identifyUser(user.user_id, {
-            email: user.email,
             display_name: user.display_name,
+          }).catch(error => {
+            console.error('[App] Failed to identify user for analytics:', error);
           });
         }
       }

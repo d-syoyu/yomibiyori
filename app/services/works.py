@@ -471,7 +471,8 @@ def record_impression(
                     "work_id": work_id,
                     "theme_id": str(work.theme_id),
                     "impressions_count": payload.count,
-                }
+                },
+                prehashed_distinct_id=True,
             )
         except Exception as exc:
             logger.error(f"[Analytics] Failed to track work view: {exc}")

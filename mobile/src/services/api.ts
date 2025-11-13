@@ -24,6 +24,7 @@ import type {
   WorkListResponse,
   WorkLikeResponse,
   WorkDateSummary,
+  WorkImpressionResponse,
   RankingResponse,
   ApiError,
 } from '../types';
@@ -360,6 +361,17 @@ class ApiClient {
     const response = await this.client.get<WorkListResponse>('/works/me', {
       params,
     });
+    return response.data;
+  }
+
+  async recordWorkImpression(
+    workId: string,
+    data: { viewer_hash?: string; count?: number } = {}
+  ): Promise<WorkImpressionResponse> {
+    const response = await this.client.post<WorkImpressionResponse>(
+      `/works/${workId}/impression`,
+      data
+    );
     return response.data;
   }
 

@@ -3,15 +3,16 @@
  * カテゴリ選択画面 - 今日のお題を表示（和×モダンデザイン）
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ThemeCategory, HomeStackParamList } from '../types';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import CategoryIcon from '../components/CategoryIcon';
+import { trackEvent, EventNames } from '../utils/analytics';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList, 'CategorySelection'>;
 
@@ -24,8 +25,20 @@ const CATEGORIES: { name: ThemeCategory; description: string }[] = [
 
 export default function CategorySelectionScreen() {
   const navigation = useNavigation<NavigationProp>();
+  
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent(EventNames.SCREEN_VIEWED, {
+        screen_name: 'CategorySelection',
+      });
+    }, [])
+  );
 
   const handleCategoryPress = (category: ThemeCategory) => {
+    trackEvent(EventNames.CATEGORY_SELECTED, {
+      screen_name: 'CategorySelection',
+      category,
+    });
     // アクション選択画面に遷移
     navigation.navigate('ActionSelection', { category });
   };

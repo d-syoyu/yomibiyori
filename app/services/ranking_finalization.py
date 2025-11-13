@@ -12,6 +12,7 @@ from redis import Redis
 from sqlalchemy import Select, delete, select
 from sqlalchemy.orm import Session
 
+from app.core.analytics import EventNames, track_event
 from app.core.config import get_settings
 from app.models import Ranking, Theme, Work
 from app.services.ranking import wilson_lower_bound
@@ -215,6 +216,17 @@ def finalize_rankings_for_date(
             print(f"Warning: Failed to delete Redis key {redis_key}: {exc}")
 
         finalised[theme.id] = rows
+
+        track_event(
+            distinct_id="system",
+            event_name=EventNames.RANKING_FINALIZED,
+            properties={
+                "theme_id": normalized_theme_id,
+                "category": theme.category,
+                "entries_count": len(rows),
+                "theme_date": theme.date.isoformat() if theme.date else None,
+            },
+        )
 
     session.commit()
     return finalised

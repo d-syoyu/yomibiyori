@@ -3,7 +3,7 @@
  * 鑑賞画面 - 他のユーザーの作品を鑑賞する
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
 import api from '../services/api';
@@ -25,10 +26,12 @@ import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
+import { getViewerHash } from '../utils/viewerHash';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
+const IMPRESSION_BATCH_LIMIT = 20;
 
 export default function AppreciationScreen({ route }: Props) {
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
@@ -42,6 +45,51 @@ export default function AppreciationScreen({ route }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentThemeId, setCurrentThemeId] = useState<string | null>(null);
+  const impressionsLoggedRef = useRef<Set<string>>(new Set());
+
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent(EventNames.SCREEN_VIEWED, {
+        screen_name: 'Appreciation',
+        category: selectedCategory,
+      });
+    }, [selectedCategory])
+  );
+
+  const recordImpressionsForWorks = useCallback(async (worksList: Work[]) => {
+    if (!worksList.length) {
+      return;
+    }
+
+    try {
+      const viewerHash = await getViewerHash();
+      const pendingWorks = worksList
+        .filter(work => !impressionsLoggedRef.current.has(work.id))
+        .slice(0, IMPRESSION_BATCH_LIMIT);
+
+      if (!pendingWorks.length) {
+        return;
+      }
+
+      await Promise.all(
+        pendingWorks.map(work =>
+          api
+            .recordWorkImpression(work.id, {
+              viewer_hash: viewerHash,
+              count: 1,
+            })
+            .then(() => {
+              impressionsLoggedRef.current.add(work.id);
+            })
+            .catch(error => {
+              console.warn('[AppreciationScreen] Failed to record impression', error);
+            })
+        )
+      );
+    } catch (error) {
+      console.error('[AppreciationScreen] Impression tracking failed:', error);
+    }
+  }, []);
 
   // Load works for the selected category
   const loadWorks = useCallback(async (isRefresh = false) => {
@@ -74,13 +122,14 @@ export default function AppreciationScreen({ route }: Props) {
       setWorks(worksData);
 
       setThemesMap(newThemesMap);
+      void recordImpressionsForWorks(worksData);
     } catch (error: any) {
       handleError(error, 'work_fetching');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedCategory, getTodayTheme, handleError]);
+  }, [selectedCategory, getTodayTheme, handleError, recordImpressionsForWorks]);
 
   // Load works when category changes
   useEffect(() => {
@@ -100,13 +149,6 @@ export default function AppreciationScreen({ route }: Props) {
             : work
         )
       );
-
-      // Track like event
-      trackEvent(EventNames.WORK_LIKED, {
-        work_id: workId,
-        theme_id: currentThemeId,
-        category: selectedCategory,
-      });
 
       // No toast or haptic - just visual feedback with updated count
     } catch (error: any) {
@@ -226,7 +268,7 @@ export default function AppreciationScreen({ route }: Props) {
                   <View key={work.id} style={styles.workCard}>
                     {/* 作品（下の句）縦書き表示 */}
                     <View style={styles.workSection}>
-                      <View style={styles.verticalTextContainer}>
+                      <View style={styles.workVerticalTextContainer}>
                         <VerticalText
                           text={work.text}
                           textStyle={styles.workVerticalText}
@@ -421,11 +463,19 @@ const styles = StyleSheet.create({
   workCard: {
     backgroundColor: colors.background.card,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     ...shadow.md,
   },
   workSection: {
     marginBottom: spacing.sm,
+  },
+  workVerticalTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 240,
+    paddingVertical: spacing.sm,
+    marginVertical: spacing.sm,
   },
   verticalTextContainer: {
     alignItems: 'center',
@@ -435,7 +485,7 @@ const styles = StyleSheet.create({
   },
   workVerticalText: {
     fontSize: fontSize.poem,
-    lineHeight: 32,
+    lineHeight: 36,
     color: colors.text.primary,
     fontFamily: fontFamily.regular,
   },

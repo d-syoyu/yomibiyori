@@ -108,7 +108,8 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
 
     # Theme day changes at 6:00 JST
     # If before 6:00 JST, use yesterday's theme
-    if now_jst.hour < 6:
+    rollover_hour = settings.theme_day_rollover_hour
+    if now_jst.hour < rollover_hour:
         today_date = (now_jst - timedelta(days=1)).date()
     else:
         today_date = now_jst.date()

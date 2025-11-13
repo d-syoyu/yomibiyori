@@ -46,6 +46,21 @@ export default function LoginScreen() {
   const showError = useToastStore((state) => state.showError);
   const { handleError } = useApiErrorHandler();
 
+  const identifyCurrentUser = async () => {
+    const user = useAuthStore.getState().user;
+    if (!user?.user_id) {
+      return;
+    }
+
+    try {
+      await identifyUser(user.user_id, {
+        display_name: user.display_name,
+      });
+    } catch (identifyError) {
+      console.error('[LoginScreen] Failed to identify user:', identifyError);
+    }
+  };
+
   const handleAuth = async () => {
     if (!email || !password) {
       showError(VALIDATION_MESSAGES.login.emptyCredentials);
@@ -69,10 +84,7 @@ export default function LoginScreen() {
       // Identify user after successful login/signup
       const user = useAuthStore.getState().user;
       if (user?.user_id) {
-        identifyUser(user.user_id, {
-          email: user.email,
-          display_name: user.display_name,
-        });
+        await identifyCurrentUser();
       }
 
       // Close modal and return to previous screen if possible
@@ -164,10 +176,7 @@ export default function LoginScreen() {
         // Identify user after successful OAuth login
         const user = useAuthStore.getState().user;
         if (user?.user_id) {
-          identifyUser(user.user_id, {
-            email: user.email,
-            display_name: user.display_name,
-          });
+        await identifyCurrentUser();
         }
 
         // Close modal and return to previous screen if possible
@@ -269,10 +278,7 @@ export default function LoginScreen() {
         // Identify user after successful OAuth login
         const user = useAuthStore.getState().user;
         if (user?.user_id) {
-          identifyUser(user.user_id, {
-            email: user.email,
-            display_name: user.display_name,
-          });
+        await identifyCurrentUser();
         }
 
         // Close modal and return to previous screen if possible

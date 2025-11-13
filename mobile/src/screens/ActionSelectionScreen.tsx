@@ -3,10 +3,10 @@
  * アクション選択画面 - 詠む or 鑑賞
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, RootStackParamList, ThemeCategory } from '../types';
@@ -15,6 +15,7 @@ import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import CategoryIcon from '../components/CategoryIcon';
+import { trackEvent, EventNames } from '../utils/analytics';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ActionSelection'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -26,6 +27,15 @@ export default function ActionSelectionScreen({ route }: Props) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const { category } = route.params;
   const [isLoading, setIsLoading] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent(EventNames.SCREEN_VIEWED, {
+        screen_name: 'ActionSelection',
+        category,
+      });
+    }, [category])
+  );
 
   const handleCompose = async () => {
     // Check authentication before allowing composition

@@ -3,7 +3,7 @@
  * ランキング画面 - お題ごとのランキング表示
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../services/api';
 import type { ThemeCategory, RankingEntry, Theme } from '../types';
 import VerticalText from '../components/VerticalText';
@@ -37,6 +38,15 @@ export default function RankingScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFinalized, setIsFinalized] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent(EventNames.SCREEN_VIEWED, {
+        screen_name: 'Ranking',
+        category: selectedCategory,
+      });
+    }, [selectedCategory])
+  );
 
   const fetchRankings = async (category: ThemeCategory) => {
     try {
@@ -439,7 +449,8 @@ const styles = StyleSheet.create({
   rankingCard: {
     backgroundColor: colors.background.card,
     borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     flexDirection: 'row',
     alignItems: 'flex-start',
     ...shadow.md,
@@ -470,16 +481,18 @@ const styles = StyleSheet.create({
   workInfo: {
     flex: 1,
     alignItems: 'center',
+    paddingHorizontal: spacing.sm,
   },
   workVerticalContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 60,
+    minHeight: 140,
+    paddingVertical: spacing.xs,
     marginBottom: spacing.sm,
   },
   workVerticalText: {
-    fontSize: fontSize.body,
-    lineHeight: 28,
+    fontSize: fontSize.poem,
+    lineHeight: 34,
     color: colors.text.primary,
     fontFamily: fontFamily.regular,
   },

@@ -3,7 +3,7 @@
  * 詠み作成画面 - 俳句を作成する
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../types';
@@ -42,6 +42,15 @@ export default function CompositionScreen({ route }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const theme = route.params?.theme;
+
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent(EventNames.SCREEN_VIEWED, {
+        screen_name: 'Composition',
+        category: theme?.category,
+      });
+    }, [theme?.category])
+  );
 
   const handleSubmit = async () => {
     console.log('[CompositionScreen] handleSubmit called');
@@ -77,18 +86,6 @@ export default function CompositionScreen({ route }: Props) {
 
       // 投稿成功
       showSuccess(SUCCESS_MESSAGES.workCreated);
-
-      // Track work creation event
-      try {
-        trackEvent(EventNames.WORK_CREATED, {
-          theme_id: theme.id,
-          category: theme.category,
-          text_length: line1.trim().length + line2.trim().length + 1,
-        });
-      } catch (trackError) {
-        console.error('[CompositionScreen] Failed to track event:', trackError);
-        // トラッキングエラーは無視（ユーザー体験に影響しない）
-      }
 
       // Clear input
       setLine1('');
@@ -472,3 +469,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
   },
 });
+
+
+

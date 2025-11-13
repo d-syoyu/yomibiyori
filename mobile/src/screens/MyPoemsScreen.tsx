@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useTutorialStore } from '../stores/useTutorialStore';
@@ -55,6 +55,14 @@ export default function MyPoemsScreen() {
 
   // Tutorial modal
   const [tutorialModalVisible, setTutorialModalVisible] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent(EventNames.SCREEN_VIEWED, {
+        screen_name: 'MyPoems',
+      });
+    }, [])
+  );
 
   // Load summary of user's works (日付ごとのサマリーのみ取得)
   const loadMyWorksSummary = useCallback(async (isRefresh = false) => {

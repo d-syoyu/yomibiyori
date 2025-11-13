@@ -91,6 +91,13 @@ class Settings(BaseSettings):
         alias="APP_TIMEZONE",
         description="IANA timezone used to resolve the daily theme window.",
     )
+    theme_day_rollover_hour: int = Field(
+        default=6,
+        alias="THEME_DAY_ROLLOVER_HOUR",
+        description="Hour in local timezone when the theme day advances to the next date (0-23).",
+        ge=0,
+        le=23,
+    )
     sentry_dsn: str | None = Field(
         default=None,
         alias="SENTRY_DSN",
