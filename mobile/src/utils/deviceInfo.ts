@@ -13,11 +13,12 @@ import type { DeviceInfo } from '../types';
  */
 export async function collectDeviceInfo(): Promise<DeviceInfo> {
   try {
+    const localizationData = Localization as unknown as Record<string, any>;
     const deviceInfo: DeviceInfo = {
       platform: Device.osName || 'unknown',
       os_version: Device.osVersion || undefined,
-      timezone: Localization.timezone || undefined,
-      locale: Localization.locale || undefined,
+      timezone: localizationData.timezone || undefined,
+      locale: localizationData.locale || undefined,
     };
 
     return deviceInfo;

@@ -11,12 +11,12 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, type ViewStyle, type TextStyle, type StyleProp } from 'react-native';
 
 interface VerticalTextProps {
   text: string;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   /** 段組み方向: 'ltr' (左→右) or 'rtl' (右→左) */
   direction?: 'ltr' | 'rtl';
   /** 音節数で自動分割（例: [5, 7, 5] または [7, 7]） */

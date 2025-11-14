@@ -22,13 +22,16 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useTutorialStore } from '../stores/useTutorialStore';
 import type { Work, Theme, WorkDateSummary, MyPoemsStackParamList } from '../types';
+import type { SharePayload } from '../types/share';
 import api from '../services/api';
-import VerticalText from '../components/VerticalText';
+import WorkCard from '../components/WorkCard';
+import ShareSheet from '../components/ShareSheet';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
 import TutorialModal from '../components/TutorialModal';
+import { createProfileSharePayload } from '../utils/share';
 
 type MyPoemsScreenNavigationProp = NativeStackNavigationProp<MyPoemsStackParamList, 'MyPoemsList'>;
 
@@ -55,6 +58,8 @@ export default function MyPoemsScreen() {
 
   // Tutorial modal
   const [tutorialModalVisible, setTutorialModalVisible] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -157,6 +162,17 @@ export default function MyPoemsScreen() {
   const handleRefresh = () => {
     loadMyWorksSummary(true);
   };
+
+  const openShareSheet = useCallback((work: Work, theme?: Theme) => {
+    const payload = createProfileSharePayload(work, theme);
+    setSharePayload(payload);
+    setShareSheetVisible(true);
+  }, []);
+
+  const closeShareSheet = useCallback(() => {
+    setShareSheetVisible(false);
+    setSharePayload(null);
+  }, []);
 
   const toggleDateExpansion = async (date: string) => {
     setExpandedDates((prev) => {
@@ -360,38 +376,17 @@ export default function MyPoemsScreen() {
                               <Text style={styles.loadingText}>作品を読み込み中...</Text>
                             </View>
                           ) : cached && cached.works.length > 0 ? (
-                            cached.works.map(({ work, theme }) => {
-                              // Combine theme (upper verse) and work (lower verse) into one tanka
-                              const tankaText = theme ? `${theme.text}\n${work.text}` : work.text;
-
-                              return (
-                                <View key={work.id} style={styles.workCard}>
-                                  {/* Complete Tanka (短歌) */}
-                                  <View style={styles.tankaSection}>
-                                    <View style={styles.tankaTextContainer}>
-                                      <VerticalText
-                                        text={tankaText}
-                                        textStyle={styles.tankaVerticalText}
-                                        direction="rtl"
-                                      />
-                                    </View>
-                                  </View>
-
-                                  {/* Footer with time and likes */}
-                                  <View style={styles.workFooter}>
-                                    <Text style={styles.workTime}>
-                                      {new Date(work.created_at).toLocaleTimeString('ja-JP', {
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      })}
-                                    </Text>
-                                    <View style={styles.likesInfo}>
-                                      <Text style={styles.likesText}>♥ {work.likes_count}</Text>
-                                    </View>
-                                  </View>
-                                </View>
-                              );
-                            })
+                            cached.works.map(({ work, theme }) => (
+                              <WorkCard
+                                key={work.id}
+                                upperText={theme?.text}
+                                lowerText={work.text}
+                                category={theme?.category ?? '恋愛'}
+                                displayName={work.display_name}
+                                likesCount={work.likes_count}
+                                onShare={() => openShareSheet(work, theme)}
+                              />
+                            ))
                           ) : (
                             <View style={styles.emptyState}>
                               <Text style={styles.emptyStateSubtext}>
@@ -413,6 +408,12 @@ export default function MyPoemsScreen() {
         <TutorialModal
           visible={tutorialModalVisible}
           onClose={() => setTutorialModalVisible(false)}
+        />
+
+        <ShareSheet
+          visible={shareSheetVisible}
+          payload={sharePayload}
+          onClose={closeShareSheet}
         />
       </View>
     </SafeAreaView>
@@ -645,52 +646,6 @@ const styles = StyleSheet.create({
   accordionContent: {
     marginTop: spacing.sm,
     gap: spacing.sm,
-  },
-  workCard: {
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    ...shadow.sm,
-  },
-  tankaSection: {
-    marginBottom: spacing.sm,
-  },
-  tankaTextContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 160,
-    paddingVertical: spacing.sm,
-  },
-  tankaVerticalText: {
-    fontSize: 22,
-    lineHeight: 36,
-    color: colors.text.primary,
-    fontFamily: fontFamily.medium,
-  },
-  workFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(107, 123, 79, 0.2)',
-  },
-  workTime: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.regular,
-    color: colors.text.tertiary,
-  },
-  likesInfo: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-  },
-  likesText: {
-    fontSize: fontSize.bodySmall,
-    fontFamily: fontFamily.semiBold,
-    color: colors.status.error,
-    letterSpacing: 0.3,
   },
   loginPromptContainer: {
     flex: 1,

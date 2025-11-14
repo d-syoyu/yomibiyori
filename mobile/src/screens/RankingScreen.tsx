@@ -13,17 +13,20 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../services/api';
 import type { ThemeCategory, RankingEntry, Theme } from '../types';
-import VerticalText from '../components/VerticalText';
+import type { SharePayload } from '../types/share';
+import { Ionicons } from '@expo/vector-icons';
 import CategoryIcon from '../components/CategoryIcon';
+import WorkCard from '../components/WorkCard';
+import ShareSheet from '../components/ShareSheet';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
+import { createRankingSharePayload } from '../utils/share';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
@@ -38,6 +41,8 @@ export default function RankingScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFinalized, setIsFinalized] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -109,6 +114,20 @@ export default function RankingScreen() {
     setSelectedCategory(category);
   };
 
+  const handleShareRanking = useCallback((entry: RankingEntry) => {
+    if (!theme) {
+      return;
+    }
+    const payload = createRankingSharePayload(entry, theme);
+    setSharePayload(payload);
+    setShareSheetVisible(true);
+  }, [theme]);
+
+  const closeShareSheet = useCallback(() => {
+    setShareSheetVisible(false);
+    setSharePayload(null);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
@@ -163,32 +182,7 @@ export default function RankingScreen() {
             ))}
           </View>
 
-          {/* Theme Display */}
-          {theme && (
-            <LinearGradient
-              colors={[
-                colors.category[theme.category].gradient[0],
-                colors.category[theme.category].gradient[1],
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.themeCard,
-                { shadowColor: colors.category[theme.category].shadow },
-              ]}
-            >
-              <View style={styles.glassOverlay}>
-                <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
-                <View style={styles.verticalTextContainer}>
-                  <VerticalText
-                    text={theme.text}
-                    textStyle={styles.themeVerticalText}
-                    direction="rtl"
-                  />
-                </View>
-              </View>
-            </LinearGradient>
-          )}
+          {/* Theme display removed to align with combined cards */}
         </View>
 
         {/* Scrollable Ranking List */}
@@ -235,34 +229,40 @@ export default function RankingScreen() {
           <View style={styles.rankingList}>
             {rankings.map((entry) => (
               <View key={entry.work_id} style={styles.rankingCard}>
-                <View
-                  style={[
-                    styles.rankBadge,
-                    entry.rank === 1 && styles.rankBadgeGold,
-                    entry.rank === 2 && styles.rankBadgeSilver,
-                    entry.rank === 3 && styles.rankBadgeBronze,
-                  ]}
-                >
-                  <Text style={styles.rankText}>{entry.rank}</Text>
-                </View>
-                <View style={styles.workInfo}>
-                  <View style={styles.workVerticalContainer}>
-                    <VerticalText
-                      text={entry.text}
-                      textStyle={styles.workVerticalText}
-                      direction="rtl"
-                    />
-                  </View>
-                  <Text style={styles.workAuthor}>by {entry.display_name}</Text>
-                </View>
-                <Text style={styles.scoreText}>
-                  {(entry.score * 100).toFixed(1)}%
-                </Text>
+                <WorkCard
+                  upperText={theme?.text}
+                  lowerText={entry.text}
+                  category={theme?.category ?? '恋愛'}
+                  displayName={entry.display_name}
+                  badgeLabel={`${entry.rank}位`}
+                  customActions={
+                    <View style={styles.rankActions}>
+                      <Text style={styles.scoreText}>
+                        {(entry.score * 100).toFixed(1)}%
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.shareButton}
+                        onPress={() => handleShareRanking(entry)}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel="ランキングを共有"
+                      >
+                        <Ionicons name="share-outline" size={18} color={colors.text.secondary} />
+                      </TouchableOpacity>
+                    </View>
+                  }
+                />
               </View>
             ))}
           </View>
         )}
         </ScrollView>
+
+        <ShareSheet
+          visible={shareSheetVisible}
+          payload={sharePayload}
+          onClose={closeShareSheet}
+        />
       </View>
     </SafeAreaView>
   );
@@ -363,36 +363,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontFamily: fontFamily.semiBold,
   },
-  themeCard: {
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.sm,
-    ...shadow.lg,
-    overflow: 'hidden',
-  },
-  glassOverlay: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: spacing.md,
-  },
-  themeLabel: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.medium,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-    letterSpacing: 1,
-    textAlign: 'center',
-  },
-  verticalTextContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120,
-    marginVertical: spacing.sm,
-  },
-  themeVerticalText: {
-    fontSize: fontSize.poem,
-    lineHeight: 34,
-    color: colors.text.primary,
-    fontFamily: fontFamily.medium,
-  },
   loadingContainer: {
     backgroundColor: colors.background.card,
     borderRadius: borderRadius.lg,
@@ -442,69 +412,40 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   rankingList: {
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
   rankingCard: {
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    ...shadow.md,
-  },
-  rankBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.text.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  rankBadgeGold: {
-    backgroundColor: colors.status.warning,
-  },
-  rankBadgeSilver: {
-    backgroundColor: colors.text.tertiary,
-  },
-  rankBadgeBronze: {
-    backgroundColor: colors.status.error,
-  },
-  rankText: {
-    fontSize: fontSize.h4,
-    fontFamily: fontFamily.semiBold,
-    color: colors.text.inverse,
-  },
-  workInfo: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  workVerticalContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 140,
-    paddingVertical: spacing.xs,
     marginBottom: spacing.sm,
   },
-  workVerticalText: {
-    fontSize: fontSize.poem,
-    lineHeight: 34,
-    color: colors.text.primary,
-    fontFamily: fontFamily.regular,
+  rankInfo: {
+    minWidth: 70,
+    alignItems: 'flex-end',
+    gap: 4,
+    marginRight: spacing.sm,
   },
-  workAuthor: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.regular,
-    color: colors.text.tertiary,
-    letterSpacing: 0.3,
+  rankActions: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  rankBadgeText: {
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
   },
   scoreText: {
     fontSize: fontSize.body,
     fontFamily: fontFamily.semiBold,
     color: colors.text.secondary,
+  },
+  shareButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 54, 93, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

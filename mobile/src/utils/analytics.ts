@@ -8,9 +8,17 @@ import * as Crypto from 'expo-crypto';
 import PostHog from 'posthog-react-native';
 
 let posthogClient: PostHog | null = null;
-const extra = (Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {}) as {
+const expoExtra = (Constants.expoConfig?.extra ?? {}) as {
   posthogApiKey?: string;
   posthogHost?: string;
+};
+const manifestExtra =
+  (Constants.manifest && typeof Constants.manifest === 'object' && 'extra' in Constants.manifest
+    ? (Constants.manifest as { extra?: typeof expoExtra }).extra
+    : {}) ?? {};
+const extra = {
+  ...manifestExtra,
+  ...expoExtra,
 };
 
 const resolvePosthogApiKey = (): string =>

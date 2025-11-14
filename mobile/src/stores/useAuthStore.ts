@@ -87,6 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user_id: response.user_id,
         email: response.email,
         display_name: response.display_name,
+        analytics_opt_out: false,
       };
 
       // Store user profile securely
@@ -134,6 +135,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user_id: response.user_id,
         email: response.email,
         display_name: response.display_name,
+        analytics_opt_out: false,
       };
 
       // Store user profile securely
@@ -181,6 +183,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user_id: response.user_id,
         email: response.email,
         display_name: response.display_name,
+        analytics_opt_out: false,
       };
 
       // Store user profile securely
@@ -256,7 +259,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('[Auth] API token set');
 
         // Parse user profile
-        const user: UserProfile = JSON.parse(profileData);
+        const parsedUser = JSON.parse(profileData) as Partial<UserProfile>;
+        const user: UserProfile = {
+          analytics_opt_out: false,
+          ...parsedUser,
+        } as UserProfile;
         console.log('[Auth] User profile parsed:', user.email);
 
         // Try to verify token, but fall back to cached profile if verification fails

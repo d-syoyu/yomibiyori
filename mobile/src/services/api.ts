@@ -37,7 +37,16 @@ type ExpoExtra = {
   apiBaseUrl?: string;
 };
 
-const extra = (Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {}) as ExpoExtra;
+const expoExtra = (Constants.expoConfig?.extra ?? {}) as ExpoExtra;
+const manifestExtra =
+  (Constants.manifest && typeof Constants.manifest === 'object' && 'extra' in Constants.manifest
+    ? (Constants.manifest as { extra?: ExpoExtra }).extra
+    : {}) ?? {};
+
+const extra: ExpoExtra = {
+  ...manifestExtra,
+  ...expoExtra,
+};
 
 const API_BASE_URL =
   extra.apiBaseUrl ?? process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';

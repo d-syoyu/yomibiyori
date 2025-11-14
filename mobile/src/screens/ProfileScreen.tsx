@@ -16,6 +16,9 @@ import {
   ActivityIndicator,
   Alert,
   useWindowDimensions,
+  type StyleProp,
+  type ViewStyle,
+  type FlexAlignType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -180,15 +183,17 @@ export default function ProfileScreen() {
   }
 
   // 動的なコンテンツスタイル
-  const scrollContentStyle = [
+  const responsiveScrollContentStyle: ViewStyle = {
+    paddingHorizontal: isTablet ? spacing.xl * 2 : spacing.lg,
+    paddingBottom: isTablet ? spacing.xxl * 4 : spacing.xxl * 2,
+    maxWidth: isTablet ? 600 : undefined,
+    alignSelf: isTablet ? ('center' as FlexAlignType) : undefined,
+    width: isTablet ? '100%' : undefined,
+  };
+
+  const scrollContentStyle: StyleProp<ViewStyle> = [
     styles.scrollContent,
-    {
-      paddingHorizontal: isTablet ? spacing.xl * 2 : spacing.lg,
-      paddingBottom: isTablet ? spacing.xxl * 4 : spacing.xxl * 2,
-      maxWidth: isTablet ? 600 : undefined,
-      alignSelf: isTablet ? 'center' : undefined,
-      width: isTablet ? '100%' : undefined,
-    },
+    responsiveScrollContentStyle,
   ];
 
   return (
@@ -217,7 +222,7 @@ export default function ProfileScreen() {
               value={displayName}
               onChangeText={setDisplayName}
               placeholder="例: 太郎"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.text.secondary}
               maxLength={80}
             />
           </View>

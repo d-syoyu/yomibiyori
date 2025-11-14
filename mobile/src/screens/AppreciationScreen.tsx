@@ -13,20 +13,22 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
+import type { SharePayload } from '../types/share';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
 import CategoryIcon from '../components/CategoryIcon';
+import WorkCard from '../components/WorkCard';
+import ShareSheet from '../components/ShareSheet';
 import { useThemeStore } from '../stores/useThemeStore';
-import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
 import { getViewerHash } from '../utils/viewerHash';
+import { createAppreciationSharePayload } from '../utils/share';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 
@@ -45,6 +47,8 @@ export default function AppreciationScreen({ route }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentThemeId, setCurrentThemeId] = useState<string | null>(null);
+  const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const impressionsLoggedRef = useRef<Set<string>>(new Set());
 
   useFocusEffect(
@@ -160,6 +164,18 @@ export default function AppreciationScreen({ route }: Props) {
     loadWorks(true);
   };
 
+  const openShareSheet = useCallback((work: Work) => {
+    const theme = themesMap.get(work.theme_id);
+    const payload = createAppreciationSharePayload(work, theme);
+    setSharePayload(payload);
+    setShareSheetVisible(true);
+  }, [themesMap]);
+
+  const closeShareSheet = useCallback(() => {
+    setShareSheetVisible(false);
+    setSharePayload(null);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
@@ -195,47 +211,7 @@ export default function AppreciationScreen({ route }: Props) {
             ))}
           </View>
 
-          {/* お題カード（固定） */}
-          {currentThemeId && themesMap.has(currentThemeId) && (() => {
-            const theme = themesMap.get(currentThemeId)!;
-            return (
-              <LinearGradient
-                colors={[
-                  colors.category[theme.category].gradient[0],
-                  colors.category[theme.category].gradient[1],
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                  styles.fixedThemeCard,
-                  { shadowColor: colors.category[theme.category].shadow },
-                ]}
-              >
-                <View style={styles.glassOverlay}>
-                  {theme.sponsored && theme.sponsor_company_name && (
-                    <View style={styles.sponsorBadge}>
-                      <Text style={styles.sponsorBadgeText}>
-                        スポンサー提供
-                      </Text>
-                    </View>
-                  )}
-                  <Text style={styles.themeCardLabel}>今日のお題（上の句）</Text>
-                  <View style={styles.verticalTextContainer}>
-                    <VerticalText
-                      text={theme.text}
-                      textStyle={styles.themeCardText}
-                      direction="rtl"
-                    />
-                  </View>
-                  {theme.sponsored && theme.sponsor_company_name && (
-                    <Text style={styles.sponsorInfo}>
-                      {theme.sponsor_company_name}
-                    </Text>
-                  )}
-                </View>
-              </LinearGradient>
-            );
-          })()}
+          {/* Theme info now handled within each work card */}
         </View>
 
         {/* 作品リスト（スクロール可能） */}
@@ -264,45 +240,31 @@ export default function AppreciationScreen({ route }: Props) {
             </View>
           ) : (
             <View style={styles.worksList}>
-              {works.map((work) => (
-                  <View key={work.id} style={styles.workCard}>
-                    {/* 作品（下の句）縦書き表示 */}
-                    <View style={styles.workSection}>
-                      <View style={styles.workVerticalTextContainer}>
-                        <VerticalText
-                          text={work.text}
-                          textStyle={styles.workVerticalText}
-                          direction="rtl"
-                        />
-                      </View>
-                    </View>
-
-                    {/* フッター */}
-                    <View style={styles.workFooter}>
-                      <View style={styles.workMetaContainer}>
-                        <Text style={styles.workAuthor}>by {work.display_name}</Text>
-                        <Text style={styles.workMeta}>
-                          {new Date(work.created_at).toLocaleTimeString('ja-JP', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.likeButton}
-                        onPress={() => handleLike(work.id)}
-                      >
-                        <Text style={styles.likeButtonText}>
-                          ♥ {work.likes_count}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-              ))}
+              {works.map((work) => {
+                const theme = themesMap.get(work.theme_id);
+                return (
+                  <WorkCard
+                    key={work.id}
+                    upperText={theme?.text}
+                    lowerText={work.text}
+                    category={theme?.category ?? '恋愛'}
+                    displayName={work.display_name}
+                    likesCount={work.likes_count}
+                    onLike={() => handleLike(work.id)}
+                    onShare={() => openShareSheet(work)}
+                  />
+                );
+              })}
             </View>
           )}
         </View>
         </ScrollView>
+
+        <ShareSheet
+          visible={shareSheetVisible}
+          payload={sharePayload}
+          onClose={closeShareSheet}
+        />
       </View>
     </SafeAreaView>
   );
@@ -363,53 +325,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontFamily: fontFamily.semiBold,
   },
-  fixedThemeCard: {
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.sm,
-    ...shadow.lg,
-    overflow: 'hidden',
-  },
-  glassOverlay: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: spacing.md,
-  },
-  sponsorBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.sm,
-    ...shadow.sm,
-  },
-  sponsorBadgeText: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.semiBold,
-    color: colors.text.primary,
-    letterSpacing: 0.5,
-  },
-  themeCardLabel: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.medium,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-    letterSpacing: 1,
-    textAlign: 'center',
-  },
-  themeCardText: {
-    fontSize: fontSize.poem,
-    lineHeight: 34,
-    color: colors.text.primary,
-    fontFamily: fontFamily.medium,
-  },
-  sponsorInfo: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.medium,
-    color: colors.text.secondary,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
   worksScrollView: {
     flex: 1,
   },
@@ -458,77 +373,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   worksList: {
-    gap: spacing.sm,
-  },
-  workCard: {
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    ...shadow.md,
-  },
-  workSection: {
-    marginBottom: spacing.sm,
-  },
-  workVerticalTextContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 240,
-    paddingVertical: spacing.sm,
-    marginVertical: spacing.sm,
-  },
-  verticalTextContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120,
-    marginVertical: spacing.sm,
-  },
-  workVerticalText: {
-    fontSize: fontSize.poem,
-    lineHeight: 36,
-    color: colors.text.primary,
-    fontFamily: fontFamily.regular,
-  },
-  workText: {
-    fontSize: fontSize.poem,
-    color: colors.text.primary,
-    lineHeight: 32,
-    marginBottom: spacing.sm,
-    fontFamily: fontFamily.regular,
-  },
-  workFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(107, 123, 79, 0.2)',
-  },
-  workMetaContainer: {
-    flex: 1,
-  },
-  workAuthor: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.regular,
-    color: colors.text.tertiary,
-    marginBottom: 4,
-    letterSpacing: 0.3,
-  },
-  workMeta: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.regular,
-    color: colors.text.tertiary,
-  },
-  likeButton: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-  },
-  likeButtonText: {
-    fontSize: fontSize.bodySmall,
-    fontFamily: fontFamily.semiBold,
-    color: colors.status.error,
-    letterSpacing: 0.3,
+    gap: spacing.md,
   },
 });
