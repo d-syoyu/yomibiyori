@@ -5,15 +5,16 @@ export const SHARE_URL = 'https://yomibiyori.com';
 const HASH_TAG = '#よみびより';
 const FALLBACK_CATEGORY = '����' as ThemeCategory;
 
-const ensureAtPrefixed = (displayName?: string): string => {
+const ensureDisplayName = (displayName?: string): string => {
   if (!displayName) {
-    return '@詠み人';
+    return '詠み人';
   }
   const trimmed = displayName.trim();
   if (!trimmed) {
-    return '@詠み人';
+    return '詠み人';
   }
-  return trimmed.startsWith('@') ? trimmed : `@${trimmed}`;
+  // WorkCardが@を付けるので、ここでは@を除去
+  return trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
 };
 
 const formatDateLabel = (primary?: string, fallback?: string): string => {
@@ -50,7 +51,7 @@ export const createAppreciationSharePayload = (work: Work, theme?: Theme): Share
       category,
       upperText: theme?.text,
       lowerText: work.text,
-      displayName: ensureAtPrefixed(work.display_name),
+      displayName: ensureDisplayName(work.display_name),
       dateLabel: formatDateLabel(theme?.date, work.created_at),
       categoryLabel: theme?.category ?? '作品',
       likesLabel: formatLikesLabel(work.likes_count),
@@ -72,7 +73,7 @@ export const createRankingSharePayload = (entry: RankingEntry, theme: Theme): Sh
       category: theme.category,
       upperText: theme.text,
       lowerText: entry.text,
-      displayName: ensureAtPrefixed(entry.display_name),
+      displayName: ensureDisplayName(entry.display_name),
       dateLabel: formatDateLabel(theme.date),
       categoryLabel: theme.category,
       likesLabel: undefined,
@@ -94,7 +95,7 @@ export const createProfileSharePayload = (work: Work, theme?: Theme): SharePaylo
       category,
       upperText: theme?.text,
       lowerText: work.text,
-      displayName: ensureAtPrefixed(work.display_name),
+      displayName: ensureDisplayName(work.display_name),
       dateLabel: formatDateLabel(theme?.date, work.created_at),
       categoryLabel: theme?.category ?? '作品',
       likesLabel: formatLikesLabel(work.likes_count),

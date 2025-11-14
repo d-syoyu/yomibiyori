@@ -204,16 +204,12 @@ const styles = StyleSheet.create({
     marginVertical: spacing.md,
   },
   cardPreview: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
     width: '90%',
     maxWidth: 320,
-    aspectRatio: 4 / 5, // Instagram 4:5比率（1080x1350と同じ）
     alignSelf: 'center',
-    backgroundColor: colors.background.card,
   },
   workCardWrapper: {
-    flex: 1,
+    // WorkCardの自然な高さを使用
   },
   appNameText: {
     fontSize: fontSize.bodySmall,
