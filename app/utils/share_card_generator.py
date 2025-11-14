@@ -16,16 +16,16 @@ class ShareCardGenerator:
     WIDTH = 1080
     HEIGHT = 1350
 
-    # カラー定義（モバイルのthemeと同じ）
+    # カラー定義（モバイルのtheme/colors.tsと完全一致）
     COLORS = {
-        "恋愛": {"gradient": ["#6B7B4F", "#93A36C"]},
-        "季節": {"gradient": ["#4F6B7B", "#6C8A93"]},
-        "日常": {"gradient": ["#7B6B4F", "#A3936C"]},
-        "ユーモア": {"gradient": ["#7B4F6B", "#A36C93"]},
+        "恋愛": {"gradient": ["#FFB7C5", "#FFE4E8"]},
+        "季節": {"gradient": ["#88B04B", "#A8C98B"]},
+        "日常": {"gradient": ["#A7D8DE", "#D4ECF0"]},
+        "ユーモア": {"gradient": ["#F0E68C", "#FFF9C4"]},
     }
 
-    # デフォルトカラー
-    DEFAULT_GRADIENT = ["#6B7B4F", "#93A36C"]
+    # デフォルトカラー（恋愛）
+    DEFAULT_GRADIENT = ["#FFB7C5", "#FFE4E8"]
 
     # レイアウト定数
     OUTER_PADDING = 40
