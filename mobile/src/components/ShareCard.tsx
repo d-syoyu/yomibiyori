@@ -53,6 +53,8 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
             upperText={content.upperText}
             lowerText={content.lowerText}
             lowerBold
+            maxWidth={200}
+            columnMinHeight={0}
           />
         </View>
 
@@ -105,14 +107,17 @@ const styles = StyleSheet.create({
   },
   topSection: {
     gap: spacing.sm,
+    flexShrink: 0,
   },
   poemSection: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 0,
   },
   bottomSection: {
     gap: spacing.md,
+    flexShrink: 0,
   },
   badge: {
     alignSelf: 'flex-start',
