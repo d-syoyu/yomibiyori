@@ -12,7 +12,7 @@ import {
   ScrollView,
   Share as NativeShare,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { downloadAsync, cacheDirectory, deleteAsync } from 'expo-file-system/legacy';
 import ShareCard from './ShareCard';
 import * as Sharing from 'expo-sharing';
 import type { SharePayload } from '../types/share';
@@ -41,9 +41,9 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
       const imageUrl = `${API_BASE_URL}/share/card/${payload.workId}`;
 
       // 画像をダウンロード
-      const downloadResult = await FileSystem.downloadAsync(
+      const downloadResult = await downloadAsync(
         imageUrl,
-        FileSystem.cacheDirectory + `share_${payload.workId}.png`
+        cacheDirectory + `share_${payload.workId}.png`
       );
 
       if (downloadResult.status !== 200) {
@@ -62,7 +62,7 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
 
         // クリーンアップ
         setTimeout(() => {
-          FileSystem.deleteAsync(downloadResult.uri).catch(err =>
+          deleteAsync(downloadResult.uri).catch(err =>
             console.warn('[ShareSheet] Cleanup error:', err)
           );
         }, 3000);
