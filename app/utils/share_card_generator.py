@@ -159,20 +159,35 @@ class ShareCardGenerator:
     ):
         """90度回転した文字を描画"""
         # 文字のバウンディングボックスを取得
-        bbox = ImageDraw.Draw(img).textbbox((0, 0), char, font=font)
+        temp_draw = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
+        bbox = temp_draw.textbbox((0, 0), char, font=font)
         char_width = bbox[2] - bbox[0]
         char_height = bbox[3] - bbox[1]
 
+        # サイズが0の場合はスキップ
+        if char_width <= 0 or char_height <= 0:
+            return
+
         # 余白を追加してテキスト用の一時画像を作成
-        padding = 10
-        temp_img = Image.new('RGBA', (char_width + padding * 2, char_height + padding * 2), (255, 255, 255, 0))
+        padding = 20
+        temp_width = char_width + padding * 2
+        temp_height = char_height + padding * 2
+
+        # RGBA画像を作成（透明背景）
+        temp_img = Image.new('RGBA', (temp_width, temp_height), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
 
-        # 一時画像に文字を描画
-        temp_draw.text((padding, padding), char, font=font, fill=fill)
+        # fillがRGB tupleの場合、RGBA に変換
+        if len(fill) == 3:
+            fill_rgba = fill + (255,)
+        else:
+            fill_rgba = fill
 
-        # 90度回転
-        rotated = temp_img.rotate(90, expand=True)
+        # 一時画像に文字を描画（パディングを考慮）
+        temp_draw.text((padding - bbox[0], padding - bbox[1]), char, font=font, fill=fill_rgba)
+
+        # 90度回転（時計回り）
+        rotated = temp_img.rotate(90, expand=True, resample=Image.BICUBIC)
 
         # 回転後のサイズ
         rotated_width, rotated_height = rotated.size
@@ -181,7 +196,7 @@ class ShareCardGenerator:
         paste_x = x - (rotated_width // 2)
         paste_y = y
 
-        # 元の画像に合成
+        # 元の画像に合成（アルファチャンネルをマスクとして使用）
         img.paste(rotated, (paste_x, paste_y), rotated)
 
     def _create_gradient_background(
