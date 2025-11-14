@@ -281,6 +281,18 @@ def _dispatch_notifications(
     total = len(messages)
     sent = total - failed
 
+    for message, ticket in dispatch_records:
+        if ticket.get("status") != "ok":
+            print(
+                "[Notifications] Expo ticket error",
+                {
+                    "token": message.token.expo_push_token,
+                    "ticket": ticket,
+                    "kind": kind,
+                    "date": target_date,
+                },
+            )
+
     return NotificationDispatchResult(
         kind=kind,
         target_date=target_date,
