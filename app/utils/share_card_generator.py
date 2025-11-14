@@ -50,8 +50,13 @@ class ShareCardGenerator:
         import glob
 
         # Noto Serif JP を優先（モバイルと統一）
+        # プロジェクト内のフォントを最優先
         possible_paths = [
-            # Noto Serif CJK fonts - Railway/Linux (モバイルと同じフォント)
+            # Project fonts (最優先 - Railwayで確実に動作)
+            "/app/fonts/NotoSerifCJKjp-Regular.otf",
+            "./fonts/NotoSerifCJKjp-Regular.otf",
+            "fonts/NotoSerifCJKjp-Regular.otf",
+            # Noto Serif CJK fonts - Railway/Linux (システムインストール)
             "/usr/share/fonts/opentype/noto-cjk/NotoSerifCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto-cjk/NotoSerifCJK-Regular.ttc",
             "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
@@ -70,9 +75,6 @@ class ShareCardGenerator:
             "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
             "/System/Library/Fonts/Hiragino Sans GB.ttc",
             "/Library/Fonts/Osaka.ttf",
-            # Project paths
-            "./fonts/NotoSerifJP-Regular.otf",
-            "./fonts/NotoSerifCJK-Regular.ttc",
         ]
 
         # 直接パスをチェック
