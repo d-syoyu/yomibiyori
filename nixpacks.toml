@@ -1,11 +1,12 @@
 [phases.setup]
-nixPkgs = ["python311", "fontconfig", "freetype", "noto-fonts-cjk-sans"]
+nixPkgs = ["python311", "fontconfig", "freetype", "noto-fonts-cjk"]
 
 [phases.install]
 cmds = [
   "pip install --upgrade pip setuptools wheel",
   "pip install -r requirements.txt",
-  "fc-cache -fv"
+  "fc-cache -fv",
+  "fc-list | grep -i 'noto.*cjk' || echo 'Warning: Noto CJK fonts not found'"
 ]
 
 [start]

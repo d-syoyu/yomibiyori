@@ -49,27 +49,30 @@ class ShareCardGenerator:
         import subprocess
         import glob
 
-        # 日本語フォントを優先的に探す
+        # Noto Serif JP を優先（モバイルと統一）
         possible_paths = [
-            # Noto CJK fonts (日本語対応) - Railway/Linux
+            # Noto Serif CJK fonts - Railway/Linux (モバイルと同じフォント)
+            "/usr/share/fonts/opentype/noto-cjk/NotoSerifCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto-cjk/NotoSerifCJK-Regular.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
+            # Noto Sans CJK fonts (フォールバック)
             "/usr/share/fonts/opentype/noto-cjk/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto-cjk/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
-            # Windows paths
-            "C:\\Windows\\Fonts\\msgothic.ttc",
+            # Windows paths (Serif優先)
             "C:\\Windows\\Fonts\\msmincho.ttc",
+            "C:\\Windows\\Fonts\\msgothic.ttc",
             "C:\\Windows\\Fonts\\yugothic.ttf",
             "C:\\Windows\\Fonts\\meiryo.ttc",
-            # macOS paths
+            # macOS paths (明朝体優先)
             "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
             "/System/Library/Fonts/Hiragino Sans GB.ttc",
             "/Library/Fonts/Osaka.ttf",
             # Project paths
             "./fonts/NotoSerifJP-Regular.otf",
-            "./fonts/NotoSansCJK-Regular.ttc",
+            "./fonts/NotoSerifCJK-Regular.ttc",
         ]
 
         # 直接パスをチェック
@@ -77,8 +80,10 @@ class ShareCardGenerator:
             if os.path.exists(path):
                 return path
 
-        # Nix storeをglobで検索
+        # Nix storeをglobで検索（Serif優先でモバイルと統一）
         nix_patterns = [
+            "/nix/store/*/share/fonts/opentype/noto-cjk/NotoSerifCJK-Regular.ttc",
+            "/nix/store/*/share/fonts/truetype/noto-cjk/NotoSerifCJK-Regular.ttc",
             "/nix/store/*/share/fonts/opentype/noto-cjk/NotoSansCJK-Regular.ttc",
             "/nix/store/*/share/fonts/truetype/noto-cjk/NotoSansCJK-Regular.ttc",
         ]
