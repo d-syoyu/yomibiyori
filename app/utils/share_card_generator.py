@@ -259,19 +259,22 @@ class ShareCardGenerator:
         # 詩を中央に配置
         available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - footer_total_height
         poem_start_y = content_y + (available_height - poem_height) // 2
-        poem_center_x = self.WIDTH // 2
 
-        # 上の句（右側）
-        # 列間隔を考慮して、十分な間隔を確保
+        # 白い内側カードの中心を使用（画像全体の中心ではなく）
+        card_center_x = (inner_x1 + inner_x2) // 2
+
+        # 上の句と下の句の間隔（上の句と下の句の中心間の距離の半分）
         upper_lower_gap = 150  # 上の句と下の句の間隔
+
+        # 上の句（右側）- カードの中心から右に配置
         if upper_text:
-            upper_start_x = poem_center_x + upper_lower_gap
+            upper_start_x = card_center_x + upper_lower_gap
             self._draw_vertical_text_multiline(
                 draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
             )
 
-        # 下の句（左側）
-        lower_start_x = poem_center_x - upper_lower_gap
+        # 下の句（左側）- カードの中心から左に配置
+        lower_start_x = card_center_x - upper_lower_gap
         self._draw_vertical_text_multiline(
             draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
         )
