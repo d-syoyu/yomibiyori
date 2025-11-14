@@ -262,14 +262,16 @@ class ShareCardGenerator:
         poem_center_x = self.WIDTH // 2
 
         # 上の句（右側）
+        # 列間隔を考慮して、十分な間隔を確保
+        upper_lower_gap = 150  # 上の句と下の句の間隔
         if upper_text:
-            upper_start_x = poem_center_x + 80
+            upper_start_x = poem_center_x + upper_lower_gap
             self._draw_vertical_text_multiline(
                 draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
             )
 
         # 下の句（左側）
-        lower_start_x = poem_center_x - 80
+        lower_start_x = poem_center_x - upper_lower_gap
         self._draw_vertical_text_multiline(
             draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
         )
