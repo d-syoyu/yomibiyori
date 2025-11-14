@@ -225,11 +225,11 @@ class ShareCardGenerator:
         img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
         draw = ImageDraw.Draw(img)
 
-        # フォント準備
-        font_poem = self._get_font(36)  # 詩用フォント
-        font_author = self._get_font(24)  # 作者名用
-        font_meta = self._get_font(18)  # メタ情報用
-        font_caption = self._get_font(20)  # キャプション用
+        # フォント準備（大幅に拡大）
+        font_poem = self._get_font(56)  # 詩用フォント
+        font_author = self._get_font(32)  # 作者名用
+        font_meta = self._get_font(24)  # メタ情報用
+        font_caption = self._get_font(28)  # キャプション用
 
         # コンテンツ領域の開始位置
         content_x = inner_x1 + self.INNER_PADDING
@@ -273,27 +273,27 @@ class ShareCardGenerator:
                 font=font_caption,
                 fill=self.TEXT_SECONDARY,
             )
-            current_y += 30 + self.CONTENT_GAP
+            current_y += 40 + self.CONTENT_GAP
 
-        # 縦書き詩（中央）
-        poem_start_y = current_y + 50
+        # 縦書き詩（中央）- 余白を減らす
+        poem_start_y = current_y + 20
         poem_center_x = self.WIDTH // 2
 
-        # 下の句（右側）
-        lower_start_x = poem_center_x + 50
+        # 下の句（右側）- 文字間隔と列間隔を拡大
+        lower_start_x = poem_center_x + 80
         self._draw_vertical_text_multiline(
-            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 42, 60
+            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
         )
 
-        # 上の句（左側）
+        # 上の句（左側）- 文字間隔と列間隔を拡大
         if upper_text:
-            upper_start_x = poem_center_x - 60
+            upper_start_x = poem_center_x - 90
             self._draw_vertical_text_multiline(
-                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 42, 60
+                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
             )
 
         # メタ情報エリア（下部）
-        meta_y = inner_y2 - self.INNER_PADDING - 110
+        meta_y = inner_y2 - self.INNER_PADDING - 140
         meta_x = content_x
 
         # 作者名
@@ -301,7 +301,7 @@ class ShareCardGenerator:
 
         # カテゴリと日付
         meta_text = f"{category_label} / {date_label}"
-        draw.text((meta_x, meta_y + 35), meta_text, font=font_meta, fill=self.TEXT_TERTIARY)
+        draw.text((meta_x, meta_y + 45), meta_text, font=font_meta, fill=self.TEXT_TERTIARY)
 
         # 右側の統計情報
         if likes_label:
@@ -318,14 +318,14 @@ class ShareCardGenerator:
             bbox = draw.textbbox((0, 0), score_label, font=font_meta)
             text_width = bbox[2] - bbox[0]
             draw.text(
-                (inner_x2 - self.INNER_PADDING - text_width, meta_y + 24),
+                (inner_x2 - self.INNER_PADDING - text_width, meta_y + 32),
                 score_label,
                 font=font_meta,
                 fill=self.TEXT_ACCENT,
             )
 
         # フッター
-        footer_y = inner_y2 - self.INNER_PADDING - 45
+        footer_y = inner_y2 - self.INNER_PADDING - 55
         draw.text((meta_x, footer_y), "よみびより", font=font_author, fill=self.TEXT_PRIMARY)
 
         footer_url = "yomibiyori.com"
