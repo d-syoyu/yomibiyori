@@ -228,55 +228,46 @@ class ShareCardGenerator:
             fill=(255, 255, 255)  # 完全な白
         )
 
-        # フォント準備（大幅に拡大）
-        font_poem = self._get_font(56)  # 詩用フォント
-        font_author = self._get_font(32)  # 作者名用
-        font_meta = self._get_font(24)  # メタ情報用
-        font_caption = self._get_font(28)  # キャプション用
+        # フォント準備（モバイルのスケール比 1080/375 ≈ 2.88倍）
+        # fontSize.poem = 20 → 58px, fontSize.bodySmall = 12 → 35px
+        font_poem = self._get_font(58)  # 詩用フォント
+        font_author = self._get_font(35)  # 作者名用（@吉川颯我）
+        font_meta = self._get_font(35)  # メタ情報用（よみびより）
 
         # コンテンツ領域の開始位置
         content_x = inner_x1 + self.INNER_PADDING
         content_y = inner_y1 + self.INNER_PADDING
         content_width = inner_x2 - inner_x1 - (self.INNER_PADDING * 2)
 
-        # 縦書き詩の高さを計算（上の句と下の句の長い方）
-        upper_lines = upper_text.split('\n') if upper_text else []
-        lower_lines = lower_text.split('\n')
-
-        # 各列の文字数の最大値を計算
-        max_upper_chars = max((len(line.strip()) for line in upper_lines), default=0)
-        max_lower_chars = max((len(line.strip()) for line in lower_lines), default=0)
-        max_chars = max(max_upper_chars, max_lower_chars)
-
-        # 詩の高さ（文字の高さ × 文字数）
-        poem_height = max_chars * 64  # char_height = 64
-
-        # 詩を中央に配置するための計算
-        # WorkCard構成: 作者名(40) + 区切り線(1+48) + フッター(40) = 約130px
-        footer_space = 130
-        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - footer_space
-        poem_start_y = content_y + (available_height - poem_height) // 2
+        # WorkCardと同じ配置: 詩は上から配置（中央配置は不要）
+        poem_start_y = content_y + 60  # 上部に余白
         poem_center_x = self.WIDTH // 2
 
         # 上の句（右側）- モバイルと同じ配置
+        # lineHeight = 38 → 109px (2.88倍), column_spacing も同様にスケール
+        char_height = 109  # lineHeight相当
+        column_spacing = 144  # spacing.lg * 2.88 ≈ 50px → 144px
+
         if upper_text:
-            upper_start_x = poem_center_x + 80
+            upper_start_x = poem_center_x + 100
             self._draw_vertical_text_multiline(
-                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
+                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
             )
 
         # 下の句（左側、太字）- モバイルと同じ配置
-        lower_start_x = poem_center_x - 90
+        lower_start_x = poem_center_x - 100
         self._draw_vertical_text_multiline(
-            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
+            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
         )
 
         # WorkCardと同じ構成: 作者名 + 区切り線 + フッター（よみびより）
-        # 作者名の位置（詩の下、marginTop相当）
-        author_y = poem_start_y + poem_height + 40  # spacing.md相当
+        # 下部から逆算して配置
+        footer_height = 100  # フッター全体の高さ
+        author_y = inner_y2 - self.INNER_PADDING - footer_height
 
-        # 作者名
-        draw.text((content_x, author_y), author_name, font=font_meta, fill=self.TEXT_SECONDARY)
+        # 作者名（@付き、WorkCardと同じ）
+        author_text = f"@{author_name}"
+        draw.text((content_x, author_y), author_text, font=font_meta, fill=self.TEXT_SECONDARY)
 
         # 区切り線（作者名の下、marginVertical相当の間隔）
         divider_y = author_y + 40 + 24  # テキスト高さ + spacing.md
