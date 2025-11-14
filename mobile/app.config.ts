@@ -1,7 +1,7 @@
 import type { ExpoConfig } from '@expo/config';
 import 'dotenv/config';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://yomibiyori-production.up.railway.app/api/v1';
 
 const config: ExpoConfig = {
   name: 'よみびより',

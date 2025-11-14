@@ -20,8 +20,21 @@ depends_on = None
 def upgrade() -> None:
     """Create notification_tokens table."""
 
-    # Ensure app_public schema exists for triggers/functions used below
+    # Ensure app_public schema + timestamp trigger function exist (Railway/Prod DB might be missing)
     op.execute("CREATE SCHEMA IF NOT EXISTS app_public;")
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION app_public.set_updated_at()
+        RETURNS TRIGGER
+        LANGUAGE plpgsql
+        AS $$
+        BEGIN
+          NEW.updated_at = NOW();
+          RETURN NEW;
+        END;
+        $$;
+        """
+    )
 
     op.create_table(
         "notification_tokens",
