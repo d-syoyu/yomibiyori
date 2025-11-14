@@ -32,11 +32,11 @@ class ShareCardGenerator:
     INNER_PADDING = 32
     CONTENT_GAP = 24
 
-    # テキストカラー
-    TEXT_PRIMARY = (26, 26, 26)  # #1A1A1A
-    TEXT_SECONDARY = (102, 102, 102)  # #666666
-    TEXT_TERTIARY = (153, 153, 153)  # #999999
-    TEXT_ACCENT = (26, 54, 93)  # #1A365D
+    # テキストカラー（モバイルのtheme/colors.tsと完全一致）
+    TEXT_PRIMARY = (107, 123, 79)  # #6B7B4F (igusa) - text.primary
+    TEXT_SECONDARY = (123, 138, 88)  # #7B8A58 (igusaMedium) - text.secondary
+    TEXT_TERTIARY = (147, 163, 108)  # #93A36C (igusaLight) - text.tertiary
+    TEXT_ACCENT = (26, 54, 93)  # #1A365D (ai) - text.accent
     BADGE_BG = (26, 54, 93, 20)  # rgba(26, 54, 93, 0.08)
     OVERLAY_BG = (255, 255, 255, 235)  # rgba(255, 255, 255, 0.92)
 
@@ -136,6 +136,54 @@ class ShareCardGenerator:
         hex_color = hex_color.lstrip("#")
         return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
+    def _needs_rotation(self, char: str) -> bool:
+        """縦書き時に90度回転が必要な文字を判定（モバイルのVerticalText.tsxと同じ）"""
+        # 伸ばし棒・ダッシュ類
+        dash_chars = ['ー', '−', '－', '–', '—', 'ｰ']
+        # 波ダッシュ
+        wave_chars = ['〜', '～', '〰']
+        # 三点リーダー
+        ellipsis_chars = ['…', '‥', '⋯']
+        # 全ての回転対象文字
+        rotation_chars = dash_chars + wave_chars + ellipsis_chars
+        return char in rotation_chars
+
+    def _draw_rotated_char(
+        self,
+        img: Image.Image,
+        char: str,
+        x: int,
+        y: int,
+        font: ImageFont.FreeTypeFont,
+        fill: tuple,
+    ):
+        """90度回転した文字を描画"""
+        # 文字のバウンディングボックスを取得
+        bbox = ImageDraw.Draw(img).textbbox((0, 0), char, font=font)
+        char_width = bbox[2] - bbox[0]
+        char_height = bbox[3] - bbox[1]
+
+        # 余白を追加してテキスト用の一時画像を作成
+        padding = 10
+        temp_img = Image.new('RGBA', (char_width + padding * 2, char_height + padding * 2), (255, 255, 255, 0))
+        temp_draw = ImageDraw.Draw(temp_img)
+
+        # 一時画像に文字を描画
+        temp_draw.text((padding, padding), char, font=font, fill=fill)
+
+        # 90度回転
+        rotated = temp_img.rotate(90, expand=True)
+
+        # 回転後のサイズ
+        rotated_width, rotated_height = rotated.size
+
+        # 中央揃えで貼り付け位置を計算
+        paste_x = x - (rotated_width // 2)
+        paste_y = y
+
+        # 元の画像に合成
+        img.paste(rotated, (paste_x, paste_y), rotated)
+
     def _create_gradient_background(
         self, img: Image.Image, colors: list[str]
     ) -> Image.Image:
@@ -159,6 +207,7 @@ class ShareCardGenerator:
 
     def _draw_vertical_text_multiline(
         self,
+        img: Image.Image,
         draw: ImageDraw.ImageDraw,
         text: str,
         start_x: int,
@@ -175,12 +224,17 @@ class ShareCardGenerator:
         for line in lines:
             current_y = start_y
             for char in line.strip():
-                # 文字を描画
-                bbox = draw.textbbox((0, 0), char, font=font)
-                char_width = bbox[2] - bbox[0]
-                # 中央揃え
-                char_x = current_x - (char_width // 2)
-                draw.text((char_x, current_y), char, font=font, fill=fill)
+                # 回転が必要な文字かチェック
+                if self._needs_rotation(char):
+                    # 回転させて描画
+                    self._draw_rotated_char(img, char, current_x, current_y, font, fill)
+                else:
+                    # 通常描画
+                    bbox = draw.textbbox((0, 0), char, font=font)
+                    char_width = bbox[2] - bbox[0]
+                    # 中央揃え
+                    char_x = current_x - (char_width // 2)
+                    draw.text((char_x, current_y), char, font=font, fill=fill)
                 current_y += char_height
 
             # 次の列は左へ
@@ -281,14 +335,14 @@ class ShareCardGenerator:
             upper_center_target = card_center_x + upper_lower_gap
             upper_start_x = upper_center_target + (upper_width // 2)
             self._draw_vertical_text_multiline(
-                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
+                img, draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
             )
 
         # 下の句（左側）- 視覚的な中心がcard_center_x - upper_lower_gapになるように配置
         lower_center_target = card_center_x - upper_lower_gap
         lower_start_x = lower_center_target + (lower_width // 2)
         self._draw_vertical_text_multiline(
-            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
+            img, draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
         )
 
         # フッター: 下部から逆算
