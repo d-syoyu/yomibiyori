@@ -52,20 +52,30 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
 
       console.log('[ShareSheet] Image downloaded successfully:', downloadResult.uri);
 
-      // 画像で共有
+      // 画像とテキストで共有
       const canShareFile = await Sharing.isAvailableAsync();
       if (canShareFile) {
-        await Sharing.shareAsync(downloadResult.uri, {
-          mimeType: 'image/png',
-          UTI: 'public.png',
-        });
+        if (Platform.OS === 'ios') {
+          // iOSではNativeShare.shareのurl経由で画像+テキストを共有可能
+          await NativeShare.share({
+            message: payload.message,
+            url: downloadResult.uri,
+          });
+        } else {
+          // Androidではexpo-sharingを使用（dialogTitleでテキストを添える）
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'image/png',
+            UTI: 'public.png',
+            dialogTitle: payload.message,
+          });
+        }
 
         // クリーンアップ
         setTimeout(() => {
           deleteAsync(downloadResult.uri).catch(err =>
             console.warn('[ShareSheet] Cleanup error:', err)
           );
-        }, 3000);
+        }, 5000);
       } else {
         // フォールバック: テキスト共有
         await NativeShare.share({
