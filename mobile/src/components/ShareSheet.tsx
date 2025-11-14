@@ -1,10 +1,9 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Modal,
   Pressable,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,10 +11,13 @@ import {
   NativeModules,
   Platform,
   ScrollView,
+  AppState,
+  Share as NativeShare,
 } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import ViewShot from 'react-native-view-shot';
 import * as FileSystem from 'expo-file-system';
 import ShareCard from './ShareCard';
+import * as Sharing from 'expo-sharing';
 import type { SharePayload } from '../types/share';
 import { colors, spacing, borderRadius, shadow, fontFamily, fontSize } from '../theme';
 
@@ -29,46 +31,92 @@ const isViewShotAvailable =
   Platform.OS !== 'web' && typeof (NativeModules as any)?.RNViewShot !== 'undefined';
 
 const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) => {
-  const viewShotRef = useRef<View>(null);
+  const viewShotRef = useRef<ViewShot | null>(null);
+  const cardReadyPromiseRef = useRef<Promise<void> | null>(null);
+  const cardReadyResolverRef = useRef<(() => void) | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isCardReady, setIsCardReady] = useState(false);
+
+  useEffect(() => {
+    setIsCardReady(false);
+    if (visible && payload) {
+      cardReadyPromiseRef.current = new Promise(resolve => {
+        cardReadyResolverRef.current = resolve;
+      });
+    } else {
+      cardReadyPromiseRef.current = null;
+      cardReadyResolverRef.current = null;
+    }
+  }, [visible, payload]);
 
   const handleShare = useCallback(async () => {
     if (!payload || !viewShotRef.current) {
       return;
     }
 
-    try {
-      if (!isViewShotAvailable) {
-        Alert.alert(
-          '共有カードが生成できません',
-          'この機能には専用ビルドのアプリが必要です。Expo Go や Web では利用できません。'
-        );
+    if (!isViewShotAvailable) {
+      Alert.alert(
+        '共有カードが生成できません',
+        'この機能には専用ビルドのアプリが必要です。Expo Go や Web では利用できません。'
+      );
+      return;
+    }
+
+    const ensureCardReady = async (): Promise<void> => {
+      if (!cardReadyPromiseRef.current) {
         return;
       }
+      await cardReadyPromiseRef.current;
+      cardReadyPromiseRef.current = null;
+    };
 
+    const captureWithRetry = async (attempt = 0): Promise<string> => {
+      try {
+        await ensureCardReady();
+        const uri = await viewShotRef.current?.capture?.();
+        if (!uri) {
+          throw new Error('capture_failed');
+        }
+        return uri;
+      } catch (error: any) {
+        const message = error?.message ?? '';
+        if (attempt < 3 && message.includes('Failed to snapshot view tag')) {
+          await new Promise(resolve => setTimeout(resolve, 150));
+          return captureWithRetry(attempt + 1);
+        }
+        throw error;
+      }
+    };
+
+    try {
       setIsSharing(true);
+      const uri = await captureWithRetry();
 
-      // レンダリング完了を待つ
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // captureRef を使用して View のスナップショットを取得
-      const uri = await captureRef(viewShotRef, {
-        format: 'png',
-        quality: 0.95,
-        result: 'tmpfile',
-      });
-
-      if (!uri) {
-        throw new Error('capture_failed');
+      const canShareFile = await Sharing.isAvailableAsync();
+      if (canShareFile) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          UTI: 'public.png',
+        });
+      } else {
+        await NativeShare.share({
+          message: payload.message,
+        });
       }
 
-      await Share.share({
-        title: 'よみびより | 共有カード',
-        message: payload.message,
-        url: uri,
+      const cleanup = () => {
+        setTimeout(() => {
+          FileSystem.deleteAsync(uri).catch(() => {});
+        }, 3000);
+      };
+      const appStateListener = AppState.addEventListener('change', state => {
+        if (state === 'active') {
+          cleanup();
+          appStateListener.remove();
+        }
       });
+      cleanup();
 
-      await FileSystem.deleteAsync(uri);
       onClose();
     } catch (error) {
       console.error('[ShareSheet] Failed to share card:', error);
@@ -104,23 +152,34 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
             )}
 
             <View style={styles.previewContainer}>
-              <View
+              <ViewShot
                 ref={viewShotRef}
-                collapsable={false}
+                options={{
+                  format: 'png',
+                  quality: 0.95,
+                  result: 'tmpfile',
+                }}
                 style={styles.cardPreview}
+                onLayout={() => {
+                  setIsCardReady(true);
+                  if (cardReadyResolverRef.current) {
+                    cardReadyResolverRef.current();
+                    cardReadyResolverRef.current = null;
+                  }
+                }}
               >
                 {payload && <ShareCard content={payload.card} />}
-              </View>
+              </ViewShot>
             </View>
 
             <View style={styles.actions}>
               <TouchableOpacity
                 style={[
                   styles.shareButton,
-                  (isSharing || !payload || !isViewShotAvailable) && styles.shareButtonDisabled,
+                  (isSharing || !payload || !isViewShotAvailable || !isCardReady) && styles.shareButtonDisabled,
                 ]}
                 onPress={handleShare}
-                disabled={isSharing || !payload || !isViewShotAvailable}
+                disabled={isSharing || !payload || !isViewShotAvailable || !isCardReady}
                 activeOpacity={0.8}
               >
                 {isSharing ? (
@@ -190,6 +249,7 @@ const styles = StyleSheet.create({
     width: '90%',
     maxWidth: 360,
     alignSelf: 'center',
+    backgroundColor: colors.background.card,
   },
   actions: {
     gap: spacing.sm,

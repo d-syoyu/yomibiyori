@@ -6,6 +6,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://yomibiyori-
 const config: ExpoConfig = {
   name: 'よみびより',
   slug: 'yomibiyori',
+  owner: "dsyoyu",
   version: '1.0.5',
   orientation: 'portrait',
   icon: './assets/icon.png',

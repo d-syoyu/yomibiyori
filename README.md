@@ -136,6 +136,7 @@ See `docs/actions_secrets_checklist.md` for full list.
 - `docs/theme_generation_job.md` - Theme generation workflow
 - `docs/ranking_finalization_job.md` - Ranking finalization workflow
 - `docs/ci_cd_schedule.md` - CI/CD and scheduling documentation
+- `docs/push_notifications_setup.md` - Expo + FCM v1 notification setup guide
 - `docs/deployment_railway.md` - Railway deployment guide
 - `docs/actions_secrets_checklist.md` - GitHub Actions secrets reference
 
