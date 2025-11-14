@@ -1,8 +1,12 @@
 [phases.setup]
-nixPkgs = ["python311", "fontconfig", "freetype", "dejavu_fonts", "noto-fonts-cjk-sans"]
+nixPkgs = ["python311", "fontconfig", "freetype", "noto-fonts-cjk-sans"]
 
 [phases.install]
-cmds = ["pip install --upgrade pip setuptools wheel", "pip install -r requirements.txt"]
+cmds = [
+  "pip install --upgrade pip setuptools wheel",
+  "pip install -r requirements.txt",
+  "fc-cache -fv"
+]
 
 [start]
 cmd = "alembic upgrade head && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"

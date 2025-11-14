@@ -47,31 +47,45 @@ class ShareCardGenerator:
     def _find_font(self) -> Optional[str]:
         """システムから日本語フォントを探す"""
         import subprocess
+        import glob
 
-        # RailwayなどのLinux環境でDejaVuフォントを優先的に使用
+        # 日本語フォントを優先的に探す
         possible_paths = [
-            # DejaVu fonts (Railway環境で確実に利用可能)
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-            # Noto CJK fonts (日本語対応)
+            # Noto CJK fonts (日本語対応) - Railway/Linux
+            "/usr/share/fonts/opentype/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            # macOS paths
-            "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
-            "/System/Library/Fonts/Hiragino Sans GB.ttc",
             # Windows paths
             "C:\\Windows\\Fonts\\msgothic.ttc",
             "C:\\Windows\\Fonts\\msmincho.ttc",
             "C:\\Windows\\Fonts\\yugothic.ttf",
+            "C:\\Windows\\Fonts\\meiryo.ttc",
+            # macOS paths
+            "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            "/Library/Fonts/Osaka.ttf",
             # Project paths
             "./fonts/NotoSerifJP-Regular.otf",
+            "./fonts/NotoSansCJK-Regular.ttc",
         ]
 
+        # 直接パスをチェック
         for path in possible_paths:
             if os.path.exists(path):
                 return path
+
+        # Nix storeをglobで検索
+        nix_patterns = [
+            "/nix/store/*/share/fonts/opentype/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/nix/store/*/share/fonts/truetype/noto-cjk/NotoSansCJK-Regular.ttc",
+        ]
+        for pattern in nix_patterns:
+            matches = glob.glob(pattern)
+            if matches:
+                return matches[0]
 
         # フォントが見つからない場合、fcコマンドで検索を試みる
         try:
@@ -95,17 +109,20 @@ class ShareCardGenerator:
 
     def _get_font(self, size: int) -> ImageFont.FreeTypeFont:
         """指定サイズのフォントを取得"""
+        if not self.font_path:
+            # フォントが見つからない場合はエラーをログ
+            import logging
+            logging.warning("No Japanese font found. Text may not render correctly.")
+            # 最後の手段: PIL の load_default() は使わず、エラーにする
+            raise RuntimeError("Japanese font is required but not found on system")
+
         try:
-            if self.font_path:
-                font = ImageFont.truetype(self.font_path, size)
-                # 日本語テストして文字化けを確認
-                return font
-            else:
-                # フォールバック: デフォルトフォント（ビットマップ）
-                return ImageFont.load_default()
+            font = ImageFont.truetype(self.font_path, size)
+            return font
         except Exception as e:
-            # エラー時もデフォルトフォント
-            return ImageFont.load_default()
+            import logging
+            logging.error(f"Failed to load font {self.font_path}: {e}")
+            raise
 
     def _hex_to_rgb(self, hex_color: str) -> tuple:
         """HEXカラーをRGBに変換"""
