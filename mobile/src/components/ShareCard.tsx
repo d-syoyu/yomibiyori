@@ -49,13 +49,15 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
 
         {/* 中央：詩 */}
         <View style={styles.poemSection}>
-          <VerticalPoem
-            upperText={content.upperText}
-            lowerText={content.lowerText}
-            lowerBold
-            maxWidth={200}
-            columnMinHeight={0}
-          />
+          <View style={styles.poemWrapper}>
+            <VerticalPoem
+              upperText={content.upperText}
+              lowerText={content.lowerText}
+              lowerBold
+              maxWidth={180}
+              columnMinHeight={0}
+            />
+          </View>
         </View>
 
         {/* 下部：メタ情報とフッター */}
@@ -114,6 +116,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 0,
+  },
+  poemWrapper: {
+    maxHeight: '100%',
+    transform: [{ scale: 0.85 }], // 詩全体を85%に縮小
   },
   bottomSection: {
     gap: spacing.md,
