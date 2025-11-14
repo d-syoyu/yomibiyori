@@ -13,7 +13,7 @@ import {
   Share as NativeShare,
 } from 'react-native';
 import { downloadAsync, cacheDirectory, deleteAsync } from 'expo-file-system/legacy';
-import ShareCard from './ShareCard';
+import WorkCard from './WorkCard';
 import * as Sharing from 'expo-sharing';
 import type { SharePayload } from '../types/share';
 import { colors, spacing, borderRadius, shadow, fontFamily, fontSize } from '../theme';
@@ -113,7 +113,19 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
 
             <View style={styles.previewContainer}>
               <View style={styles.cardPreview}>
-                {payload && <ShareCard content={payload.card} />}
+                {payload && (
+                  <View style={styles.workCardWrapper}>
+                    <WorkCard
+                      upperText={payload.card.upperText}
+                      lowerText={payload.card.lowerText}
+                      category={payload.card.category}
+                      displayName={payload.card.displayName}
+                      extraFooterContent={
+                        <Text style={styles.appNameText}>よみびより</Text>
+                      }
+                    />
+                  </View>
+                )}
               </View>
             </View>
 
@@ -199,6 +211,14 @@ const styles = StyleSheet.create({
     aspectRatio: 4 / 5, // Instagram 4:5比率（1080x1350と同じ）
     alignSelf: 'center',
     backgroundColor: colors.background.card,
+  },
+  workCardWrapper: {
+    flex: 1,
+  },
+  appNameText: {
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
   },
   actions: {
     gap: spacing.sm,
