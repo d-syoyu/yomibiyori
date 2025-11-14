@@ -266,15 +266,27 @@ class ShareCardGenerator:
         # 上の句と下の句の間隔（上の句と下の句の中心間の距離の半分）
         upper_lower_gap = 150  # 上の句と下の句の間隔
 
-        # 上の句（右側）- カードの中心から右に配置
+        # 各詩の列数を計算（改行で分割した数）
+        upper_columns = len(upper_lines)
+        lower_columns = len(lower_lines)
+
+        # 各詩の実際の幅を計算（列数 - 1）× column_spacing
+        # start_xは最初の列（右端）の位置なので、幅は左方向に広がる
+        upper_width = (upper_columns - 1) * column_spacing if upper_columns > 0 else 0
+        lower_width = (lower_columns - 1) * column_spacing if lower_columns > 0 else 0
+
+        # 上の句（右側）- 視覚的な中心がcard_center_x + upper_lower_gapになるように配置
+        # start_xは右端なので、中心位置 + (幅の半分)の位置に配置
         if upper_text:
-            upper_start_x = card_center_x + upper_lower_gap
+            upper_center_target = card_center_x + upper_lower_gap
+            upper_start_x = upper_center_target + (upper_width // 2)
             self._draw_vertical_text_multiline(
                 draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
             )
 
-        # 下の句（左側）- カードの中心から左に配置
-        lower_start_x = card_center_x - upper_lower_gap
+        # 下の句（左側）- 視覚的な中心がcard_center_x - upper_lower_gapになるように配置
+        lower_center_target = card_center_x - upper_lower_gap
+        lower_start_x = lower_center_target + (lower_width // 2)
         self._draw_vertical_text_multiline(
             draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
         )
