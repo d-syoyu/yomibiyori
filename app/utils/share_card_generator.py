@@ -12,9 +12,9 @@ import os
 class ShareCardGenerator:
     """共有カード画像生成クラス"""
 
-    # 画像サイズ（SNS共有に最適化）
-    WIDTH = 720
-    HEIGHT = 1280
+    # 画像サイズ（Instagram 4:5比率）
+    WIDTH = 1080
+    HEIGHT = 1350
 
     # カラー定義（モバイルのthemeと同じ）
     COLORS = {
@@ -27,10 +27,10 @@ class ShareCardGenerator:
     # デフォルトカラー
     DEFAULT_GRADIENT = ["#6B7B4F", "#93A36C"]
 
-    # レイアウト定数（スケール調整済み）
-    OUTER_PADDING = 28
-    INNER_PADDING = 20
-    CONTENT_GAP = 16
+    # レイアウト定数
+    OUTER_PADDING = 40
+    INNER_PADDING = 32
+    CONTENT_GAP = 24
 
     # テキストカラー
     TEXT_PRIMARY = (26, 26, 26)  # #1A1A1A
@@ -46,19 +46,25 @@ class ShareCardGenerator:
 
     def _find_font(self) -> Optional[str]:
         """システムから日本語フォントを探す"""
+        import subprocess
+
+        # RailwayなどのLinux環境でDejaVuフォントを優先的に使用
         possible_paths = [
-            # Linux paths (Railway, Ubuntu, etc.)
+            # DejaVu fonts (Railway環境で確実に利用可能)
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+            # Noto CJK fonts (日本語対応)
             "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             # macOS paths
             "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
             "/System/Library/Fonts/Hiragino Sans GB.ttc",
             # Windows paths
             "C:\\Windows\\Fonts\\msgothic.ttc",
             "C:\\Windows\\Fonts\\msmincho.ttc",
+            "C:\\Windows\\Fonts\\yugothic.ttf",
             # Project paths
             "./fonts/NotoSerifJP-Regular.otf",
         ]
@@ -67,16 +73,38 @@ class ShareCardGenerator:
             if os.path.exists(path):
                 return path
 
+        # フォントが見つからない場合、fcコマンドで検索を試みる
+        try:
+            result = subprocess.run(
+                ["fc-list", ":lang=ja", "file"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            if result.returncode == 0 and result.stdout:
+                lines = result.stdout.strip().split('\n')
+                if lines:
+                    # 最初の日本語フォントを使用
+                    font_path = lines[0].split(':')[0].strip()
+                    if os.path.exists(font_path):
+                        return font_path
+        except Exception:
+            pass
+
         return None
 
     def _get_font(self, size: int) -> ImageFont.FreeTypeFont:
         """指定サイズのフォントを取得"""
         try:
             if self.font_path:
-                return ImageFont.truetype(self.font_path, size)
+                font = ImageFont.truetype(self.font_path, size)
+                # 日本語テストして文字化けを確認
+                return font
             else:
+                # フォールバック: デフォルトフォント（ビットマップ）
                 return ImageFont.load_default()
-        except Exception:
+        except Exception as e:
+            # エラー時もデフォルトフォント
             return ImageFont.load_default()
 
     def _hex_to_rgb(self, hex_color: str) -> tuple:
@@ -180,11 +208,11 @@ class ShareCardGenerator:
         img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
         draw = ImageDraw.Draw(img)
 
-        # フォント準備（スケール調整済み）
-        font_poem = self._get_font(24)  # 詩用フォント
-        font_author = self._get_font(16)  # 作者名用
-        font_meta = self._get_font(12)  # メタ情報用
-        font_caption = self._get_font(14)  # キャプション用
+        # フォント準備
+        font_poem = self._get_font(36)  # 詩用フォント
+        font_author = self._get_font(24)  # 作者名用
+        font_meta = self._get_font(18)  # メタ情報用
+        font_caption = self._get_font(20)  # キャプション用
 
         # コンテンツ領域の開始位置
         content_x = inner_x1 + self.INNER_PADDING
@@ -196,8 +224,8 @@ class ShareCardGenerator:
 
         # バッジ（オプション）
         if badge_label:
-            badge_padding_x = 12
-            badge_padding_y = 6
+            badge_padding_x = 16
+            badge_padding_y = 8
             bbox = draw.textbbox((0, 0), badge_label, font=font_meta)
             badge_width = (bbox[2] - bbox[0]) + (badge_padding_x * 2)
             badge_height = (bbox[3] - bbox[1]) + (badge_padding_y * 2)
@@ -228,27 +256,27 @@ class ShareCardGenerator:
                 font=font_caption,
                 fill=self.TEXT_SECONDARY,
             )
-            current_y += 24 + self.CONTENT_GAP
+            current_y += 30 + self.CONTENT_GAP
 
         # 縦書き詩（中央）
-        poem_start_y = current_y + 30
+        poem_start_y = current_y + 50
         poem_center_x = self.WIDTH // 2
 
-        # 下の句（右側・太字）
-        lower_start_x = poem_center_x + 30
+        # 下の句（右側）
+        lower_start_x = poem_center_x + 50
         self._draw_vertical_text_multiline(
-            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 28, 36
+            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 42, 60
         )
 
         # 上の句（左側）
         if upper_text:
-            upper_start_x = poem_center_x - 40
+            upper_start_x = poem_center_x - 60
             self._draw_vertical_text_multiline(
-                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 28, 36
+                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 42, 60
             )
 
         # メタ情報エリア（下部）
-        meta_y = inner_y2 - self.INNER_PADDING - 80
+        meta_y = inner_y2 - self.INNER_PADDING - 110
         meta_x = content_x
 
         # 作者名
@@ -256,7 +284,7 @@ class ShareCardGenerator:
 
         # カテゴリと日付
         meta_text = f"{category_label} / {date_label}"
-        draw.text((meta_x, meta_y + 24), meta_text, font=font_meta, fill=self.TEXT_TERTIARY)
+        draw.text((meta_x, meta_y + 35), meta_text, font=font_meta, fill=self.TEXT_TERTIARY)
 
         # 右側の統計情報
         if likes_label:
@@ -280,7 +308,7 @@ class ShareCardGenerator:
             )
 
         # フッター
-        footer_y = inner_y2 - self.INNER_PADDING - 30
+        footer_y = inner_y2 - self.INNER_PADDING - 45
         draw.text((meta_x, footer_y), "よみびより", font=font_author, fill=self.TEXT_PRIMARY)
 
         footer_url = "yomibiyori.com"
