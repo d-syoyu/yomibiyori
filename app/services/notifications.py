@@ -248,6 +248,7 @@ def _dispatch_notifications(
     now = datetime.now(timezone.utc)
     for token in tokens:
         token.last_sent_at = now
+        payload_data = _sanitize_payload(template.data | {"user_id": token.user_id})
         messages.append(
             NotificationMessage(
                 token=token,
@@ -256,7 +257,7 @@ def _dispatch_notifications(
                     "sound": "default",
                     "title": template.title,
                     "body": template.body,
-                    "data": template.data | {"user_id": token.user_id},
+                    "data": payload_data,
                 },
             )
         )
@@ -346,3 +347,15 @@ def _coerce_uuid(value: Any) -> UUID:
     if isinstance(value, UUID):
         return value
     return UUID(str(value))
+
+
+def _sanitize_payload(value: Any) -> Any:
+    """Recursively convert payload data into JSON-safe types."""
+
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _sanitize_payload(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_sanitize_payload(item) for item in value]
+    return value
