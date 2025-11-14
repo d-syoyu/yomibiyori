@@ -25,6 +25,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.yomibiyori.app',
+    googleServicesFile: './google-services.json', // ← これを追加
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',

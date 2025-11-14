@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "764240513830",
+    "project_id": "yomibiyori-32891",
+    "storage_bucket": "yomibiyori-32891.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764240513830:android:3d8f7e323b893f347e8fe7",
+        "android_client_info": {
+          "package_name": "com.yomibiyori.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-xEvUNUrCmAWoVFhCxMmwvo1J8K6qXEw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

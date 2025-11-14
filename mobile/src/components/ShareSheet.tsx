@@ -13,7 +13,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import ViewShot from 'react-native-view-shot';
+import { captureRef } from 'react-native-view-shot';
 import * as FileSystem from 'expo-file-system';
 import ShareCard from './ShareCard';
 import type { SharePayload } from '../types/share';
@@ -29,7 +29,7 @@ const isViewShotAvailable =
   Platform.OS !== 'web' && typeof (NativeModules as any)?.RNViewShot !== 'undefined';
 
 const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) => {
-  const viewShotRef = useRef<ViewShot | null>(null);
+  const viewShotRef = useRef<View>(null);
   const [isSharing, setIsSharing] = useState(false);
 
   const handleShare = useCallback(async () => {
@@ -47,7 +47,16 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
       }
 
       setIsSharing(true);
-      const uri = await viewShotRef.current?.capture?.();
+
+      // レンダリング完了を待つ
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // captureRef を使用して View のスナップショットを取得
+      const uri = await captureRef(viewShotRef, {
+        format: 'png',
+        quality: 0.95,
+        result: 'tmpfile',
+      });
 
       if (!uri) {
         throw new Error('capture_failed');
@@ -59,7 +68,7 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
         url: uri,
       });
 
-      await FileSystem.deleteAsync(uri, { idempotent: true });
+      await FileSystem.deleteAsync(uri);
       onClose();
     } catch (error) {
       console.error('[ShareSheet] Failed to share card:', error);
@@ -95,17 +104,13 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
             )}
 
             <View style={styles.previewContainer}>
-              <ViewShot
+              <View
                 ref={viewShotRef}
-                options={{
-                  format: 'png',
-                  quality: 0.95,
-                  result: 'tmpfile',
-                }}
+                collapsable={false}
                 style={styles.cardPreview}
               >
                 {payload && <ShareCard content={payload.card} />}
-              </ViewShot>
+              </View>
             </View>
 
             <View style={styles.actions}>

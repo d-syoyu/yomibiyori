@@ -20,6 +20,9 @@ depends_on = None
 def upgrade() -> None:
     """Create notification_tokens table."""
 
+    # Ensure app_public schema exists for triggers/functions used below
+    op.execute("CREATE SCHEMA IF NOT EXISTS app_public;")
+
     op.create_table(
         "notification_tokens",
         sa.Column("id", sa.UUID(), primary_key=True, server_default=sa.text("gen_random_uuid()")),
