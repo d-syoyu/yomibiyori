@@ -18,6 +18,7 @@ export interface ShareCardContent {
 
 export interface SharePayload {
   context: ShareContext;
+  workId: string;
   card: ShareCardContent;
   message: string;
 }

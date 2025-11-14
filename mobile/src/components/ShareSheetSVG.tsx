@@ -1,4 +1,9 @@
-import React, { useCallback, useState } from 'react';
+/**
+ * SVGベース共有シート
+ * より安定的な画像生成を実現
+ */
+
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,84 +13,93 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Platform,
   ScrollView,
+  AppState,
   Share as NativeShare,
+  Platform,
+  NativeModules,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import ShareCard from './ShareCard';
 import * as Sharing from 'expo-sharing';
+import ShareCardSVG from './svg/ShareCardSVG';
+import { captureSvgToImageWithRetry } from '../utils/svgToImage';
 import type { SharePayload } from '../types/share';
-import { colors, spacing, borderRadius, fontFamily, fontSize } from '../theme';
-import { API_BASE_URL } from '../config';
+import { colors, spacing, borderRadius, shadow, fontFamily, fontSize } from '../theme';
 
-interface ShareSheetProps {
+interface ShareSheetSVGProps {
   visible: boolean;
   payload: SharePayload | null;
   onClose: () => void;
 }
 
-const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) => {
+const isViewShotAvailable =
+  Platform.OS !== 'web' && typeof (NativeModules as any)?.RNViewShot !== 'undefined';
+
+const ShareSheetSVG: React.FC<ShareSheetSVGProps> = ({ visible, payload, onClose }) => {
+  const svgRef = useRef<any>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isSvgReady, setIsSvgReady] = useState(false);
 
   const handleShare = useCallback(async () => {
-    if (!payload || !payload.workId) {
+    if (!payload || !svgRef.current) {
+      return;
+    }
+
+    if (!isViewShotAvailable) {
+      Alert.alert(
+        '共有カードが生成できません',
+        'この機能には専用ビルドのアプリが必要です。Expo Go や Web では利用できません。'
+      );
       return;
     }
 
     try {
       setIsSharing(true);
 
-      // サーバーから画像を取得
-      console.log('[ShareSheet] Fetching image from server...');
-      const imageUrl = `${API_BASE_URL}/share/card/${payload.workId}`;
+      // SVGを画像に変換
+      console.log('[ShareSheetSVG] Starting SVG capture...');
+      const uri = await captureSvgToImageWithRetry(svgRef, {
+        width: 1080,
+        height: 1920,
+        quality: 1,
+      });
+      console.log('[ShareSheetSVG] SVG captured successfully:', uri);
 
-      // 画像をダウンロード
-      const downloadResult = await FileSystem.downloadAsync(
-        imageUrl,
-        FileSystem.cacheDirectory + `share_${payload.workId}.png`
-      );
-
-      if (downloadResult.status !== 200) {
-        throw new Error('Failed to download image from server');
-      }
-
-      console.log('[ShareSheet] Image downloaded successfully:', downloadResult.uri);
-
-      // 画像で共有
+      // 共有
       const canShareFile = await Sharing.isAvailableAsync();
       if (canShareFile) {
-        await Sharing.shareAsync(downloadResult.uri, {
+        await Sharing.shareAsync(uri, {
           mimeType: 'image/png',
           UTI: 'public.png',
         });
-
-        // クリーンアップ
-        setTimeout(() => {
-          FileSystem.deleteAsync(downloadResult.uri).catch(err =>
-            console.warn('[ShareSheet] Cleanup error:', err)
-          );
-        }, 3000);
       } else {
-        // フォールバック: テキスト共有
         await NativeShare.share({
           message: payload.message,
         });
       }
+
+      // クリーンアップ
+      const cleanup = () => {
+        setTimeout(() => {
+          console.log('[ShareSheetSVG] Cleaning up temp file:', uri);
+          FileSystem.deleteAsync(uri).catch(err =>
+            console.warn('[ShareSheetSVG] Cleanup error:', err)
+          );
+        }, 3000);
+      };
+
+      const appStateListener = AppState.addEventListener('change', state => {
+        if (state === 'active') {
+          cleanup();
+          appStateListener.remove();
+        }
+      });
+      cleanup();
 
       onClose();
     } catch (error) {
-      console.error('[ShareSheet] Share failed:', error);
-
-      // エラー時はテキストで共有を試みる
-      try {
-        await NativeShare.share({
-          message: payload.message,
-        });
-        onClose();
-      } catch (fallbackError) {
-        Alert.alert('共有に失敗しました', '時間をおいて再度お試しください。');
-      }
+      console.error('[ShareSheetSVG] Share failed:', error);
+      Alert.alert('共有に失敗しました', '時間をおいて再度お試しください。');
     } finally {
       setIsSharing(false);
     }
@@ -110,10 +124,32 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
             <Text style={styles.sheetDescription}>
               プレビューを確認して「画像として共有」をタップすると端末の共有シートが開きます。
             </Text>
+            {!isViewShotAvailable && (
+              <Text style={styles.noticeText}>
+                共有カードの生成は Expo Go / Web ではサポートされません。開発用/本番用ビルドでご利用ください。
+              </Text>
+            )}
 
             <View style={styles.previewContainer}>
-              <View style={styles.cardPreview}>
-                {payload && <ShareCard content={payload.card} />}
+              <View
+                style={styles.svgWrapper}
+                onLayout={() => {
+                  // SVGのレンダリングが完了するまで少し待機
+                  setTimeout(() => {
+                    setIsSvgReady(true);
+                    console.log('[ShareSheetSVG] SVG ready for capture');
+                  }, 300);
+                }}
+              >
+                {payload && (
+                  <View
+                    ref={svgRef}
+                    collapsable={false}
+                    style={styles.svgContainer}
+                  >
+                    <ShareCardSVG content={payload.card} width={324} height={576} />
+                  </View>
+                )}
               </View>
             </View>
 
@@ -121,17 +157,15 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
               <TouchableOpacity
                 style={[
                   styles.shareButton,
-                  isSharing && styles.shareButtonDisabled,
+                  (isSharing || !payload || !isViewShotAvailable || !isSvgReady) &&
+                    styles.shareButtonDisabled,
                 ]}
                 onPress={handleShare}
-                disabled={isSharing}
+                disabled={isSharing || !payload || !isViewShotAvailable || !isSvgReady}
                 activeOpacity={0.8}
               >
                 {isSharing ? (
-                  <View style={styles.preparingRow}>
-                    <ActivityIndicator color={colors.text.inverse} size="small" />
-                    <Text style={styles.shareButtonText}>画像を生成中...</Text>
-                  </View>
+                  <ActivityIndicator color={colors.text.inverse} />
                 ) : (
                   <Text style={styles.shareButtonText}>画像として共有</Text>
                 )}
@@ -191,13 +225,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: spacing.md,
   },
-  cardPreview: {
+  svgWrapper: {
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    width: '90%',
-    maxWidth: 360,
-    alignSelf: 'center',
+    width: 324,
+    height: 576,
     backgroundColor: colors.background.card,
+  },
+  svgContainer: {
+    width: 324,
+    height: 576,
   },
   actions: {
     gap: spacing.sm,
@@ -207,15 +244,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.md,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   shareButtonDisabled: {
     opacity: 0.5,
-  },
-  preparingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   shareButtonText: {
     fontSize: fontSize.body,
@@ -237,4 +268,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShareSheet;
+export default ShareSheetSVG;

@@ -30,7 +30,11 @@ const VerticalPoem: React.FC<VerticalPoemProps> = ({
   const normalizedLower = trimText(lowerText) ?? '';
 
   return (
-    <View style={[styles.row, { maxWidth }]}>
+    <View
+      style={[styles.row, { maxWidth }]}
+      collapsable={false}
+      renderToHardwareTextureAndroid
+    >
       {normalizedUpper ? (
         <View style={[styles.column, { minHeight: columnMinHeight }]}>
           <VerticalText

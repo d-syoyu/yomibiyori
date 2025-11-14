@@ -74,7 +74,10 @@ export default function VerticalText({
       styles.container,
       direction === 'rtl' ? styles.containerRTL : styles.containerLTR,
       style
-    ]}>
+    ]}
+      collapsable={false}
+      renderToHardwareTextureAndroid
+    >
       {lines.map((line, lineIndex) => {
         // Skip empty lines
         if (!line || line.trim().length === 0) {
@@ -82,7 +85,11 @@ export default function VerticalText({
         }
 
         return (
-          <View key={lineIndex} style={styles.column}>
+          <View
+            key={lineIndex}
+            style={styles.column}
+            collapsable={false}
+          >
             {line.split('').map((char, charIndex) => {
               const shouldRotate = needsRotation(char);
 

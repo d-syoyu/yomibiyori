@@ -18,13 +18,22 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
   const shadowColor = categoryTheme?.shadow ?? 'rgba(0, 0, 0, 0.2)';
 
   return (
-    <LinearGradient
-      colors={gradientColors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.gradient, { shadowColor }]}
+    <View
+      style={{ width: '100%' }}
+      collapsable={false}
+      renderToHardwareTextureAndroid
     >
-      <View style={styles.overlay}>
+      <LinearGradient
+        colors={gradientColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.gradient, { shadowColor }]}
+      >
+        <View
+          style={styles.overlay}
+          collapsable={false}
+          renderToHardwareTextureAndroid
+        >
         {content.badgeLabel && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{content.badgeLabel}</Text>
@@ -64,6 +73,7 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
         </View>
       </View>
     </LinearGradient>
+    </View>
   );
 };
 

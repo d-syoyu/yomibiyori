@@ -44,6 +44,7 @@ export const createAppreciationSharePayload = (work: Work, theme?: Theme): Share
   const category = theme?.category ?? FALLBACK_CATEGORY;
   return {
     context: 'appreciation',
+    workId: work.id,
     message: `今日の一首を ${HASH_TAG} で鑑賞しました。\n${SHARE_URL}`,
     card: {
       category,
@@ -65,6 +66,7 @@ export const createRankingSharePayload = (entry: RankingEntry, theme: Theme): Sh
 
   return {
     context: 'ranking',
+    workId: entry.work_id,
     message: `今日のランキング${entry.rank}位の句です（${theme.category}部門）。\n${HASH_TAG}\n${SHARE_URL}`,
     card: {
       category: theme.category,
@@ -86,6 +88,7 @@ export const createProfileSharePayload = (work: Work, theme?: Theme): SharePaylo
   const category = theme?.category ?? FALLBACK_CATEGORY;
   return {
     context: 'profile',
+    workId: work.id,
     message: `今日の一首を ${HASH_TAG} で詠みました。\n${SHARE_URL}`,
     card: {
       category,
