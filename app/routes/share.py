@@ -93,11 +93,33 @@ def font_diagnostics():
     システムにインストールされている日本語フォントを確認
     """
     diagnostics = {
+        "project_fonts": [],
         "nix_store_fonts": [],
         "standard_paths": [],
         "fc_list_output": None,
         "font_packages": [],
     }
+
+    # プロジェクト内のフォントを確認
+    project_font_paths = [
+        "/app/fonts/",
+        "./fonts/",
+        "fonts/",
+    ]
+    for path in project_font_paths:
+        if os.path.exists(path) and os.path.isdir(path):
+            try:
+                files = os.listdir(path)
+                diagnostics["project_fonts"].append({
+                    "path": path,
+                    "files": files,
+                    "absolute_path": os.path.abspath(path),
+                })
+            except Exception as e:
+                diagnostics["project_fonts"].append({
+                    "path": path,
+                    "error": str(e),
+                })
 
     # Nix storeのフォントを検索
     nix_patterns = [
