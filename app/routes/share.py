@@ -11,6 +11,9 @@ from app.models.user import User
 from app.models.theme import Theme
 from app.utils.share_card_generator import ShareCardGenerator
 from datetime import datetime
+import os
+import glob
+import subprocess
 
 router = APIRouter(prefix="/share", tags=["share"])
 
@@ -81,3 +84,73 @@ def generate_share_card(
             "Content-Disposition": f'inline; filename="yomibiyori_{work_id}.png"',
         },
     )
+
+
+@router.get("/font-diagnostics")
+def font_diagnostics():
+    """
+    フォント診断エンドポイント（デバッグ用）
+    システムにインストールされている日本語フォントを確認
+    """
+    diagnostics = {
+        "nix_store_fonts": [],
+        "standard_paths": [],
+        "fc_list_output": None,
+        "font_packages": [],
+    }
+
+    # Nix storeのフォントを検索
+    nix_patterns = [
+        "/nix/store/*/share/fonts/opentype/noto-cjk/*.ttc",
+        "/nix/store/*/share/fonts/truetype/noto-cjk/*.ttc",
+        "/nix/store/*/share/fonts/**/Noto*CJK*.ttc",
+    ]
+    for pattern in nix_patterns:
+        matches = glob.glob(pattern)
+        diagnostics["nix_store_fonts"].extend(matches)
+
+    # 標準パスをチェック
+    standard_paths = [
+        "/usr/share/fonts/opentype/noto-cjk/",
+        "/usr/share/fonts/truetype/noto-cjk/",
+        "/usr/share/fonts/opentype/noto/",
+        "/usr/share/fonts/truetype/noto/",
+    ]
+    for path in standard_paths:
+        if os.path.exists(path):
+            files = os.listdir(path)
+            diagnostics["standard_paths"].append({
+                "path": path,
+                "files": files,
+            })
+
+    # fc-listで日本語フォントを確認
+    try:
+        result = subprocess.run(
+            ["fc-list", ":lang=ja", "file"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            diagnostics["fc_list_output"] = result.stdout.strip().split('\n')
+        else:
+            diagnostics["fc_list_output"] = f"Error: {result.stderr}"
+    except Exception as e:
+        diagnostics["fc_list_output"] = f"Exception: {str(e)}"
+
+    # nixパッケージ情報
+    try:
+        result = subprocess.run(
+            ["nix-store", "--query", "--requisites", "/run/current-system"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            packages = [line for line in result.stdout.split('\n') if 'noto' in line.lower() or 'font' in line.lower()]
+            diagnostics["font_packages"] = packages[:20]  # 最初の20個
+    except Exception as e:
+        diagnostics["font_packages"] = f"Exception: {str(e)}"
+
+    return diagnostics
