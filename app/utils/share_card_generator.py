@@ -243,45 +243,6 @@ class ShareCardGenerator:
         content_y = inner_y1 + self.INNER_PADDING
         content_width = inner_x2 - inner_x1 - (self.INNER_PADDING * 2)
 
-        # Y座標を追跡
-        current_y = content_y
-
-        # バッジ（オプション）
-        if badge_label:
-            badge_padding_x = 16
-            badge_padding_y = 8
-            bbox = draw.textbbox((0, 0), badge_label, font=font_meta)
-            badge_width = (bbox[2] - bbox[0]) + (badge_padding_x * 2)
-            badge_height = (bbox[3] - bbox[1]) + (badge_padding_y * 2)
-
-            draw.rounded_rectangle(
-                [
-                    content_x,
-                    current_y,
-                    content_x + badge_width,
-                    current_y + badge_height,
-                ],
-                radius=8,
-                fill=self.BADGE_BG,
-            )
-            draw.text(
-                (content_x + badge_padding_x, current_y + badge_padding_y),
-                badge_label,
-                font=font_meta,
-                fill=self.TEXT_ACCENT,
-            )
-            current_y += badge_height + self.CONTENT_GAP
-
-        # キャプション（オプション）
-        if caption:
-            draw.text(
-                (content_x, current_y),
-                caption,
-                font=font_caption,
-                fill=self.TEXT_SECONDARY,
-            )
-            current_y += 40 + self.CONTENT_GAP
-
         # 縦書き詩の高さを計算（上の句と下の句の長い方）
         upper_lines = upper_text.split('\n') if upper_text else []
         lower_lines = lower_text.split('\n')
@@ -294,9 +255,9 @@ class ShareCardGenerator:
         # 詩の高さ（文字の高さ × 文字数）
         poem_height = max_chars * 64  # char_height = 64
 
-        # 詩を中央に配置するための計算
-        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - 200  # メタ情報とフッターのスペース
-        poem_start_y = current_y + (available_height - poem_height) // 2
+        # 詩を中央に配置するための計算（シンプル構成: 詩 + 作者名 + アプリ名）
+        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - 80  # 作者名とアプリ名のスペース
+        poem_start_y = content_y + (available_height - poem_height) // 2
         poem_center_x = self.WIDTH // 2
 
         # 上の句（右側）- モバイルと同じ配置
@@ -312,50 +273,21 @@ class ShareCardGenerator:
             draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
         )
 
-        # メタ情報エリア（詩の下、適切な間隔）
-        meta_y = inner_y2 - self.INNER_PADDING - 180
-        meta_x = content_x
+        # シンプル構成: 作者名と右下に「よみびより」のみ
+        bottom_y = inner_y2 - self.INNER_PADDING - 40
 
-        # 作者名
-        draw.text((meta_x, meta_y), author_name, font=font_author, fill=self.TEXT_PRIMARY)
+        # 作者名（左下）
+        draw.text((content_x, bottom_y), author_name, font=font_meta, fill=self.TEXT_SECONDARY)
 
-        # カテゴリと日付
-        meta_text = f"{category_label} / {date_label}"
-        draw.text((meta_x, meta_y + 45), meta_text, font=font_meta, fill=self.TEXT_TERTIARY)
-
-        # 右側の統計情報
-        if likes_label:
-            bbox = draw.textbbox((0, 0), likes_label, font=font_meta)
-            text_width = bbox[2] - bbox[0]
-            draw.text(
-                (inner_x2 - self.INNER_PADDING - text_width, meta_y),
-                likes_label,
-                font=font_meta,
-                fill=self.TEXT_ACCENT,
-            )
-
-        if score_label:
-            bbox = draw.textbbox((0, 0), score_label, font=font_meta)
-            text_width = bbox[2] - bbox[0]
-            draw.text(
-                (inner_x2 - self.INNER_PADDING - text_width, meta_y + 32),
-                score_label,
-                font=font_meta,
-                fill=self.TEXT_ACCENT,
-            )
-
-        # フッター
-        footer_y = inner_y2 - self.INNER_PADDING - 55
-        draw.text((meta_x, footer_y), "よみびより", font=font_author, fill=self.TEXT_PRIMARY)
-
-        footer_url = "yomibiyori.com"
-        bbox = draw.textbbox((0, 0), footer_url, font=font_meta)
-        url_width = bbox[2] - bbox[0]
+        # 「よみびより」（右下）
+        app_name = "よみびより"
+        bbox = draw.textbbox((0, 0), app_name, font=font_meta)
+        app_name_width = bbox[2] - bbox[0]
         draw.text(
-            (inner_x2 - self.INNER_PADDING - url_width, footer_y),
-            footer_url,
+            (inner_x2 - self.INNER_PADDING - app_name_width, bottom_y),
+            app_name,
             font=font_meta,
-            fill=self.TEXT_PRIMARY,
+            fill=self.TEXT_SECONDARY,
         )
 
         # BytesIOに保存（PNG最適化）
