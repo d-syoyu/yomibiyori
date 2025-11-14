@@ -46,11 +46,19 @@ class ShareCardGenerator:
     def _find_font(self) -> Optional[str]:
         """システムからNoto Serif JPフォントを探す"""
         possible_paths = [
+            # Linux paths (Railway, Ubuntu, etc.)
             "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            # macOS paths
             "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            # Windows paths
             "C:\\Windows\\Fonts\\msgothic.ttc",  # Windows MS Gothic
-            "./fonts/NotoSerifJP-Regular.otf",  # プロジェクト内
+            "C:\\Windows\\Fonts\\msmincho.ttc",  # Windows MS Mincho
+            # Project paths
+            "./fonts/NotoSerifJP-Regular.otf",
         ]
 
         for path in possible_paths:
