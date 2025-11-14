@@ -19,7 +19,7 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
 
   return (
     <View
-      style={{ width: '100%' }}
+      style={{ width: '100%', aspectRatio: 4 / 5 }}
       collapsable={false}
       renderToHardwareTextureAndroid
     >
@@ -34,42 +34,51 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
           collapsable={false}
           renderToHardwareTextureAndroid
         >
-        {content.badgeLabel && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{content.badgeLabel}</Text>
-          </View>
-        )}
+        {/* 上部：バッジとキャプション */}
+        <View style={styles.topSection}>
+          {content.badgeLabel && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{content.badgeLabel}</Text>
+            </View>
+          )}
 
-        {content.caption && (
-          <Text style={styles.caption}>{content.caption}</Text>
-        )}
-
-        <VerticalPoem
-          upperText={content.upperText}
-          lowerText={content.lowerText}
-          lowerBold
-        />
-
-        <View style={styles.metaRow}>
-          <View style={styles.metaColumn}>
-            <Text style={styles.author}>{content.displayName}</Text>
-            <Text style={styles.metaText}>
-              {content.categoryLabel} / {content.dateLabel}
-            </Text>
-          </View>
-          <View style={styles.statColumn}>
-            {content.likesLabel && (
-              <Text style={styles.statText}>{content.likesLabel}</Text>
-            )}
-            {content.scoreLabel && (
-              <Text style={[styles.statText, styles.scoreText]}>{content.scoreLabel}</Text>
-            )}
-          </View>
+          {content.caption && (
+            <Text style={styles.caption}>{content.caption}</Text>
+          )}
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.appName}>{APP_NAME}</Text>
-          <Text style={styles.urlText}>{content.footerUrl ?? 'yomibiyori.com'}</Text>
+        {/* 中央：詩 */}
+        <View style={styles.poemSection}>
+          <VerticalPoem
+            upperText={content.upperText}
+            lowerText={content.lowerText}
+            lowerBold
+          />
+        </View>
+
+        {/* 下部：メタ情報とフッター */}
+        <View style={styles.bottomSection}>
+          <View style={styles.metaRow}>
+            <View style={styles.metaColumn}>
+              <Text style={styles.author}>{content.displayName}</Text>
+              <Text style={styles.metaText}>
+                {content.categoryLabel} / {content.dateLabel}
+              </Text>
+            </View>
+            <View style={styles.statColumn}>
+              {content.likesLabel && (
+                <Text style={styles.statText}>{content.likesLabel}</Text>
+              )}
+              {content.scoreLabel && (
+                <Text style={[styles.statText, styles.scoreText]}>{content.scoreLabel}</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.appName}>{APP_NAME}</Text>
+            <Text style={styles.urlText}>{content.footerUrl ?? 'yomibiyori.com'}</Text>
+          </View>
         </View>
       </View>
     </LinearGradient>
@@ -79,6 +88,7 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
 
 const styles = StyleSheet.create({
   gradient: {
+    flex: 1,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     shadowOffset: { width: 0, height: 8 },
@@ -87,9 +97,21 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   overlay: {
+    flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
     borderRadius: borderRadius.md,
     padding: spacing.lg,
+    justifyContent: 'space-between',
+  },
+  topSection: {
+    gap: spacing.sm,
+  },
+  poemSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomSection: {
     gap: spacing.md,
   },
   badge: {
@@ -116,7 +138,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   metaColumn: {
     flex: 1,
@@ -149,7 +170,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: spacing.md,
   },
   appName: {
     fontSize: fontSize.body,

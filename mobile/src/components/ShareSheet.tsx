@@ -195,7 +195,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     width: '90%',
-    maxWidth: 360,
+    maxWidth: 320,
+    aspectRatio: 4 / 5, // Instagram 4:5比率（1080x1350と同じ）
     alignSelf: 'center',
     backgroundColor: colors.background.card,
   },
