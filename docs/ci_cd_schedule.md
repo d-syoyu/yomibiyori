@@ -29,11 +29,15 @@
 2. **ランキング確定 (22:00 JST)**  
    - `finalize_rankings.yml`（cron: `0 13 * * *`）で `scripts/finalize_rankings.py` を実行。  
    - Secrets として `DATABASE_URL` / `REDIS_URL` / `SUPABASE_PROJECT_REF` が必要。
-3. **06:00 通知配信 (未実装)**  
-   - Expo Push 用の Queue へ連携するジョブを追加予定。Actions もしくは Railway Scheduler での実装を検討。
+3. **06:00 通知配信 (実装済み)**  
+   - `send_theme_notifications.yml`（cron: `0 21 * * *`）で `scripts/send_theme_release_notifications.py` を実行。  
+   - Secrets: `DATABASE_URL`, `EXPO_ACCESS_TOKEN`（Expo Push API 用トークン）。
+4. **22:05 ランキング通知**  
+   - `send_ranking_notifications.yml`（cron: `5 13 * * *`）で `scripts/send_ranking_result_notifications.py` を実行。  
+   - ランキング確定ワークフロー完了後にほぼ同期して Push 配信。Secrets は上記と同様。
 
 ## Secrets 管理
-- GitHub Actions: `DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`, `THEME_CATEGORIES`, `SUPABASE_PROJECT_REF`, `SUPABASE_SERVICE_ROLE_KEY`
+- GitHub Actions: `DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`, `THEME_CATEGORIES`, `SUPABASE_PROJECT_REF`, `SUPABASE_SERVICE_ROLE_KEY`, `EXPO_ACCESS_TOKEN`
 - Railway: プロジェクト環境変数に追加し、`railway run` から参照
 
 ## 今後の TODO

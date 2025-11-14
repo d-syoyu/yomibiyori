@@ -15,6 +15,7 @@ from app.schemas.auth import (
     VerifyTokenAndUpdatePasswordRequest,
     UpdateProfileRequest,
 )
+from app.schemas.notification import NotificationTokenCreate, NotificationTokenResponse
 from app.schemas.work import (
     WorkCreate,
     WorkResponse,
@@ -59,6 +60,8 @@ __all__ = [
     "UpdatePasswordResponse",
     "VerifyTokenAndUpdatePasswordRequest",
     "UpdateProfileRequest",
+    "NotificationTokenCreate",
+    "NotificationTokenResponse",
     # work
     "WorkCreate",
     "WorkResponse",

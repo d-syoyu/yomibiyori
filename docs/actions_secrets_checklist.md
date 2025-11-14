@@ -9,6 +9,7 @@
 | `THEME_CATEGORIES` | 生成対象カテゴリ（例: `恋愛,季節,日常,ユーモア`） | generate_themes |
 | `SUPABASE_PROJECT_REF` | Supabase プロジェクト ID | generate_themes / finalize_rankings |
 | `SUPABASE_SERVICE_ROLE_KEY` | ランキング確定ジョブ等の特権操作 | finalize_rankings |
+| `EXPO_ACCESS_TOKEN` | Expo Push API 認証トークン | send_theme_notifications / send_ranking_notifications |
 
 ## 任意
 | Secret | 用途 |

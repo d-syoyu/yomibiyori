@@ -16,6 +16,9 @@ import Navigation from './src/navigation';
 import api from './src/services/api';
 import useAuthStore from './src/stores/useAuthStore';
 import { initAnalytics, identifyUser } from './src/utils/analytics';
+import { configureNotificationHandler, registerForPushNotifications } from './src/utils/pushNotifications';
+
+configureNotificationHandler();
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -23,6 +26,7 @@ export default function App() {
     NotoSerifJP_500Medium,
     NotoSerifJP_600SemiBold,
   });
+  const currentUserId = useAuthStore(state => state.user?.user_id);
 
   // Setup token validation hook for proactive refresh
   useEffect(() => {
@@ -34,6 +38,14 @@ export default function App() {
       api.setTokenValidationHook(null);
     };
   }, []);
+
+  // Register Expo push token after login
+  useEffect(() => {
+    if (!currentUserId) {
+      return;
+    }
+    registerForPushNotifications();
+  }, [currentUserId]);
 
   // Initialize PostHog analytics
   useEffect(() => {

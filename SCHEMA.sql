@@ -55,6 +55,32 @@ comment on column users.analytics_opt_out is '���̓g���b�N�̎�
 comment on column users.notify_theme_release is '06:00 �V���_�ӂ̃��[�U�[�ʒm';
 comment on column users.notify_ranking_result is '22:00 �����L���O���m�̕ʒm';
 
+-- ========= 通知トークン =========
+create table if not exists notification_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  expo_push_token text not null,
+  device_id text,
+  platform text,
+  app_version text,
+  is_active boolean not null default true,
+  last_registered_at timestamptz not null default now(),
+  last_sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint uq_notification_tokens_push_token unique (expo_push_token)
+);
+create trigger trg_notification_tokens_updated_at
+before update on notification_tokens
+for each row execute function app_public.set_updated_at();
+create index if not exists idx_notification_tokens_user_active on notification_tokens(user_id) where is_active = true;
+create index if not exists idx_notification_tokens_active on notification_tokens(is_active);
+
+comment on table notification_tokens is 'Expo Push トークン登録テーブル';
+comment on column notification_tokens.expo_push_token is 'ExponentPushToken[...] 形式のトークン';
+comment on column notification_tokens.is_active is 'Expo エラー発生時に無効化するフラグ';
+
+
 -- ========= お題（上の句） =========
 create table if not exists themes (
   id uuid primary key default gen_random_uuid(),

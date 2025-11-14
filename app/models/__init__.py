@@ -7,6 +7,7 @@ from app.models.ranking import Ranking
 from app.models.user import User
 from app.models.work import Work
 from app.models.sponsor import Sponsor, SponsorCampaign, SponsorTheme
+from app.models.notification import NotificationToken
 
 __all__ = [
     "Base",
@@ -18,4 +19,5 @@ __all__ = [
     "Sponsor",
     "SponsorCampaign",
     "SponsorTheme",
+    "NotificationToken",
 ]

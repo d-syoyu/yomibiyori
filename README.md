@@ -32,9 +32,9 @@ mobile/
     store/       # Zustand state management
     services/    # API client and auth services
 docs/          # Architecture and operational notes
-scripts/       # CLI scripts for scheduled jobs (generate_themes, finalize_rankings)
+scripts/       # CLI scripts for scheduled jobs (themes, rankings, notifications)
 tests/         # Pytest suite with fakeredis + SQLite (13 test files)
-.github/       # CI and scheduled workflows (generate_themes, finalize_rankings)
+.github/       # CI and scheduled workflows (generate_themes, finalize_rankings, notifications)
 Procfile       # Railway entrypoint
 ```
 
@@ -104,6 +104,8 @@ Detailed steps: `docs/deployment_railway.md`.
 ## Scheduled Jobs
 - `generate_themes.yml` (cron `0 12 * * *` → 21:00 JST): runs `scripts/generate_themes.py` to generate themes for the next day
 - `finalize_rankings.yml` (cron `0 13 * * *` → 22:00 JST): runs `scripts/finalize_rankings.py` to finalize today's rankings and save to PostgreSQL
+- `send_theme_notifications.yml` (cron `0 21 * * *` → 06:00 JST): runs `scripts/send_theme_release_notifications.py` to send morning Expo Push notifications
+- `send_ranking_notifications.yml` (cron `5 13 * * *` → 22:05 JST): runs `scripts/send_ranking_result_notifications.py` to alert users when rankings are ready
 
 Both jobs can also be triggered manually via `workflow_dispatch`.
 

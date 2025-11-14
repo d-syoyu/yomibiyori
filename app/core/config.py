@@ -193,6 +193,29 @@ class Settings(BaseSettings):
         alias="OAUTH_ALLOWED_REDIRECT_HOSTS",
         description="Comma-separated list of hostnames allowed in OAuth redirect_to parameters.",
     )
+    expo_access_token: str | None = Field(
+        default=None,
+        alias="EXPO_ACCESS_TOKEN",
+        description="Bearer token for Expo Push API requests.",
+    )
+    expo_push_api_url: str = Field(
+        default="https://exp.host/--/api/v2/push/send",
+        alias="EXPO_PUSH_API_URL",
+        description="Expo Push API endpoint.",
+    )
+    expo_push_timeout: float = Field(
+        default=15.0,
+        alias="EXPO_PUSH_TIMEOUT",
+        description="Timeout (seconds) for Expo Push API calls.",
+        ge=1.0,
+    )
+    notification_batch_size: int = Field(
+        default=100,
+        alias="NOTIFICATION_BATCH_SIZE",
+        description="Maximum number of push messages per HTTP batch (Expo max 100).",
+        ge=1,
+        le=100,
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

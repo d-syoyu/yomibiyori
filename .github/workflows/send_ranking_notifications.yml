@@ -1,0 +1,31 @@
+name: Send Ranking Notifications
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "5 13 * * *" # 22:05 JST, after ranking finalization
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -e .
+
+      - name: Dispatch ranking notifications
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+        run: |
+          TARGET_DATE=$(TZ=Asia/Tokyo date '+%Y-%m-%d')
+          python scripts/send_ranking_result_notifications.py --date $TARGET_DATE

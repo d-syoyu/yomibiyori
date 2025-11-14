@@ -35,3 +35,8 @@ class User(Base):
         back_populates="author",
         cascade="all, delete-orphan",
     )
+    notification_tokens: Mapped[list["NotificationToken"]] = relationship(
+        "NotificationToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

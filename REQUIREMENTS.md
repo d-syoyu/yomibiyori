@@ -122,6 +122,8 @@
   - 06:00: お題配信通知。
   - 22:00: ランキング確定通知。
   - プロフィール画面で 06:00 / 22:00 の Push 通知を個別に ON/OFF 切り替え可能。
+  - Expo Push トークン登録 API: `/notifications/tokens`（ユーザー認証必須、ExponentPushToken[...] の登録・更新）。
+  - GitHub Actions ジョブ: `send_theme_notifications.yml`（06:00 JST）、`send_ranking_notifications.yml`（22:05 JST）が `scripts/send_*_notifications.py` を実行。
 
 ### 9. 分析とユーザー行動トラッキング
 - **要件ID**: FR-009

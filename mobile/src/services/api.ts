@@ -27,6 +27,8 @@ import type {
   WorkImpressionResponse,
   RankingResponse,
   ApiError,
+  NotificationTokenRequest,
+  NotificationTokenResponse,
 } from '../types';
 
 // ============================================================================
@@ -397,6 +399,15 @@ class ApiClient {
     const response = await this.client.get<RankingResponse>('/ranking', {
       params: { theme_id: themeId },
     });
+    return response.data;
+  }
+
+  // ==========================================================================
+  // Notification Endpoints
+  // ==========================================================================
+
+  async registerNotificationToken(data: NotificationTokenRequest): Promise<NotificationTokenResponse> {
+    const response = await this.client.post<NotificationTokenResponse>('/notifications/tokens', data);
     return response.data;
   }
 }

@@ -68,6 +68,23 @@ export interface UpdateProfileRequest {
   notify_ranking_result?: boolean;
 }
 
+export interface NotificationTokenRequest {
+  expo_push_token: string;
+  device_id?: string;
+  platform?: string;
+  app_version?: string;
+}
+
+export interface NotificationTokenResponse {
+  id: string;
+  expo_push_token: string;
+  device_id?: string | null;
+  platform?: string | null;
+  app_version?: string | null;
+  is_active: boolean;
+  last_registered_at: string;
+}
+
 export interface OAuthUrlResponse {
   url: string;
   provider: 'google' | 'apple';
