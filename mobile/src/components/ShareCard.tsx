@@ -10,7 +10,7 @@ interface ShareCardProps {
 }
 
 const APP_NAME = 'よみびより';
-const DEFAULT_GRADIENT = ['#6B7B4F', '#93A36C'] as const;
+const DEFAULT_GRADIENT = ['#FFB7C5', '#FFE4E8'] as const;
 
 const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
   const categoryTheme = colors.category[content.category];
@@ -29,63 +29,56 @@ const ShareCard: React.FC<ShareCardProps> = ({ content }) => {
         end={{ x: 1, y: 1 }}
         style={[styles.gradient, { shadowColor }]}
       >
+        {/* WorkCardと同じ構造の白い内側カード */}
         <View
-          style={styles.overlay}
+          style={styles.innerCard}
           collapsable={false}
           renderToHardwareTextureAndroid
         >
-        {/* 上部：バッジとキャプション */}
-        <View style={styles.topSection}>
+          {/* バッジ（オプション） */}
           {content.badgeLabel && (
-            <View style={styles.badge}>
+            <View style={styles.badgeContainer}>
               <Text style={styles.badgeText}>{content.badgeLabel}</Text>
             </View>
           )}
 
+          {/* キャプション（オプション） */}
           {content.caption && (
             <Text style={styles.caption}>{content.caption}</Text>
           )}
-        </View>
 
-        {/* 中央：詩 */}
-        <View style={styles.poemSection}>
-          <View style={styles.poemWrapper}>
+          {/* 詩本体 - WorkCardと同じVerticalPoemを使用 */}
+          <View style={styles.poemContainer}>
             <VerticalPoem
               upperText={content.upperText}
               lowerText={content.lowerText}
               lowerBold
-              maxWidth={180}
-              columnMinHeight={0}
             />
           </View>
-        </View>
 
-        {/* 下部：メタ情報とフッター */}
-        <View style={styles.bottomSection}>
-          <View style={styles.metaRow}>
-            <View style={styles.metaColumn}>
-              <Text style={styles.author}>{content.displayName}</Text>
+          {/* 投稿者名 - WorkCardと同じスタイル */}
+          <Text style={styles.authorText}>@{content.displayName}</Text>
+
+          {/* 区切り線 */}
+          <View style={styles.divider} />
+
+          {/* フッター情報 */}
+          <View style={styles.footer}>
+            <View style={styles.footerLeft}>
               <Text style={styles.metaText}>
                 {content.categoryLabel} / {content.dateLabel}
               </Text>
+              <Text style={styles.appName}>{APP_NAME}</Text>
             </View>
-            <View style={styles.statColumn}>
+            <View style={styles.footerRight}>
               {content.likesLabel && (
-                <Text style={styles.statText}>{content.likesLabel}</Text>
+                <Text style={styles.likesLabel}>{content.likesLabel}</Text>
               )}
-              {content.scoreLabel && (
-                <Text style={[styles.statText, styles.scoreText]}>{content.scoreLabel}</Text>
-              )}
+              <Text style={styles.urlText}>{content.footerUrl ?? 'yomibiyori.com'}</Text>
             </View>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.appName}>{APP_NAME}</Text>
-            <Text style={styles.urlText}>{content.footerUrl ?? 'yomibiyori.com'}</Text>
           </View>
         </View>
-      </View>
-    </LinearGradient>
+      </LinearGradient>
     </View>
   );
 };
@@ -94,43 +87,25 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    padding: spacing.md,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 18,
     elevation: 4,
   },
-  overlay: {
+  innerCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
     padding: spacing.lg,
     justifyContent: 'space-between',
   },
-  topSection: {
-    gap: spacing.sm,
-    flexShrink: 0,
-  },
-  poemSection: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 0,
-  },
-  poemWrapper: {
-    maxHeight: '100%',
-    transform: [{ scale: 0.65 }], // 詩全体を65%に縮小（バランス調整）
-  },
-  bottomSection: {
-    gap: spacing.md,
-    flexShrink: 0,
-  },
-  badge: {
+  badgeContainer: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(26, 54, 93, 0.08)',
+    borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    borderRadius: borderRadius.sm,
   },
   badgeText: {
     fontSize: fontSize.caption,
@@ -143,44 +118,43 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     color: colors.text.secondary,
     letterSpacing: 1,
+    marginTop: spacing.xs,
   },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  metaColumn: {
+  poemContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 0,
   },
-  author: {
-    fontSize: fontSize.body,
-    fontFamily: fontFamily.semiBold,
-    color: colors.text.primary,
-    letterSpacing: 0.5,
-  },
-  metaText: {
-    fontSize: fontSize.caption,
+  authorText: {
+    fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.medium,
-    color: colors.text.tertiary,
-    letterSpacing: 0.5,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
   },
-  statColumn: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  statText: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.semiBold,
-    color: colors.text.accent,
-  },
-  scoreText: {
-    color: colors.status.info,
+  divider: {
+    height: 1,
+    backgroundColor: colors.background.secondary,
+    marginVertical: spacing.sm,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  footerLeft: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  footerRight: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  metaText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.medium,
+    color: colors.text.tertiary,
   },
   appName: {
     fontSize: fontSize.body,
@@ -188,11 +162,15 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     letterSpacing: 1,
   },
-  urlText: {
+  likesLabel: {
     fontSize: fontSize.caption,
     fontFamily: fontFamily.semiBold,
+    color: colors.text.accent,
+  },
+  urlText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.medium,
     color: colors.text.primary,
-    letterSpacing: 1,
   },
 });
 
