@@ -329,8 +329,7 @@ const styles = StyleSheet.create({
   verticalTextContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 120,
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
   },
   themeVerticalText: {
     fontSize: fontSize.poem,
