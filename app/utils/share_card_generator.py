@@ -239,48 +239,58 @@ class ShareCardGenerator:
         content_y = inner_y1 + self.INNER_PADDING
         content_width = inner_x2 - inner_x1 - (self.INNER_PADDING * 2)
 
-        # WorkCardと同じ配置: 詩は上から配置（中央配置は不要）
-        poem_start_y = content_y + 60  # 上部に余白
+        # 詩の配置計算: 中央に配置
+        # lineHeight = 38 → 109px (2.88倍)
+        char_height = 109  # lineHeight相当
+        column_spacing = 90  # 列間隔を狭く
+
+        # 縦書き詩の高さを計算
+        upper_lines = upper_text.split('\n') if upper_text else []
+        lower_lines = lower_text.split('\n')
+        max_upper_chars = max((len(line.strip()) for line in upper_lines), default=0)
+        max_lower_chars = max((len(line.strip()) for line in lower_lines), default=0)
+        max_chars = max(max_upper_chars, max_lower_chars)
+        poem_height = max_chars * char_height
+
+        # フッター領域のサイズ（spacing.mdスケール: 16 * 2.88 ≈ 46）
+        spacing_md = 46
+        footer_total_height = 35 + spacing_md + 1 + spacing_md + 35 + spacing_md  # 作者名 + margin + 線 + margin + よみびより + margin
+
+        # 詩を中央に配置
+        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - footer_total_height
+        poem_start_y = content_y + (available_height - poem_height) // 2
         poem_center_x = self.WIDTH // 2
 
-        # 上の句（右側）- モバイルと同じ配置
-        # lineHeight = 38 → 109px (2.88倍), column_spacing も同様にスケール
-        char_height = 109  # lineHeight相当
-        column_spacing = 144  # spacing.lg * 2.88 ≈ 50px → 144px
-
+        # 上の句（右側）
         if upper_text:
-            upper_start_x = poem_center_x + 100
+            upper_start_x = poem_center_x + 80
             self._draw_vertical_text_multiline(
                 draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
             )
 
-        # 下の句（左側、太字）- モバイルと同じ配置
-        lower_start_x = poem_center_x - 100
+        # 下の句（左側）
+        lower_start_x = poem_center_x - 80
         self._draw_vertical_text_multiline(
             draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
         )
 
-        # WorkCardと同じ構成: 作者名 + 区切り線 + フッター（よみびより）
-        # 下部から逆算して配置
-        footer_height = 100  # フッター全体の高さ
-        author_y = inner_y2 - self.INNER_PADDING - footer_height
+        # フッター: 下部から逆算
+        author_y = inner_y2 - self.INNER_PADDING - footer_total_height + spacing_md
 
-        # 作者名（@付き、WorkCardと同じ）
+        # 作者名（@付き）
         author_text = f"@{author_name}"
-        draw.text((content_x, author_y), author_text, font=font_meta, fill=self.TEXT_SECONDARY)
+        draw.text((content_x, author_y), author_text, font=font_author, fill=self.TEXT_SECONDARY)
 
-        # 区切り線（作者名の下、marginVertical相当の間隔）
-        divider_y = author_y + 40 + 24  # テキスト高さ + spacing.md
-        divider_x1 = content_x
-        divider_x2 = inner_x2 - self.INNER_PADDING
+        # 区切り線（より濃い色に変更）
+        divider_y = author_y + 35 + spacing_md
         draw.line(
-            [(divider_x1, divider_y), (divider_x2, divider_y)],
-            fill=(245, 245, 245),  # colors.background.secondary
-            width=1
+            [(content_x, divider_y), (inner_x2 - self.INNER_PADDING, divider_y)],
+            fill=(220, 220, 220),  # より濃いグレー
+            width=2  # 太くする
         )
 
-        # フッター: 右に「よみびより」（WorkCardのcustomActions位置）
-        footer_y = divider_y + 24  # spacing.md
+        # よみびより（右下）
+        footer_y = divider_y + spacing_md
         app_name = "よみびより"
         bbox = draw.textbbox((0, 0), app_name, font=font_meta)
         app_name_width = bbox[2] - bbox[0]
