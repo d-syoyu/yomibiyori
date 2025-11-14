@@ -5,8 +5,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.database import get_db
-from app.models import Work, User, Theme
+from app.db.session import get_db
+from app.db.models import Work, User, Theme
 from app.utils.share_card_generator import ShareCardGenerator
 from datetime import datetime
 
