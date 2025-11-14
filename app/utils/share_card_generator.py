@@ -12,9 +12,9 @@ import os
 class ShareCardGenerator:
     """共有カード画像生成クラス"""
 
-    # 画像サイズ
-    WIDTH = 1080
-    HEIGHT = 1920
+    # 画像サイズ（SNS共有に最適化）
+    WIDTH = 720
+    HEIGHT = 1280
 
     # カラー定義（モバイルのthemeと同じ）
     COLORS = {
@@ -27,10 +27,10 @@ class ShareCardGenerator:
     # デフォルトカラー
     DEFAULT_GRADIENT = ["#6B7B4F", "#93A36C"]
 
-    # レイアウト定数
-    OUTER_PADDING = 40
-    INNER_PADDING = 32
-    CONTENT_GAP = 24
+    # レイアウト定数（スケール調整済み）
+    OUTER_PADDING = 28
+    INNER_PADDING = 20
+    CONTENT_GAP = 16
 
     # テキストカラー
     TEXT_PRIMARY = (26, 26, 26)  # #1A1A1A
@@ -180,11 +180,11 @@ class ShareCardGenerator:
         img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
         draw = ImageDraw.Draw(img)
 
-        # フォント準備
-        font_poem = self._get_font(32)  # 詩用フォント
-        font_author = self._get_font(22)  # 作者名用
-        font_meta = self._get_font(16)  # メタ情報用
-        font_caption = self._get_font(18)  # キャプション用
+        # フォント準備（スケール調整済み）
+        font_poem = self._get_font(24)  # 詩用フォント
+        font_author = self._get_font(16)  # 作者名用
+        font_meta = self._get_font(12)  # メタ情報用
+        font_caption = self._get_font(14)  # キャプション用
 
         # コンテンツ領域の開始位置
         content_x = inner_x1 + self.INNER_PADDING
@@ -196,8 +196,8 @@ class ShareCardGenerator:
 
         # バッジ（オプション）
         if badge_label:
-            badge_padding_x = 16
-            badge_padding_y = 8
+            badge_padding_x = 12
+            badge_padding_y = 6
             bbox = draw.textbbox((0, 0), badge_label, font=font_meta)
             badge_width = (bbox[2] - bbox[0]) + (badge_padding_x * 2)
             badge_height = (bbox[3] - bbox[1]) + (badge_padding_y * 2)
@@ -228,27 +228,27 @@ class ShareCardGenerator:
                 font=font_caption,
                 fill=self.TEXT_SECONDARY,
             )
-            current_y += 30 + self.CONTENT_GAP
+            current_y += 24 + self.CONTENT_GAP
 
         # 縦書き詩（中央）
-        poem_start_y = current_y + 40
+        poem_start_y = current_y + 30
         poem_center_x = self.WIDTH // 2
 
         # 下の句（右側・太字）
-        lower_start_x = poem_center_x + 40
+        lower_start_x = poem_center_x + 30
         self._draw_vertical_text_multiline(
-            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 38, 50
+            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 28, 36
         )
 
         # 上の句（左側）
         if upper_text:
-            upper_start_x = poem_center_x - 60
+            upper_start_x = poem_center_x - 40
             self._draw_vertical_text_multiline(
-                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 38, 50
+                draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 28, 36
             )
 
         # メタ情報エリア（下部）
-        meta_y = inner_y2 - self.INNER_PADDING - 120
+        meta_y = inner_y2 - self.INNER_PADDING - 80
         meta_x = content_x
 
         # 作者名
@@ -256,7 +256,7 @@ class ShareCardGenerator:
 
         # カテゴリと日付
         meta_text = f"{category_label} / {date_label}"
-        draw.text((meta_x, meta_y + 32), meta_text, font=font_meta, fill=self.TEXT_TERTIARY)
+        draw.text((meta_x, meta_y + 24), meta_text, font=font_meta, fill=self.TEXT_TERTIARY)
 
         # 右側の統計情報
         if likes_label:
@@ -280,7 +280,7 @@ class ShareCardGenerator:
             )
 
         # フッター
-        footer_y = inner_y2 - self.INNER_PADDING - 40
+        footer_y = inner_y2 - self.INNER_PADDING - 30
         draw.text((meta_x, footer_y), "よみびより", font=font_author, fill=self.TEXT_PRIMARY)
 
         footer_url = "yomibiyori.com"
@@ -293,9 +293,9 @@ class ShareCardGenerator:
             fill=self.TEXT_PRIMARY,
         )
 
-        # BytesIOに保存
+        # BytesIOに保存（PNG最適化）
         output = BytesIO()
-        img.save(output, format="PNG", quality=95)
+        img.save(output, format="PNG", quality=85, optimize=True)
         output.seek(0)
 
         return output
