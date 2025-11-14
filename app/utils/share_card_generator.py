@@ -205,32 +205,28 @@ class ShareCardGenerator:
         Returns:
             BytesIO: PNG画像のバイトストリーム
         """
-        # 画像作成
-        img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color="white")
-
-        # グラデーション背景
+        # WorkCardと同じ構成: カテゴリカラーの単色背景
         gradient_colors = self.COLORS.get(category_label, {}).get(
             "gradient", self.DEFAULT_GRADIENT
         )
-        img = self._create_gradient_background(img, gradient_colors)
+        # グラデーションの1色目を背景色として使用（WorkCardのouterContainerと同じ）
+        bg_color = self._hex_to_rgb(gradient_colors[0])
+        img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
+        draw = ImageDraw.Draw(img)
 
-        # 半透明オーバーレイ用の新しいイメージ
-        overlay = Image.new("RGBA", (self.WIDTH, self.HEIGHT), (0, 0, 0, 0))
-        overlay_draw = ImageDraw.Draw(overlay)
-
-        # 白い内側の矩形
+        # 白い内側カード（WorkCardのinnerCardと同じ）
+        # OUTER_PADDINGは外側全体のパディング、spacing.xsに相当
         inner_x1 = self.OUTER_PADDING
         inner_y1 = self.OUTER_PADDING
         inner_x2 = self.WIDTH - self.OUTER_PADDING
         inner_y2 = self.HEIGHT - self.OUTER_PADDING
 
-        overlay_draw.rounded_rectangle(
-            [inner_x1, inner_y1, inner_x2, inner_y2], radius=24, fill=self.OVERLAY_BG
+        # 白い内側カードを描画
+        draw.rounded_rectangle(
+            [inner_x1, inner_y1, inner_x2, inner_y2],
+            radius=24,
+            fill=(255, 255, 255)  # 完全な白
         )
-
-        # オーバーレイを合成
-        img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
-        draw = ImageDraw.Draw(img)
 
         # フォント準備（大幅に拡大）
         font_poem = self._get_font(56)  # 詩用フォント
@@ -255,8 +251,10 @@ class ShareCardGenerator:
         # 詩の高さ（文字の高さ × 文字数）
         poem_height = max_chars * 64  # char_height = 64
 
-        # 詩を中央に配置するための計算（シンプル構成: 詩 + 作者名 + アプリ名）
-        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - 80  # 作者名とアプリ名のスペース
+        # 詩を中央に配置するための計算
+        # WorkCard構成: 作者名(40) + 区切り線(1+48) + フッター(40) = 約130px
+        footer_space = 130
+        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - footer_space
         poem_start_y = content_y + (available_height - poem_height) // 2
         poem_center_x = self.WIDTH // 2
 
@@ -273,21 +271,33 @@ class ShareCardGenerator:
             draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
         )
 
-        # シンプル構成: 作者名と右下に「よみびより」のみ
-        bottom_y = inner_y2 - self.INNER_PADDING - 40
+        # WorkCardと同じ構成: 作者名 + 区切り線 + フッター（よみびより）
+        # 作者名の位置（詩の下、marginTop相当）
+        author_y = poem_start_y + poem_height + 40  # spacing.md相当
 
-        # 作者名（左下）
-        draw.text((content_x, bottom_y), author_name, font=font_meta, fill=self.TEXT_SECONDARY)
+        # 作者名
+        draw.text((content_x, author_y), author_name, font=font_meta, fill=self.TEXT_SECONDARY)
 
-        # 「よみびより」（右下）
+        # 区切り線（作者名の下、marginVertical相当の間隔）
+        divider_y = author_y + 40 + 24  # テキスト高さ + spacing.md
+        divider_x1 = content_x
+        divider_x2 = inner_x2 - self.INNER_PADDING
+        draw.line(
+            [(divider_x1, divider_y), (divider_x2, divider_y)],
+            fill=(245, 245, 245),  # colors.background.secondary
+            width=1
+        )
+
+        # フッター: 右に「よみびより」（WorkCardのcustomActions位置）
+        footer_y = divider_y + 24  # spacing.md
         app_name = "よみびより"
         bbox = draw.textbbox((0, 0), app_name, font=font_meta)
         app_name_width = bbox[2] - bbox[0]
         draw.text(
-            (inner_x2 - self.INNER_PADDING - app_name_width, bottom_y),
+            (inner_x2 - self.INNER_PADDING - app_name_width, footer_y),
             app_name,
             font=font_meta,
-            fill=self.TEXT_SECONDARY,
+            fill=self.TEXT_SECONDARY
         )
 
         # BytesIOに保存（PNG最適化）
