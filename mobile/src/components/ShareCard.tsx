@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   poemWrapper: {
     maxHeight: '100%',
-    transform: [{ scale: 0.5 }], // 詩全体を50%に縮小
+    transform: [{ scale: 0.65 }], // 詩全体を65%に縮小（バランス調整）
   },
   bottomSection: {
     gap: spacing.md,
