@@ -55,21 +55,11 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
       // 画像とテキストで共有
       const canShareFile = await Sharing.isAvailableAsync();
       if (canShareFile) {
-        if (Platform.OS === 'ios') {
-          // iOSではNativeShare.shareのurl経由で画像+テキストを共有可能
-          await NativeShare.share({
-            message: payload.message,
-            url: downloadResult.uri,
-          });
-        } else {
-          // Androidではexpo-sharingを使用（画像のみ共有）
-          // テキストは画像内に含まれているため、追加のテキスト共有は不要
-          await Sharing.shareAsync(downloadResult.uri, {
-            mimeType: 'image/png',
-            UTI: 'public.png',
-            dialogTitle: '共有',
-          });
-        }
+        // expo-sharingを使用して画像を共有（iOS/Android両対応）
+        await Sharing.shareAsync(downloadResult.uri, {
+          mimeType: 'image/png',
+          UTI: 'public.png',
+        });
 
         // クリーンアップ
         setTimeout(() => {
