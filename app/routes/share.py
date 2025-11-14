@@ -3,9 +3,9 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy import select
-from app.db.session import get_db
+from app.db.session import get_db_session
 from app.db.models import Work, User, Theme
 from app.utils.share_card_generator import ShareCardGenerator
 from datetime import datetime
@@ -14,9 +14,9 @@ router = APIRouter(prefix="/share", tags=["share"])
 
 
 @router.get("/card/{work_id}")
-async def generate_share_card(
+def generate_share_card(
     work_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db_session),
 ):
     """
     作品の共有カード画像を生成
@@ -28,7 +28,7 @@ async def generate_share_card(
         PNG画像
     """
     # 作品を取得
-    result = await db.execute(
+    result = db.execute(
         select(Work, User, Theme)
         .join(User, Work.user_id == User.id)
         .join(Theme, Work.theme_id == Theme.id)

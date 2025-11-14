@@ -16,7 +16,7 @@ import * as FileSystem from 'expo-file-system';
 import ShareCard from './ShareCard';
 import * as Sharing from 'expo-sharing';
 import type { SharePayload } from '../types/share';
-import { colors, spacing, borderRadius, fontFamily, fontSize } from '../theme';
+import { colors, spacing, borderRadius, shadow, fontFamily, fontSize } from '../theme';
 import { API_BASE_URL } from '../config';
 
 interface ShareSheetProps {
