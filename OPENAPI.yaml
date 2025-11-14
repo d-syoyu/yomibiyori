@@ -786,6 +786,28 @@ components:
           maxLength: 80
           minLength: 1
           description: New display name for the user
+        birth_year:
+          type: integer
+          minimum: 1900
+          maximum: 2025
+          description: Year of birth (optional)
+        prefecture:
+          type: string
+          maxLength: 50
+          description: Prefecture name
+        device_info:
+          type: object
+          nullable: true
+          description: Device metadata payload
+        analytics_opt_out:
+          type: boolean
+          description: Disable analytics tracking
+        notify_theme_release:
+          type: boolean
+          description: Enable or disable 06:00 theme release notifications
+        notify_ranking_result:
+          type: boolean
+          description: Enable or disable 22:00 ranking result notifications
     VerifyTokenAndUpdatePasswordRequest:
       type: object
       required:
@@ -871,6 +893,30 @@ components:
         display_name:
           type: string
           nullable: true
+        birth_year:
+          type: integer
+          nullable: true
+          minimum: 1900
+          maximum: 2025
+        prefecture:
+          type: string
+          nullable: true
+        device_info:
+          type: object
+          nullable: true
+          description: Device metadata reported by the client
+        analytics_opt_out:
+          type: boolean
+          default: false
+          description: User opted out of analytics tracking
+        notify_theme_release:
+          type: boolean
+          default: true
+          description: Receive 06:00 theme release notifications
+        notify_ranking_result:
+          type: boolean
+          default: true
+          description: Receive 22:00 ranking result notifications
     RankingEntry:
       type: object
       required:

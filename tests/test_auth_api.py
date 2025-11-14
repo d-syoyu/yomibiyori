@@ -42,6 +42,8 @@ def _create_user(session: Session, *, user_id: str | None = None, name: str = "P
         id=user_id or str(uuid4()),
         name=name,
         email=email or f"user-{uuid4()}@example.com",
+        notify_theme_release=True,
+        notify_ranking_result=True,
         created_at=now,
         updated_at=now,
     )
@@ -126,6 +128,8 @@ def test_get_profile_success(client: TestClient, db_session: Session) -> None:
     assert payload["email"] == "existing@example.com"
     assert payload["display_name"] == "Existing Poet"
     assert payload["analytics_opt_out"] is False
+    assert payload["notify_theme_release"] is True
+    assert payload["notify_ranking_result"] is True
     assert payload["birth_year"] is None
     assert payload["prefecture"] is None
     assert payload["device_info"] is None
@@ -170,6 +174,26 @@ def test_sync_profile_updates_local_record(
 
     updated = db_session.get(User, user.id)
     assert updated.name == "Refreshed Name"
+
+
+def test_update_profile_notification_preferences(client: TestClient, db_session: Session) -> None:
+    user = _create_user(db_session, name="Toggle Poet", email="toggle@example.com")
+    response = client.patch(
+        "/api/v1/auth/profile",
+        headers=_bearer(user.id),
+        json={
+            "notify_theme_release": False,
+            "notify_ranking_result": False,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["notify_theme_release"] is False
+    assert payload["notify_ranking_result"] is False
+
+    db_session.refresh(user)
+    assert user.notify_theme_release is False
+    assert user.notify_ranking_result is False
 
 
 def test_password_reset_requests_supabase(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

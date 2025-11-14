@@ -30,6 +30,12 @@ create table if not exists users (
   name text not null check (length(name) between 1 and 80),
   email text unique not null check (position('@' in email) > 1),
   role text not null default 'user' check (role in ('user', 'sponsor', 'admin')),
+  birth_year integer check (birth_year is null or (birth_year between 1900 and 2025)),
+  prefecture text check (prefecture is null or length(prefecture) between 1 and 50),
+  device_info jsonb,
+  analytics_opt_out boolean not null default false,
+  notify_theme_release boolean not null default true,
+  notify_ranking_result boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -37,9 +43,17 @@ create trigger trg_users_updated_at
 before update on users
 for each row execute function app_public.set_updated_at();
 create index if not exists idx_users_role on users(role);
+create index if not exists idx_users_birth_year on users(birth_year) where birth_year is not null;
+create index if not exists idx_users_prefecture on users(prefecture) where prefecture is not null;
 
-comment on table users is 'アプリ内プロフィール（Supabaseのauth.usersとは独立運用可能）';
-comment on column users.role is 'ユーザーロール: user（一般） / sponsor（スポンサー） / admin（管理者）';
+comment on table users is '�A�v�����v���t�B�[���iSupabase��auth.users�Ƃ͓Ɨ��^�p�\�j';
+comment on column users.role is '���[�U�[���[��: user�i��ʁj / sponsor�i�X�|���T�[�j / admin�i�Ǘ��ҁj';
+comment on column users.birth_year is '�����N�i��: 1990�j';
+comment on column users.prefecture is '�럹�񍐏��';
+comment on column users.device_info is ' {platform, os_version, timezone, locale} �Ȃǂ̃f�o�C�X����';
+comment on column users.analytics_opt_out is '���̓g���b�N�̎��ΐ��';
+comment on column users.notify_theme_release is '06:00 �V���_�ӂ̃��[�U�[�ʒm';
+comment on column users.notify_ranking_result is '22:00 �����L���O���m�̕ʒm';
 
 -- ========= お題（上の句） =========
 create table if not exists themes (

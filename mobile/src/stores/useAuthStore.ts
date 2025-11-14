@@ -88,6 +88,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: response.email,
         display_name: response.display_name,
         analytics_opt_out: false,
+        notify_theme_release: true,
+        notify_ranking_result: true,
       };
 
       // Store user profile securely
@@ -136,6 +138,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: response.email,
         display_name: response.display_name,
         analytics_opt_out: false,
+        notify_theme_release: true,
+        notify_ranking_result: true,
       };
 
       // Store user profile securely
@@ -184,6 +188,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: response.email,
         display_name: response.display_name,
         analytics_opt_out: false,
+        notify_theme_release: true,
+        notify_ranking_result: true,
       };
 
       // Store user profile securely
@@ -262,6 +268,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const parsedUser = JSON.parse(profileData) as Partial<UserProfile>;
         const user: UserProfile = {
           analytics_opt_out: false,
+          notify_theme_release: true,
+          notify_ranking_result: true,
           ...parsedUser,
         } as UserProfile;
         console.log('[Auth] User profile parsed:', user.email);

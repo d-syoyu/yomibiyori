@@ -59,6 +59,8 @@ class UserProfileResponse(BaseModel):
     prefecture: Optional[str] = Field(None, description="User's prefecture (e.g., '東京都')")
     device_info: Optional[dict[str, Any]] = Field(None, description="Device information")
     analytics_opt_out: bool = Field(False, description="Analytics opt-out preference")
+    notify_theme_release: bool = Field(True, description="Receive 06:00 theme release notifications")
+    notify_ranking_result: bool = Field(True, description="Receive 22:00 ranking result notifications")
 
 
 class UpdateProfileRequest(BaseModel):
@@ -69,6 +71,8 @@ class UpdateProfileRequest(BaseModel):
     prefecture: Optional[str] = Field(None, max_length=50, description="Prefecture")
     device_info: Optional[dict[str, Any]] = Field(None, description="Device information")
     analytics_opt_out: Optional[bool] = Field(None, description="Opt out of analytics")
+    notify_theme_release: Optional[bool] = Field(None, description="Allow 06:00 theme release notifications")
+    notify_ranking_result: Optional[bool] = Field(None, description="Allow 22:00 ranking result notifications")
 
 
 class RefreshTokenRequest(BaseModel):

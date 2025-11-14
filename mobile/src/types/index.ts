@@ -54,6 +54,8 @@ export interface UserProfile {
   prefecture?: string;
   device_info?: DeviceInfo;
   analytics_opt_out: boolean;
+  notify_theme_release: boolean;
+  notify_ranking_result: boolean;
 }
 
 export interface UpdateProfileRequest {
@@ -62,6 +64,8 @@ export interface UpdateProfileRequest {
   prefecture?: string;
   device_info?: DeviceInfo;
   analytics_opt_out?: boolean;
+  notify_theme_release?: boolean;
+  notify_ranking_result?: boolean;
 }
 
 export interface OAuthUrlResponse {

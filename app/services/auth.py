@@ -277,6 +277,22 @@ def _upsert_user_record(
     return user
 
 
+def _build_user_profile_response(user: User) -> UserProfileResponse:
+    """Convert a User ORM instance into a response schema."""
+
+    return UserProfileResponse(
+        user_id=str(user.id),
+        email=user.email,
+        display_name=user.name,
+        birth_year=user.birth_year,
+        prefecture=user.prefecture,
+        device_info=user.device_info,
+        analytics_opt_out=user.analytics_opt_out,
+        notify_theme_release=user.notify_theme_release,
+        notify_ranking_result=user.notify_ranking_result,
+    )
+
+
 def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
     """Create a user through Supabase Auth and persist it locally."""
 
@@ -466,7 +482,7 @@ def get_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
 
-    return UserProfileResponse(user_id=str(user.id), email=user.email, display_name=user.name)
+    return _build_user_profile_response(user)
 
 
 def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
@@ -516,7 +532,7 @@ def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
 
     user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
-    return UserProfileResponse(user_id=str(user.id), email=user.email, display_name=user.name)
+    return _build_user_profile_response(user)
 
 
 def refresh_access_token(*, refresh_token: str) -> SessionToken:
@@ -936,6 +952,10 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
 
     if payload.analytics_opt_out is not None:
         user.analytics_opt_out = payload.analytics_opt_out
+    if payload.notify_theme_release is not None:
+        user.notify_theme_release = payload.notify_theme_release
+    if payload.notify_ranking_result is not None:
+        user.notify_ranking_result = payload.notify_ranking_result
 
     user.updated_at = datetime.now(timezone.utc)
 
@@ -964,15 +984,7 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
         except Exception as e:
             print(f"[Analytics] Failed to track profile update: {e}")
 
-    return UserProfileResponse(
-        user_id=str(user.id),
-        email=user.email,
-        display_name=user.name,
-        birth_year=user.birth_year,
-        prefecture=user.prefecture,
-        device_info=user.device_info,
-        analytics_opt_out=user.analytics_opt_out,
-    )
+    return _build_user_profile_response(user)
 
 
 def delete_user_account(session: Session, *, user_id: str) -> None:

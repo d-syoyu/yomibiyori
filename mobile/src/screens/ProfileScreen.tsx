@@ -15,6 +15,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Switch,
   useWindowDimensions,
   type StyleProp,
   type ViewStyle,
@@ -45,6 +46,8 @@ export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState('');
   const [birthYear, setBirthYear] = useState<number | undefined>();
   const [prefecture, setPrefecture] = useState<string | undefined>();
+  const [themeNotificationEnabled, setThemeNotificationEnabled] = useState(true);
+  const [rankingNotificationEnabled, setRankingNotificationEnabled] = useState(true);
 
   const { showSuccess, showError } = useToastStore();
 
@@ -69,6 +72,12 @@ export default function ProfileScreen() {
       setDisplayName(data.display_name || '');
       setBirthYear(data.birth_year);
       setPrefecture(data.prefecture);
+      setThemeNotificationEnabled(
+        data.notify_theme_release ?? true,
+      );
+      setRankingNotificationEnabled(
+        data.notify_ranking_result ?? true,
+      );
     } catch (error: any) {
       console.error('[ProfileScreen] Failed to load profile:', error);
       try {
@@ -98,6 +107,8 @@ export default function ProfileScreen() {
         display_name: displayName.trim(),
         birth_year: birthYear,
         prefecture,
+        notify_theme_release: themeNotificationEnabled,
+        notify_ranking_result: rankingNotificationEnabled,
       };
 
       console.log('[ProfileScreen] Updating profile with data:', updateData);
@@ -260,6 +271,41 @@ export default function ProfileScreen() {
             <PrefecturePicker value={prefecture} onChange={setPrefecture} pickerStyle={styles.pickerContainer} />
           </View>
 
+          {/* Notification Preferences */}
+          <View style={styles.section}>
+            <Text style={styles.label}>通知設定</Text>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTexts}>
+                <Text style={styles.toggleTitle}>06:00 お題配信通知</Text>
+                <Text style={styles.toggleDescription}>朝の新テーマをお知らせします</Text>
+              </View>
+              <Switch
+                value={themeNotificationEnabled}
+                onValueChange={setThemeNotificationEnabled}
+                disabled={isSaving}
+                trackColor={{ false: 'rgba(107, 123, 79, 0.3)', true: colors.text.primary }}
+                thumbColor={themeNotificationEnabled ? colors.text.inverse : '#f4f3f4'}
+                ios_backgroundColor="rgba(107, 123, 79, 0.3)"
+              />
+            </View>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTexts}>
+                <Text style={styles.toggleTitle}>22:00 ランキング確定通知</Text>
+                <Text style={styles.toggleDescription}>投稿結果の確定タイミングをお知らせします</Text>
+              </View>
+              <Switch
+                value={rankingNotificationEnabled}
+                onValueChange={setRankingNotificationEnabled}
+                disabled={isSaving}
+                trackColor={{ false: 'rgba(107, 123, 79, 0.3)', true: colors.text.primary }}
+                thumbColor={rankingNotificationEnabled ? colors.text.inverse : '#f4f3f4'}
+                ios_backgroundColor="rgba(107, 123, 79, 0.3)"
+              />
+            </View>
+          </View>
+
           {/* Save Button */}
           <TouchableOpacity
             style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
@@ -382,6 +428,28 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     fontFamily: fontFamily.regular,
     letterSpacing: 0.3,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  toggleTexts: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  toggleTitle: {
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    letterSpacing: 0.3,
+  },
+  toggleDescription: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.regular,
+    color: colors.text.secondary,
+    marginTop: 2,
   },
   pickerContainer: {
     borderWidth: 1,
