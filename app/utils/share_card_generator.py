@@ -282,25 +282,38 @@ class ShareCardGenerator:
             )
             current_y += 40 + self.CONTENT_GAP
 
-        # 縦書き詩（中央）- 余白を減らす
-        poem_start_y = current_y + 20
+        # 縦書き詩の高さを計算（上の句と下の句の長い方）
+        upper_lines = upper_text.split('\n') if upper_text else []
+        lower_lines = lower_text.split('\n')
+
+        # 各列の文字数の最大値を計算
+        max_upper_chars = max((len(line.strip()) for line in upper_lines), default=0)
+        max_lower_chars = max((len(line.strip()) for line in lower_lines), default=0)
+        max_chars = max(max_upper_chars, max_lower_chars)
+
+        # 詩の高さ（文字の高さ × 文字数）
+        poem_height = max_chars * 64  # char_height = 64
+
+        # 詩を中央に配置するための計算
+        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - 200  # メタ情報とフッターのスペース
+        poem_start_y = current_y + (available_height - poem_height) // 2
         poem_center_x = self.WIDTH // 2
 
-        # 下の句（右側）- 文字間隔と列間隔を拡大
-        lower_start_x = poem_center_x + 80
-        self._draw_vertical_text_multiline(
-            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
-        )
-
-        # 上の句（左側）- 文字間隔と列間隔を拡大
+        # 上の句（右側）- モバイルと同じ配置
         if upper_text:
-            upper_start_x = poem_center_x - 90
+            upper_start_x = poem_center_x + 80
             self._draw_vertical_text_multiline(
                 draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
             )
 
-        # メタ情報エリア（下部）
-        meta_y = inner_y2 - self.INNER_PADDING - 140
+        # 下の句（左側、太字）- モバイルと同じ配置
+        lower_start_x = poem_center_x - 90
+        self._draw_vertical_text_multiline(
+            draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, 64, 90
+        )
+
+        # メタ情報エリア（詩の下、適切な間隔）
+        meta_y = inner_y2 - self.INNER_PADDING - 180
         meta_x = content_x
 
         # 作者名
