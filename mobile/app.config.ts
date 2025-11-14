@@ -23,14 +23,23 @@ const config: ExpoConfig = {
     config: {
       usesNonExemptEncryption: false,
     },
+    infoPlist: {
+      UIBackgroundModes: ['remote-notification'],
+    },
   },
   android: {
     package: 'com.yomibiyori.app',
-    googleServicesFile: './google-services.json', // ← これを追加
+    googleServicesFile: './google-services.json',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
+    permissions: [
+      'CAMERA',
+      'READ_EXTERNAL_STORAGE',
+      'WRITE_EXTERNAL_STORAGE',
+      'POST_NOTIFICATIONS',
+    ],
     intentFilters: [
       {
         action: 'VIEW',
@@ -49,7 +58,18 @@ const config: ExpoConfig = {
   web: {
     favicon: './assets/favicon.png',
   },
-  plugins: ['expo-font', 'expo-secure-store'],
+  plugins: [
+    'expo-font',
+    'expo-secure-store',
+    [
+      'expo-notifications',
+      {
+        icon: './assets/notification-icon.png',
+        color: '#6B7B4F',
+        sounds: [],
+      },
+    ],
+  ],
   updates: {
     url: 'https://u.expo.dev/da2c3e4e-0129-4a61-8b63-1491fa1d3a1a',
   },
