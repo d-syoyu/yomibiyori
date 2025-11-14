@@ -37,5 +37,10 @@ class NotificationTokenResponse(BaseModel):
     is_active: bool
     last_registered_at: datetime
 
+    @field_validator("id", mode="before")
+    @classmethod
+    def cast_id(cls, value: str | UUID) -> str:
+        return str(value)
+
     class Config:
         from_attributes = True
