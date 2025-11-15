@@ -1,13 +1,15 @@
 /**
- * アプリケーション設定
+ * Lightweight configuration helpers for the React Native app.
  */
 
-// API Base URL
+// Base API endpoint (used by the legacy ShareSheet and other utilities)
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'http://yomibiyori-production.up.railway.app/api/v1';
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  'https://yomibiyori-production.up.railway.app/api/v1';
 
-// 開発環境判定
+// Development flag injected by Metro
 export const IS_DEV = __DEV__;
 
-// その他の設定
+// Static app version reference for places outside Expo constants
 export const APP_VERSION = '1.0.0';
