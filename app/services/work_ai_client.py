@@ -207,27 +207,44 @@ class XAIWorkClient(WorkAIClient):
 
         last_content = None
         last_counts = None
+        last_error = None
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
             except requests.RequestException as exc:
-                raise WorkAIClientError("Failed to call X.ai API endpoint") from exc
+                last_error = f"Network error: {exc}"
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Network error: {exc}")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError(f"Failed to call X.ai API endpoint after {MAX_RETRIES} attempts: {exc}") from exc
+                continue
 
             try:
                 response.raise_for_status()
             except requests.HTTPError as exc:
-                raise WorkAIClientError(f"X.ai API returned {response.status_code}") from exc
+                last_error = f"HTTP {response.status_code}: {response.text[:200]}"
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - HTTP error: {response.status_code}")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError(f"X.ai API returned {response.status_code}") from exc
+                continue
 
             try:
                 payload_json = response.json()
             except ValueError as exc:
-                raise WorkAIClientError("X.ai API returned invalid JSON") from exc
+                last_error = f"Invalid JSON: {exc}"
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Invalid JSON response")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError("X.ai API returned invalid JSON") from exc
+                continue
 
             try:
                 content = payload_json["choices"][0]["message"]["content"]
             except (KeyError, IndexError, TypeError) as exc:
-                raise WorkAIClientError("X.ai API response missing message content") from exc
+                last_error = f"Missing content: {exc}"
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Missing message content")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError("X.ai API response missing message content") from exc
+                continue
 
             content = content.strip()
             is_valid, counts = validate_77(content)
