@@ -176,8 +176,8 @@ def create_or_login_user(api_base: str, account: dict) -> str | None:
             print(f"⚠ セッション情報が不正: session={data.get('session')}")
             return None
 
-        # ユーザーが既に存在する場合、ログインを試行
-        if response.status_code == 400 or response.status_code == 409:
+        # ユーザーが既に存在する場合、ログインを試行 (400, 409, 422)
+        if response.status_code in [400, 409, 422]:
             login_response = requests.post(
                 f"{api_base}/auth/login",
                 json={
