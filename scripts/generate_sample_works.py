@@ -167,16 +167,18 @@ def create_or_login_user(api_base: str, account: dict) -> str | None:
             timeout=10.0,
         )
 
-        if response.status_code == 200:
-            print(f"✓ ユーザー作成成功: {account['username']}")
+        # サインアップ成功 (201 Created)
+        if response.status_code == 201:
             data = response.json()
+            print(f"✓ ユーザー作成成功: {account['username']}")
             if 'session' in data and 'access_token' in data['session']:
                 return data['session']['access_token']
+            print(f"⚠ セッション情報が不正: session={data.get('session')}")
             return None
 
         # ユーザーが既に存在する場合、ログインを試行
-        if response.status_code == 400:
-            response = requests.post(
+        if response.status_code == 400 or response.status_code == 409:
+            login_response = requests.post(
                 f"{api_base}/auth/login",
                 json={
                     "email": account["email"],
@@ -185,11 +187,16 @@ def create_or_login_user(api_base: str, account: dict) -> str | None:
                 timeout=10.0,
             )
 
-            if response.status_code == 200:
-                print(f"- ユーザー既存: {account['username']}、ログイン成功")
-                data = response.json()
+            if login_response.status_code == 200:
+                data = login_response.json()
+                print(f"✓ ユーザーログイン成功: {account['username']}")
                 if 'session' in data and 'access_token' in data['session']:
                     return data['session']['access_token']
+                print(f"⚠ セッション情報が不正: session={data.get('session')}")
+                return None
+
+            print(f"✗ ログイン失敗: {account['username']} - {login_response.text}")
+            return None
 
         print(f"✗ 認証失敗: {account['username']} - {response.text}")
         return None
