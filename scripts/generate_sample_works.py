@@ -11,6 +11,7 @@ import argparse
 import os
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date
 
 import requests
@@ -251,6 +252,67 @@ def post_work(api_base: str, theme_id: str, text: str, access_token: str) -> dic
         return None
 
 
+def process_single_work(
+    account: dict,
+    category: str,
+    api_base: str,
+    ai_client,
+    dry_run: bool
+) -> tuple[bool, str]:
+    """1つのアカウント・カテゴリーの組み合わせで作品を生成・投稿（並列処理用）
+
+    Returns:
+        tuple[bool, str]: (成功したか, アカウント名)
+    """
+    username = account['username']
+
+    try:
+        # ユーザー認証
+        access_token = create_or_login_user(api_base, account)
+        if not access_token:
+            print(f"✗ 認証失敗: {username}")
+            return False, username
+
+        # テーマ取得
+        theme = get_theme_for_category(api_base, category, access_token)
+        if not theme:
+            print(f"✗ テーマ取得失敗: {username} - {category}")
+            return False, username
+
+        upper_verse = theme['text']
+        print(f"[{username}] 上の句: {upper_verse.replace(chr(10), ' / ')}")
+
+        # AIで下の句を生成
+        try:
+            lower_verse = ai_client.generate(
+                upper_verse=upper_verse,
+                category=category,
+                username=username,
+                persona=account.get('persona', '')
+            )
+            print(f"[{username}] 下の句（AI生成）: {lower_verse.replace(chr(10), ' / ')}")
+        except WorkAIClientError as exc:
+            print(f"✗ AI生成失敗: {username} - {exc}")
+            return False, username
+
+        # 投稿
+        if not dry_run:
+            result = post_work(api_base, theme['id'], lower_verse, access_token)
+            if result:
+                print(f"✓ 投稿成功: {username} - ID={result.get('id')}")
+                return True, username
+            else:
+                print(f"✗ 投稿失敗: {username}")
+                return False, username
+        else:
+            print(f"✓ Dry Run: {username} - 投稿をスキップ")
+            return True, username
+
+    except Exception as e:
+        print(f"✗ 処理エラー: {username} - {e}")
+        return False, username
+
+
 def main() -> int:
     args = _parse_args()
     settings = get_settings()
@@ -278,7 +340,8 @@ def main() -> int:
     # 日替わりでアカウントを選択（日付ベースのランダムシード）
     accounts_to_use = select_daily_accounts(args.accounts)
 
-    # カテゴリーごとに処理
+    # 全カテゴリー・全アカウントの組み合わせを準備
+    tasks = []
     for category in CATEGORIES:
         print(f"\n{'=' * 80}")
         print(f"カテゴリー: {category}")
@@ -310,55 +373,40 @@ def main() -> int:
 
         print(f"選択されたアカウント: {', '.join([acc['username'] for acc in selected_accounts])}")
 
+        # タスクリストに追加
         for account in selected_accounts:
-            print(f"\n--- {account['username']} ({category}) ---")
+            tasks.append((account, category))
 
-            # ユーザー認証
-            access_token = create_or_login_user(args.api_base, account)
-            if not access_token:
-                print(f"✗ 認証失敗: {account['username']}")
-                total_failed += 1
-                continue
+    print(f"\n{'=' * 80}")
+    print(f"並列処理開始: {len(tasks)}件のタスクを最大4並列で実行")
+    print('=' * 80)
 
-            # テーマ取得
-            theme = get_theme_for_category(args.api_base, category, access_token)
-            if not theme:
-                print(f"✗ テーマ取得失敗: {category}")
-                total_failed += 1
-                continue
+    # 並列処理（最大4並列）
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(
+                process_single_work,
+                account,
+                category,
+                args.api_base,
+                ai_client,
+                args.dry_run
+            ): (account['username'], category)
+            for account, category in tasks
+        }
 
-            upper_verse = theme['text']
-            print(f"上の句: {upper_verse.replace(chr(10), ' / ')}")
-
-            # AIで下の句を生成（ペルソナを渡す）
+        # 完了したタスクから順に処理
+        for future in as_completed(futures):
+            username, category = futures[future]
             try:
-                lower_verse = ai_client.generate(
-                    upper_verse=upper_verse,
-                    category=category,
-                    username=account['username'],
-                    persona=account.get('persona', '')
-                )
-                print(f"下の句（AI生成）: {lower_verse.replace(chr(10), ' / ')}")
-            except WorkAIClientError as exc:
-                print(f"✗ AI生成失敗: {exc}")
-                total_failed += 1
-                continue
-
-            # 投稿（Dry Run でなければ実行）
-            if args.dry_run:
-                print(f"[DRY RUN] 投稿スキップ")
-                total_posted += 1
-            else:
-                work = post_work(args.api_base, theme['id'], lower_verse, access_token)
-                if work:
-                    print(f"✓ 投稿成功: ID={work.get('id', 'unknown')}")
+                success, account_name = future.result()
+                if success:
                     total_posted += 1
                 else:
-                    print("✗ 投稿失敗")
                     total_failed += 1
-
-            # APIレート制限対策として少し待機
-            time.sleep(1.0)
+            except Exception as e:
+                print(f"✗ タスク実行エラー: {username} ({category}) - {e}")
+                total_failed += 1
 
     print("\n" + "=" * 80)
     print(f"完了: 成功={total_posted} / 失敗={total_failed}")
