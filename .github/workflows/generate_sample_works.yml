@@ -1,0 +1,74 @@
+name: Generate Sample Works
+
+on:
+  workflow_dispatch:
+    inputs:
+      accounts:
+        description: 'Number of accounts to use (1-5)'
+        required: false
+        default: '5'
+      per_category:
+        description: 'Number of works per category'
+        required: false
+        default: '2'
+  schedule:
+    # 毎日 07:00 JST (22:00 UTC前日) - お題配信の1時間後
+    - cron: "0 22 * * *"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -e .
+
+      - name: Generate sample works
+        env:
+          # Database connection (not needed for API-based script, but required for imports)
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+          # AI Provider configuration
+          THEME_AI_PROVIDER: ${{ secrets.THEME_AI_PROVIDER }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          XAI_MODEL: "grok-4-fast-reasoning"
+          XAI_TIMEOUT: "60.0"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
+          CLAUDE_TIMEOUT: "30.0"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: "gpt-4o-mini"
+          OPENAI_TIMEOUT: "15.0"
+
+          # Supabase configuration (for imports)
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+
+          # API endpoint
+          API_BASE_URL: "https://yomibiyori-production.up.railway.app/api/v1"
+
+          # Timezone
+          APP_TIMEZONE: "Asia/Tokyo"
+        run: |
+          # Default values
+          ACCOUNTS="${{ github.event.inputs.accounts || '5' }}"
+          PER_CATEGORY="${{ github.event.inputs.per_category || '2' }}"
+
+          echo "=== Generating sample works ==="
+          echo "Accounts: $ACCOUNTS"
+          echo "Per category: $PER_CATEGORY"
+          echo "API Base: $API_BASE_URL"
+          echo ""
+
+          python scripts/generate_sample_works.py \
+            --accounts "$ACCOUNTS" \
+            --per-category "$PER_CATEGORY"

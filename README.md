@@ -103,11 +103,12 @@ Detailed steps: `docs/deployment_railway.md`.
 
 ## Scheduled Jobs
 - `generate_themes.yml` (cron `0 12 * * *` → 21:00 JST): runs `scripts/generate_themes.py` to generate themes for the next day
+- `generate_sample_works.yml` (cron `0 22 * * *` → 07:00 JST): runs `scripts/generate_sample_works.py` to post AI-generated sample works using 5 realistic user accounts
 - `finalize_rankings.yml` (cron `0 13 * * *` → 22:00 JST): runs `scripts/finalize_rankings.py` to finalize today's rankings and save to PostgreSQL
 - `send_theme_notifications.yml` (cron `0 21 * * *` → 06:00 JST): runs `scripts/send_theme_release_notifications.py` to send morning Expo Push notifications
 - `send_ranking_notifications.yml` (cron `5 13 * * *` → 22:05 JST): runs `scripts/send_ranking_result_notifications.py` to alert users when rankings are ready
 
-Both jobs can also be triggered manually via `workflow_dispatch`.
+All jobs can also be triggered manually via `workflow_dispatch`.
 
 Required repository secrets:
 - `DATABASE_URL`, `REDIS_URL`, `SUPABASE_PROJECT_REF`
