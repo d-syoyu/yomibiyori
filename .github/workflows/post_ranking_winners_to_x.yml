@@ -1,0 +1,42 @@
+name: Post Ranking Winners to X
+
+on:
+  workflow_dispatch: # 手動実行可能
+  schedule:
+    # 毎日22:15 JST (13:15 UTC) に実行
+    - cron: "15 13 * * *"
+
+jobs:
+  post-winners:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir -e .
+
+      - name: Post ranking winners to X
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          REDIS_RANKING_PREFIX: ${{ secrets.REDIS_RANKING_PREFIX }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: python scripts/post_ranking_winners_to_x.py
