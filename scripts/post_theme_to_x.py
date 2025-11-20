@@ -73,6 +73,13 @@ class XAPIClient:
             media_id = response.json().get("media_id_string")
             logger.info(f"Media uploaded successfully: {media_id}")
             return media_id
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Failed to upload media: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response headers: {dict(e.response.headers)}")
+                logger.error(f"Response body: {e.response.text}")
+            return None
         except Exception as e:
             logger.error(f"Failed to upload media: {e}")
             return None
@@ -237,6 +244,12 @@ def main():
         logger.error("Missing X API credentials in environment variables")
         logger.error("Required: X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
         sys.exit(1)
+
+    # デバッグ: 認証情報の最初の数文字を表示（セキュリティのため一部のみ）
+    logger.info(f"X_API_KEY: {consumer_key[:10]}..." if consumer_key else "None")
+    logger.info(f"X_API_SECRET: {consumer_secret[:10]}..." if consumer_secret else "None")
+    logger.info(f"X_ACCESS_TOKEN: {access_token[:10]}..." if access_token else "None")
+    logger.info(f"X_ACCESS_TOKEN_SECRET: {access_token_secret[:10]}..." if access_token_secret else "None")
 
     # 今日の全カテゴリのお題を取得
     themes = get_today_themes()
