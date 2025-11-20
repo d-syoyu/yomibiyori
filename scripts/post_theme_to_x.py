@@ -9,8 +9,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
-import requests
-from requests_oauthlib import OAuth1
+import tweepy
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class XAPIClient:
-    """X(Twitter) API v2クライアント"""
+    """X(Twitter) API v2クライアント（tweepy使用）"""
 
     def __init__(
         self,
@@ -46,14 +45,24 @@ class XAPIClient:
             access_token: Access Token
             access_token_secret: Access Token Secret
         """
-        self.auth = OAuth1(
+        # OAuth 1.0a認証（v1.1 APIとv2 API両方で使用）
+        self.auth = tweepy.OAuth1UserHandler(
             consumer_key,
             consumer_secret,
             access_token,
             access_token_secret,
         )
-        self.base_url = "https://api.twitter.com/2"
-        self.upload_url = "https://upload.twitter.com/1.1"
+
+        # API v1.1クライアント（メディアアップロード用）
+        self.api_v1 = tweepy.API(self.auth)
+
+        # API v2クライアント（ツイート投稿用）
+        self.client = tweepy.Client(
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret,
+        )
 
     def upload_media(self, image_bytes: bytes) -> Optional[str]:
         """
@@ -66,22 +75,27 @@ class XAPIClient:
             media_id: アップロード成功時のメディアID
         """
         try:
-            url = f"{self.upload_url}/media/upload.json"
-            files = {"media": image_bytes}
-            response = requests.post(url, auth=self.auth, files=files, timeout=30)
-            response.raise_for_status()
-            media_id = response.json().get("media_id_string")
-            logger.info(f"Media uploaded successfully: {media_id}")
-            return media_id
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"Failed to upload media: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response status: {e.response.status_code}")
-                logger.error(f"Response headers: {dict(e.response.headers)}")
-                logger.error(f"Response body: {e.response.text}")
-            return None
+            # 一時ファイルに保存してアップロード
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                tmp_file.write(image_bytes)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # API v1.1でメディアアップロード
+                media = self.api_v1.media_upload(tmp_file_path)
+                media_id = media.media_id_string
+                logger.info(f"Media uploaded successfully: {media_id}")
+                return media_id
+            finally:
+                # 一時ファイルを削除
+                import os as os_module
+                os_module.unlink(tmp_file_path)
+
         except Exception as e:
             logger.error(f"Failed to upload media: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Response: {e.response}")
             return None
 
     def post_tweet(self, text: str, media_ids: Optional[list[str]] = None) -> bool:
@@ -96,21 +110,17 @@ class XAPIClient:
             成功したかどうか
         """
         try:
-            url = f"{self.base_url}/tweets"
-            payload = {"text": text}
-
-            if media_ids:
-                payload["media"] = {"media_ids": media_ids}
-
-            response = requests.post(url, auth=self.auth, json=payload, timeout=30)
-            response.raise_for_status()
-            tweet_data = response.json()
-            logger.info(f"Tweet posted successfully: {tweet_data}")
+            # API v2でツイート投稿
+            response = self.client.create_tweet(
+                text=text,
+                media_ids=media_ids
+            )
+            logger.info(f"Tweet posted successfully: {response.data}")
             return True
         except Exception as e:
             logger.error(f"Failed to post tweet: {e}")
             if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response: {e.response.text}")
+                logger.error(f"Response: {e.response}")
             return False
 
 
