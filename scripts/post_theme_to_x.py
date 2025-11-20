@@ -158,12 +158,17 @@ def generate_tweet_text(theme: Theme) -> str:
     date_jst = theme.date.astimezone(jst)
     date_str = date_jst.strftime("%Y年%m月%d日")
 
+    # App Store URL
+    app_store_url = "https://apps.apple.com/jp/app/%E3%82%88%E3%81%BF%E3%81%B3%E3%82%88%E3%82%8A/id6754638890"
+
     # カテゴリごとの投稿文（お題テキストは画像に含まれているため省略）
     category_messages = {
         "romance": f"""💕 {date_str}のお題【恋愛】
 
 胸がときめく恋の一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
+
+{app_store_url}
 
 #よみびより #短歌 #詩 #恋愛""",
 
@@ -172,6 +177,8 @@ def generate_tweet_text(theme: Theme) -> str:
 季節の移ろいを感じる一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
 
+{app_store_url}
+
 #よみびより #短歌 #詩 #季節""",
 
         "daily": f"""☕ {date_str}のお題【日常】
@@ -179,12 +186,16 @@ def generate_tweet_text(theme: Theme) -> str:
 何気ない日々の中にある美しさを詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
 
+{app_store_url}
+
 #よみびより #短歌 #詩 #日常""",
 
         "humor": f"""😄 {date_str}のお題【ユーモア】
 
 クスッと笑える一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
+
+{app_store_url}
 
 #よみびより #短歌 #詩 #ユーモア""",
     }
@@ -195,6 +206,8 @@ def generate_tweet_text(theme: Theme) -> str:
         f"""🌸 {date_str}のお題【{category_label}】
 
 よみびよりアプリで下の句を詠んでみませんか？
+
+{app_store_url}
 
 #よみびより #短歌 #詩"""
     )
