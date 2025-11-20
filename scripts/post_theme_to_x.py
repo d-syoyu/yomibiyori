@@ -17,7 +17,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from sqlalchemy import select, desc
-from app.db.session import get_session_context
+from app.db.session import SessionLocal
 from app.models.theme import Theme
 from app.utils.theme_card_generator import ThemeCardGenerator
 
@@ -107,27 +107,30 @@ class XAPIClient:
             return False
 
 
-def get_today_theme() -> Optional[Theme]:
+def get_today_themes() -> list[Theme]:
     """
-    今日のお題を取得
+    今日の全カテゴリのお題を取得
 
     Returns:
-        今日のTheme、見つからない場合はNone
+        今日のThemeリスト
     """
     jst = timezone(timedelta(hours=9))
     now_jst = datetime.now(jst)
     today_start = now_jst.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = now_jst.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    with get_session_context() as db:
+    db = SessionLocal()
+    try:
         result = db.execute(
             select(Theme)
             .where(Theme.date >= today_start)
             .where(Theme.date <= today_end)
-            .order_by(desc(Theme.created_at))
+            .order_by(Theme.category)
         )
-        theme = result.scalars().first()
-        return theme
+        themes = result.scalars().all()
+        return themes
+    finally:
+        db.close()
 
 
 def generate_tweet_text(theme: Theme) -> str:
