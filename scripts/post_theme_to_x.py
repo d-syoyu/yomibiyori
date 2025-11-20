@@ -107,12 +107,12 @@ class XAPIClient:
             return False
 
 
-def get_today_themes() -> list[Theme]:
+def get_today_theme() -> Optional[Theme]:
     """
-    今日の全カテゴリのお題を取得
+    今日のお題を取得
 
     Returns:
-        今日のThemeリスト
+        今日のTheme、見つからない場合はNone
     """
     jst = timezone(timedelta(hours=9))
     now_jst = datetime.now(jst)
@@ -124,15 +124,15 @@ def get_today_themes() -> list[Theme]:
             select(Theme)
             .where(Theme.date >= today_start)
             .where(Theme.date <= today_end)
-            .order_by(Theme.category)
+            .order_by(desc(Theme.created_at))
         )
-        themes = result.scalars().all()
-        return themes
+        theme = result.scalars().first()
+        return theme
 
 
 def generate_tweet_text(theme: Theme) -> str:
     """
-    ツイート本文を生成
+    ツイート本文を生成（カテゴリごとに異なる内容）
 
     Args:
         theme: お題オブジェクト
@@ -140,29 +140,74 @@ def generate_tweet_text(theme: Theme) -> str:
     Returns:
         ツイート本文
     """
-    # カテゴリラベル
-    category_labels = {
-        "romance": "恋愛",
-        "season": "季節",
-        "daily": "日常",
-        "humor": "ユーモア",
+    # カテゴリラベルと絵文字
+    category_info = {
+        "romance": {"label": "恋愛", "emoji": "💕", "hashtag": "#恋愛"},
+        "season": {"label": "季節", "emoji": "🍃", "hashtag": "#季節"},
+        "daily": {"label": "日常", "emoji": "☕", "hashtag": "#日常"},
+        "humor": {"label": "ユーモア", "emoji": "😄", "hashtag": "#ユーモア"},
     }
-    category_label = category_labels.get(theme.category, theme.category)
+
+    info = category_info.get(theme.category, {"label": theme.category, "emoji": "📖", "hashtag": ""})
+    category_label = info["label"]
+    emoji = info["emoji"]
+    category_hashtag = info["hashtag"]
 
     # 日付フォーマット
     jst = timezone(timedelta(hours=9))
     date_jst = theme.date.astimezone(jst)
     date_str = date_jst.strftime("%Y年%m月%d日")
 
-    # ツイート本文
-    tweet_text = f"""🌸 {date_str}のお題
+    # カテゴリごとの投稿文
+    category_messages = {
+        "romance": f"""💕 {date_str}のお題【恋愛】
 
-📖 カテゴリ: {category_label}
+{theme.text}
+
+胸がときめく恋の一首を詠んでみませんか？
+アプリで下の句を投稿しよう！
+
+#よみびより #短歌 #詩 #恋愛""",
+
+        "season": f"""🍃 {date_str}のお題【季節】
+
+{theme.text}
+
+季節の移ろいを感じる一首を詠んでみませんか？
+アプリで下の句を投稿しよう！
+
+#よみびより #短歌 #詩 #季節""",
+
+        "daily": f"""☕ {date_str}のお題【日常】
+
+{theme.text}
+
+何気ない日々の中にある美しさを詠んでみませんか？
+アプリで下の句を投稿しよう！
+
+#よみびより #短歌 #詩 #日常""",
+
+        "humor": f"""😄 {date_str}のお題【ユーモア】
+
+{theme.text}
+
+クスッと笑える一首を詠んでみませんか？
+アプリで下の句を投稿しよう！
+
+#よみびより #短歌 #詩 #ユーモア""",
+    }
+
+    # カテゴリに応じた投稿文を返す（デフォルトは汎用的な文章）
+    tweet_text = category_messages.get(
+        theme.category,
+        f"""🌸 {date_str}のお題【{category_label}】
 
 {theme.text}
 
 よみびよりアプリで下の句を詠んでみませんか？
-#よみびより #短歌 #詩 #AI"""
+
+#よみびより #短歌 #詩"""
+    )
 
     return tweet_text
 
@@ -182,13 +227,13 @@ def main():
         logger.error("Required: X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
         sys.exit(1)
 
-    # 今日の全カテゴリのお題を取得
-    themes = get_today_themes()
-    if not themes:
-        logger.error("No themes found for today")
+    # 今日のお題を取得
+    theme = get_today_theme()
+    if not theme:
+        logger.error("No theme found for today")
         sys.exit(1)
 
-    logger.info(f"Found {len(themes)} themes for today")
+    logger.info(f"Found theme: {theme.id} - {theme.text[:20]}...")
 
     # カテゴリラベル
     category_labels = {
@@ -197,6 +242,27 @@ def main():
         "daily": "日常",
         "humor": "ユーモア",
     }
+    category_label = category_labels.get(theme.category, theme.category)
+
+    # 日付フォーマット
+    jst = timezone(timedelta(hours=9))
+    date_jst = theme.date.astimezone(jst)
+    date_label = date_jst.strftime("%Y/%m/%d")
+
+    # お題画像を生成
+    try:
+        generator = ThemeCardGenerator()
+        image_bytes_io = generator.generate_theme_card(
+            theme_text=theme.text,
+            category=theme.category,
+            category_label=category_label,
+            date_label=date_label,
+        )
+        image_bytes = image_bytes_io.getvalue()
+        logger.info(f"Generated theme card image: {len(image_bytes)} bytes")
+    except Exception as e:
+        logger.error(f"Failed to generate theme card: {e}")
+        sys.exit(1)
 
     # X APIクライアントを初期化
     client = XAPIClient(
@@ -206,73 +272,24 @@ def main():
         access_token_secret=access_token_secret,
     )
 
-    # 画像ジェネレーターを初期化
-    generator = ThemeCardGenerator()
-
-    # 各カテゴリのお題を投稿
-    jst = timezone(timedelta(hours=9))
-    posted_count = 0
-    failed_count = 0
-
-    for theme in themes:
-        logger.info(f"Processing theme: {theme.id} - Category: {theme.category}")
-
-        category_label = category_labels.get(theme.category, theme.category)
-        date_jst = theme.date.astimezone(jst)
-        date_label = date_jst.strftime("%Y/%m/%d")
-
-        # お題画像を生成
-        try:
-            image_bytes_io = generator.generate_theme_card(
-                theme_text=theme.text,
-                category=theme.category,
-                category_label=category_label,
-                date_label=date_label,
-            )
-            image_bytes = image_bytes_io.getvalue()
-            logger.info(f"Generated theme card image: {len(image_bytes)} bytes")
-        except Exception as e:
-            logger.error(f"Failed to generate theme card for {theme.category}: {e}")
-            failed_count += 1
-            continue
-
-        # 画像をアップロード
-        media_id = client.upload_media(image_bytes)
-        if not media_id:
-            logger.error(f"Failed to upload image for {theme.category}")
-            failed_count += 1
-            continue
-
-        # ツイート本文を生成
-        tweet_text = generate_tweet_text(theme)
-        logger.info(f"Tweet text for {theme.category}:\n{tweet_text}")
-
-        # ツイートを投稿
-        success = client.post_tweet(tweet_text, media_ids=[media_id])
-        if success:
-            logger.info(f"Successfully posted theme for {theme.category}")
-            posted_count += 1
-        else:
-            logger.error(f"Failed to post tweet for {theme.category}")
-            failed_count += 1
-
-        # レート制限対策: 各投稿間に少し待機
-        if theme != themes[-1]:  # 最後のテーマでなければ待機
-            import time
-            time.sleep(2)  # 2秒待機
-
-    # 結果をログ
-    logger.info(f"Posting completed. Posted: {posted_count}, Failed: {failed_count}")
-
-    if posted_count == 0:
-        logger.error("All posts failed")
+    # 画像をアップロード
+    media_id = client.upload_media(image_bytes)
+    if not media_id:
+        logger.error("Failed to upload image to X")
         sys.exit(1)
-    elif failed_count > 0:
-        logger.warning(f"Some posts failed ({failed_count} failures)")
-        sys.exit(0)  # 一部成功したので正常終了
-    else:
-        logger.info("All themes posted successfully!")
-        sys.exit(0)
+
+    # ツイート本文を生成
+    tweet_text = generate_tweet_text(theme)
+    logger.info(f"Tweet text:\n{tweet_text}")
+
+    # ツイートを投稿
+    success = client.post_tweet(tweet_text, media_ids=[media_id])
+    if not success:
+        logger.error("Failed to post tweet")
+        sys.exit(1)
+
+    logger.info("Successfully posted theme to X!")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
