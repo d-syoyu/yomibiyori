@@ -158,7 +158,12 @@ def generate_tweet_text(theme: Theme) -> str:
 
     # 日付フォーマット
     jst = timezone(timedelta(hours=9))
-    date_jst = theme.date.astimezone(jst)
+    # theme.dateがdate型の場合、datetime型に変換
+    if isinstance(theme.date, datetime):
+        date_jst = theme.date.astimezone(jst)
+    else:
+        # date型をdatetime型に変換してからタイムゾーン設定
+        date_jst = datetime.combine(theme.date, datetime.min.time()).replace(tzinfo=jst)
     date_str = date_jst.strftime("%Y年%m月%d日")
 
     # App Store URL
@@ -269,7 +274,11 @@ def main():
         logger.info(f"Processing theme: {theme.id} - Category: {theme.category}")
 
         category_label = category_labels.get(theme.category, theme.category)
-        date_jst = theme.date.astimezone(jst)
+        # theme.dateがdate型の場合、datetime型に変換
+        if isinstance(theme.date, datetime):
+            date_jst = theme.date.astimezone(jst)
+        else:
+            date_jst = datetime.combine(theme.date, datetime.min.time()).replace(tzinfo=jst)
         date_label = date_jst.strftime("%Y/%m/%d")
 
         # お題画像を生成
