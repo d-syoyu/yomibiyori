@@ -64,7 +64,8 @@ class ThemeCardGenerator(ShareCardGenerator):
 
         # 上部にカテゴリバッジを配置
         category_badge_y = content_y
-        category_text = f"📖 {category_label}"
+        # 絵文字はフォントが対応していないため、カテゴリラベルのみ表示
+        category_text = f"【{category_label}】"
         draw.text(
             (content_x, category_badge_y),
             category_text,
