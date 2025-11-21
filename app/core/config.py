@@ -178,7 +178,7 @@ class Settings(BaseSettings):
         description="X.ai API key used when THEME_AI_PROVIDER=xai.",
     )
     xai_model: str = Field(
-        default="grok-4-fast-reasoning",
+        default="grok-4-1-fast-reasoning",
         alias="XAI_MODEL",
         description="X.ai Grok model used for theme generation.",
     )

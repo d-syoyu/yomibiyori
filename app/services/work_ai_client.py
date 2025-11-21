@@ -56,9 +56,23 @@ class OpenAIWorkClient(WorkAIClient):
     endpoint: str = "https://api.openai.com/v1/chat/completions"
     timeout: float = 10.0
 
+    # カテゴリ別の下の句スタイルガイド
+    CATEGORY_STYLES = {
+        "恋愛": "切ない余韻、ドキドキする展開、意外な心情の吐露など、読む人の恋心を揺さぶる表現で。",
+        "季節": "季節の移ろいに重ねた心情、五感で感じる情景、自然と心の共鳴を描いて。",
+        "日常": "「わかる！」と共感を呼ぶ展開、クスッと笑える発見、ほっこりする結末で。",
+        "ユーモア": "予想外のオチ、ツッコミどころ満載の展開、笑いを誘う大胆な表現で締めくくって。",
+    }
+
     def generate(self, *, upper_verse: str, category: str, username: str) -> str:
         """Generate a 7-7 lower verse with syllable validation."""
         MAX_RETRIES = 3
+
+        # カテゴリに応じたスタイルガイド
+        style_guide = self.CATEGORY_STYLES.get(
+            category,
+            "読む人の想像力を刺激する、印象的な表現で完結させて。"
+        )
 
         payload = {
             "model": self.model,
@@ -68,7 +82,12 @@ class OpenAIWorkClient(WorkAIClient):
                     "content": (
                         "あなたは音数（モーラ数）に精通した現代的な詩人です。\n"
                         "上の句（5-7-5）を受け取り、下の句（7-7）で完結させます。\n"
-                        "必ず7-7の音数を守り、一音一音数えながら作句します。"
+                        "必ず7-7の音数を守り、一音一音数えながら作句します。\n\n"
+                        "【重要な心得】\n"
+                        "- ありきたりな表現は避ける\n"
+                        "- 読む人の心に残る、個性的な言葉選びを\n"
+                        "- 予定調和を裏切る、意外性のある展開を\n"
+                        "- 余韻や含みを持たせる深い表現を"
                     ),
                 },
                 {
@@ -77,18 +96,24 @@ class OpenAIWorkClient(WorkAIClient):
                         f"以下の上の句に対して、下の句（7-7）を作成してください。\n"
                         f"**作成前に必ず一音ずつ数えて、7-7を厳密に確認してください。**\n\n"
                         f"【上の句】\n{upper_verse}\n\n"
+                        f"【カテゴリ】{category}\n"
+                        f"【このカテゴリでの表現スタイル】\n{style_guide}\n\n"
                         f"【音数の厳守（絶対条件）】\n"
                         f"- 1行目：必ず正確に7音\n"
                         f"- 2行目：必ず正確に7音\n"
                         f"- 音数が合わない句は絶対に出力しないでください\n\n"
+                        f"【表現の工夫】\n"
+                        f"- 常套句や決まり文句を避ける\n"
+                        f"- 具体的で鮮やかな描写を\n"
+                        f"- 読み手の想像力を刺激する言葉を\n"
+                        f"- 心に刺さる、印象的なフレーズで締めくくる\n\n"
                         f"【出力形式】\n"
                         f"- 必ず2行（1行目7音/2行目7音）\n"
-                        f"- 句のみ出力（音数カウントや説明は不要）\n"
-                        f"- 例: 時が止まれば\\nいいのにと願う夜"
+                        f"- 句のみ出力（音数カウントや説明は不要）"
                     ),
                 },
             ],
-            "temperature": 0.9,
+            "temperature": 1.1,
             "max_tokens": 100,
         }
 
@@ -147,9 +172,17 @@ class XAIWorkClient(WorkAIClient):
     """X.ai Grok-backed lower verse generator."""
 
     api_key: str
-    model: str = "grok-4-fast-reasoning"
+    model: str = "grok-4-1-fast-reasoning"
     endpoint: str = "https://api.x.ai/v1/chat/completions"
     timeout: float = 30.0
+
+    # カテゴリ別の下の句スタイルガイド（OpenAIと統一）
+    CATEGORY_STYLES = {
+        "恋愛": "切ない余韻、ドキドキする展開、意外な心情の吐露など、読む人の恋心を揺さぶる表現で。",
+        "季節": "季節の移ろいに重ねた心情、五感で感じる情景、自然と心の共鳴を描いて。",
+        "日常": "「わかる！」と共感を呼ぶ展開、クスッと笑える発見、ほっこりする結末で。",
+        "ユーモア": "予想外のオチ、ツッコミどころ満載の展開、笑いを誘う大胆な表現で締めくくって。",
+    }
 
     def generate(self, *, upper_verse: str, category: str, username: str, persona: str = "") -> str:
         """Generate a 7-7 lower verse with syllable validation."""
@@ -158,6 +191,12 @@ class XAIWorkClient(WorkAIClient):
         # ペルソナが指定されていない場合はユーザー名をそのまま使用
         if not persona:
             persona = f"「{username}」という名前の詩人として、あなた独自の感性で表現します。"
+
+        # カテゴリに応じたスタイルガイド
+        style_guide = self.CATEGORY_STYLES.get(
+            category,
+            "読む人の想像力を刺激する、印象的な表現で完結させて。"
+        )
 
         payload = {
             "model": self.model,
@@ -168,8 +207,13 @@ class XAIWorkClient(WorkAIClient):
                         f"あなたは音数（モーラ数）に精通した現代的な詩人「{username}」です。\n"
                         f"ペルソナ: {persona}\n\n"
                         "上の句（5-7-5）を受け取り、下の句（7-7）で完結させます。\n"
-                        "必ず7-7の音数を守り、一音一音数えながら作句します。\n"
-                        "あなたの個性とペルソナを活かした表現で詠んでください。"
+                        "必ず7-7の音数を守り、一音一音数えながら作句します。\n\n"
+                        "【重要な心得】\n"
+                        "- ありきたりな表現は避ける\n"
+                        "- 読む人の心に残る、個性的な言葉選びを\n"
+                        "- 予定調和を裏切る、意外性のある展開を\n"
+                        "- 余韻や含みを持たせる深い表現を\n"
+                        "- あなたのペルソナを活かした独自の視点で"
                     ),
                 },
                 {
@@ -178,25 +222,25 @@ class XAIWorkClient(WorkAIClient):
                         f"以下の上の句に対して、下の句（7-7）を作成してください。\n"
                         f"**作成前に必ず一音ずつ数えて、7-7を厳密に確認してください。**\n\n"
                         f"【上の句】\n{upper_verse}\n\n"
-                        f"【カテゴリー】\n{category}\n\n"
+                        f"【カテゴリ】{category}\n"
+                        f"【このカテゴリでの表現スタイル】\n{style_guide}\n\n"
                         f"【あなたのペルソナ】\n{persona}\n\n"
                         f"【音数の厳守（絶対条件）】\n"
                         f"- 1行目：必ず正確に7音\n"
                         f"- 2行目：必ず正確に7音\n"
                         f"- 音数が合わない句は絶対に出力しないでください\n\n"
-                        f"【内容の条件（重要）】\n"
-                        f"- 示唆に富んだ表現を心がける\n"
-                        f"- 読む人に深い印象を与える言葉選び\n"
-                        f"- 単なる説明ではなく、想像力をかき立てる表現\n"
-                        f"- 余韻や含みを持たせる\n\n"
+                        f"【表現の工夫】\n"
+                        f"- 常套句や決まり文句を避ける\n"
+                        f"- 具体的で鮮やかな描写を\n"
+                        f"- 読み手の想像力を刺激する言葉を\n"
+                        f"- 心に刺さる、印象的なフレーズで締めくくる\n\n"
                         f"【出力形式】\n"
                         f"- 必ず2行（1行目7音/2行目7音）\n"
-                        f"- 句のみ出力（音数カウントや説明は不要）\n"
-                        f"- 例: 時が止まれば\\nいいのにと願う夜"
+                        f"- 句のみ出力（音数カウントや説明は不要）"
                     ),
                 },
             ],
-            "temperature": 1.0,
+            "temperature": 1.2,
             "max_tokens": 200,
         }
 
@@ -275,28 +319,53 @@ class ClaudeWorkClient(WorkAIClient):
     model: str = "claude-sonnet-4-5-20250929"
     timeout: float = 30.0
 
+    # カテゴリ別の下の句スタイルガイド（OpenAI/XAIと統一）
+    CATEGORY_STYLES = {
+        "恋愛": "切ない余韻、ドキドキする展開、意外な心情の吐露など、読む人の恋心を揺さぶる表現で。",
+        "季節": "季節の移ろいに重ねた心情、五感で感じる情景、自然と心の共鳴を描いて。",
+        "日常": "「わかる！」と共感を呼ぶ展開、クスッと笑える発見、ほっこりする結末で。",
+        "ユーモア": "予想外のオチ、ツッコミどころ満載の展開、笑いを誘う大胆な表現で締めくくって。",
+    }
+
     def generate(self, *, upper_verse: str, category: str, username: str) -> str:
         """Generate a 7-7 lower verse with syllable validation."""
         MAX_RETRIES = 3
 
+        # カテゴリに応じたスタイルガイド
+        style_guide = self.CATEGORY_STYLES.get(
+            category,
+            "読む人の想像力を刺激する、印象的な表現で完結させて。"
+        )
+
         system_prompt = (
             "あなたは音数（モーラ数）に精通した現代的な詩人です。\n"
             "上の句（5-7-5）を受け取り、下の句（7-7）で完結させます。\n"
-            "必ず7-7の音数を守り、一音一音数えながら作句します。"
+            "必ず7-7の音数を守り、一音一音数えながら作句します。\n\n"
+            "【重要な心得】\n"
+            "- ありきたりな表現は避ける\n"
+            "- 読む人の心に残る、個性的な言葉選びを\n"
+            "- 予定調和を裏切る、意外性のある展開を\n"
+            "- 余韻や含みを持たせる深い表現を"
         )
 
         user_prompt = (
             f"以下の上の句に対して、下の句（7-7）を作成してください。\n"
             f"**作成前に必ず一音ずつ数えて、7-7を厳密に確認してください。**\n\n"
             f"【上の句】\n{upper_verse}\n\n"
+            f"【カテゴリ】{category}\n"
+            f"【このカテゴリでの表現スタイル】\n{style_guide}\n\n"
             f"【音数の厳守（絶対条件）】\n"
             f"- 1行目：必ず正確に7音\n"
             f"- 2行目：必ず正確に7音\n"
             f"- 音数が合わない句は絶対に出力しないでください\n\n"
+            f"【表現の工夫】\n"
+            f"- 常套句や決まり文句を避ける\n"
+            f"- 具体的で鮮やかな描写を\n"
+            f"- 読み手の想像力を刺激する言葉を\n"
+            f"- 心に刺さる、印象的なフレーズで締めくくる\n\n"
             f"【出力形式】\n"
             f"- 必ず2行（1行目7音/2行目7音）\n"
-            f"- 句のみ出力（音数カウントや説明は不要）\n"
-            f"- 例: 時が止まれば\\nいいのにと願う夜"
+            f"- 句のみ出力（音数カウントや説明は不要）"
         )
 
         client = anthropic.Anthropic(api_key=self.api_key, timeout=self.timeout)
@@ -309,7 +378,7 @@ class ClaudeWorkClient(WorkAIClient):
                 message = client.messages.create(
                     model=self.model,
                     max_tokens=200,
-                    temperature=0.9,
+                    temperature=1.1,
                     system=system_prompt,
                     messages=[
                         {"role": "user", "content": user_prompt}
