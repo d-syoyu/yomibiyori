@@ -32,28 +32,28 @@ export default function Support() {
 
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. よみびよりとは何ですか？</h3>
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. よみびよりとは何ですか?</h3>
                 <p className="text-gray-700 leading-relaxed">
-                  A. よみびよりは、毎日届く上の句（5-7-5）に、あなたが下の句（7-7）を詠んで短歌を完成させる、言葉を紡ぐ喜びを味わえるサービスです。
+                  A. よみびよりは、毎日届く上の句(5-7-5)に、あなたが下の句(7-7)を詠んで短歌を完成させる、言葉を紡ぐ喜びを味わえるサービスです。
                 </p>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. 投稿できる時間は決まっていますか？</h3>
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. 投稿できる時間は決まっていますか?</h3>
                 <p className="text-gray-700 leading-relaxed">
-                  A. はい。毎日6:00〜22:00（日本時間）の間に投稿できます。1日1首、カテゴリごとに投稿可能です。
+                  A. はい。毎日6:00〜22:00(日本時間)の間に投稿できます。1日1首、カテゴリごとに投稿可能です。
                 </p>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. お題のカテゴリは何がありますか？</h3>
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. お題のカテゴリは何がありますか?</h3>
                 <p className="text-gray-700 leading-relaxed">
                   A. 「恋愛」「季節」「日常」「ユーモア」の4つのカテゴリからお題が毎日生成されます。
                 </p>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. ランキングはどのように決まりますか？</h3>
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. ランキングはどのように決まりますか?</h3>
                 <p className="text-gray-700 leading-relaxed">
                   A. 他のユーザーからの「いいね」の数や閲覧数などを元に、リアルタイムでランキングが更新されます。毎日22:00に確定します。
                 </p>
@@ -69,7 +69,7 @@ export default function Support() {
               <div>
                 <h3 className="text-lg font-semibold text-amber-800 mb-2">Q. パスワードを忘れてしまいました</h3>
                 <p className="text-gray-700 leading-relaxed">
-                  A. ログイン画面の「パスワードをお忘れですか？」からパスワードリセットのメールをお送りします。
+                  A. ログイン画面の「パスワードをお忘れですか?」からパスワードリセットのメールをお送りします。
                 </p>
               </div>
 
@@ -88,26 +88,43 @@ export default function Support() {
               上記で解決しない場合や、その他のご質問がございましたら、以下の方法でお問い合わせください。
             </p>
 
-            <div className="bg-amber-50 rounded-lg p-6 border border-amber-200">
-              <h3 className="text-lg font-semibold text-amber-900 mb-3">メールでのお問い合わせ</h3>
-              <p className="text-gray-700 mb-2">
-                メールアドレス：
-                <a href="mailto:d.syoyu@gmail.com" className="text-amber-900 underline hover:text-amber-700">
-                  d.syoyu@gmail.com
+            <div className="space-y-4">
+              <div className="bg-amber-50 rounded-lg p-6 border border-amber-200">
+                <h3 className="text-lg font-semibold text-amber-900 mb-3">メールでのお問い合わせ</h3>
+                <p className="text-gray-700 mb-2">
+                  メールアドレス:
+                  <a href="mailto:d.syoyu@gmail.com" className="text-amber-900 underline hover:text-amber-700">
+                    d.syoyu@gmail.com
+                  </a>
+                </p>
+                <p className="text-sm text-gray-600">
+                  ※お問い合わせの際は、以下の情報をご記載いただくとスムーズです
+                </p>
+                <ul className="list-disc pl-6 mt-2 space-y-1 text-sm text-gray-600">
+                  <li>お使いのデバイス(iPhone / Android)</li>
+                  <li>アプリのバージョン</li>
+                  <li>問題の詳細や発生状況</li>
+                </ul>
+              </div>
+
+              <div className="bg-amber-50 rounded-lg p-6 border border-amber-200">
+                <h3 className="text-lg font-semibold text-amber-900 mb-3">X(旧Twitter)でのお問い合わせ</h3>
+                <p className="text-gray-700 mb-3">
+                  XのDMでもお問い合わせを受け付けております。
+                </p>
+                <a
+                  href="https://x.com/messages/compose?recipient_id=1984540429845692416"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-semibold"
+                >
+                  XのDMで問い合わせる
                 </a>
-              </p>
-              <p className="text-sm text-gray-600">
-                ※お問い合わせの際は、以下の情報をご記載いただくとスムーズです
-              </p>
-              <ul className="list-disc pl-6 mt-2 space-y-1 text-sm text-gray-600">
-                <li>お使いのデバイス（iPhone / Android）</li>
-                <li>アプリのバージョン</li>
-                <li>問題の詳細や発生状況</li>
-              </ul>
+              </div>
             </div>
 
             <p className="text-sm text-gray-600 mt-4">
-              営業時間：平日 10:00〜18:00（土日祝日を除く）
+              営業時間:平日 10:00〜18:00(土日祝日を除く)
               <br />
               ※お問い合わせの内容によっては、回答にお時間をいただく場合がございます。
             </p>
