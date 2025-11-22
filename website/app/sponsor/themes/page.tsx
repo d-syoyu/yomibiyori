@@ -83,15 +83,15 @@ function SponsorThemesContent() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-900'
+        return 'bg-yellow-50 text-yellow-800 border border-yellow-200'
       case 'approved':
-        return 'bg-green-100 text-green-900'
+        return 'bg-emerald-50 text-emerald-800 border border-emerald-200'
       case 'published':
-        return 'bg-blue-100 text-blue-900'
+        return 'bg-[var(--color-washi)] text-[var(--color-igusa)] border border-[var(--color-igusa-light)]'
       case 'rejected':
-        return 'bg-red-100 text-red-900'
+        return 'bg-red-50 text-red-800 border border-red-200'
       default:
-        return 'bg-gray-100 text-gray-900'
+        return 'bg-gray-50 text-gray-800 border border-gray-200'
     }
   }
 
@@ -111,23 +111,25 @@ function SponsorThemesContent() {
   }
 
   if (loading) {
-    return <div className="text-purple-900">読み込み中...</div>
+    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-purple-900 mb-2">
-            お題管理
+          <h1 className="section-heading text-3xl mb-2">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
+              お題管理
+            </span>
           </h1>
-          <p className="text-purple-700">
+          <p className="section-subheading">
             投稿したお題の一覧と審査状況を確認できます
           </p>
         </div>
         <a
           href="/sponsor/themes/new"
-          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-medium rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all"
+          className="btn-primary"
         >
           新規投稿
         </a>
@@ -144,11 +146,10 @@ function SponsorThemesContent() {
                   ? `/sponsor/themes?status=${filter.value}`
                   : '/sponsor/themes'
               }
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-md'
-                  : 'bg-white/80 text-purple-700 hover:bg-purple-50 border border-purple-200'
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${isActive
+                  ? 'bg-[var(--color-igusa)] text-white'
+                  : 'bg-white text-[var(--color-text-secondary)] hover:bg-[var(--color-washi)] border border-[var(--color-border)]'
+                }`}
             >
               {filter.label}
             </a>
@@ -157,15 +158,15 @@ function SponsorThemesContent() {
       </div>
 
       {themes.length === 0 ? (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-12 border border-purple-100 text-center">
-          <p className="text-purple-700 text-lg mb-4">
+        <div className="card text-center py-12">
+          <p className="text-[var(--color-text-secondary)] text-lg mb-6">
             {status
               ? `${statusFilters.find((f) => f.value === status)?.label}のお題はありません`
               : 'お題がありません'}
           </p>
           <a
             href="/sponsor/themes/new"
-            className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-medium rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all"
+            className="btn-primary inline-block"
           >
             最初のお題を投稿する
           </a>
@@ -175,14 +176,14 @@ function SponsorThemesContent() {
           {themes.map((theme) => (
             <div
               key={theme.id}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-purple-100 shadow-lg"
+              className="card"
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-900 mb-2">
+                  <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-[var(--color-washi)] text-[var(--color-igusa)] border border-[var(--color-border)] mb-2">
                     {theme.category}
                   </span>
-                  <p className="text-sm text-purple-600">
+                  <p className="text-sm text-[var(--color-text-muted)]">
                     配信予定日: {new Date(theme.date).toLocaleDateString('ja-JP')}
                   </p>
                 </div>
@@ -193,8 +194,8 @@ function SponsorThemesContent() {
                 </span>
               </div>
 
-              <div className="mb-4">
-                <p className="text-2xl font-bold text-purple-900 text-center py-8">
+              <div className="mb-4 bg-[var(--color-washi)] rounded-xl p-8 border border-[var(--color-border)]">
+                <p className="text-2xl font-serif font-bold text-[var(--color-text-primary)] text-center">
                   {theme.text_575}
                 </p>
               </div>
@@ -208,7 +209,7 @@ function SponsorThemesContent() {
                 </div>
               )}
 
-              <div className="flex justify-between items-center text-sm text-purple-600">
+              <div className="flex justify-between items-center text-sm text-[var(--color-text-muted)]">
                 <span>投稿日時: {new Date(theme.created_at).toLocaleString('ja-JP')}</span>
               </div>
             </div>
@@ -221,7 +222,7 @@ function SponsorThemesContent() {
 
 export default function SponsorThemesPage() {
   return (
-    <Suspense fallback={<div className="text-purple-900">読み込み中...</div>}>
+    <Suspense fallback={<div className="text-[var(--color-text-secondary)]">読み込み中...</div>}>
       <SponsorThemesContent />
     </Suspense>
   )

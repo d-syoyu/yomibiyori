@@ -174,23 +174,25 @@ export default function NewThemePage() {
   const minDate = tomorrow.toISOString().split('T')[0]
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-purple-900 mb-2">
-          新規お題投稿
+    <div className="max-w-2xl mx-auto space-y-8">
+      <div>
+        <h1 className="section-heading text-3xl mb-2">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
+            新規お題投稿
+          </span>
         </h1>
-        <p className="text-purple-700">
+        <p className="section-subheading">
           配信したいお題を投稿してください。審査後、承認されると配信されます。
         </p>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-purple-100 shadow-lg">
+      <div className="card">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Date */}
           <div>
             <label
               htmlFor="date"
-              className="block text-sm font-medium text-gray-800 mb-2"
+              className="block text-sm font-medium text-[var(--color-text-primary)] mb-2"
             >
               配信予定日 <span className="text-red-500">*</span>
             </label>
@@ -201,9 +203,9 @@ export default function NewThemePage() {
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               min={minDate}
               required
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
             />
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
               お題が配信される日付を選択してください
             </p>
           </div>
@@ -212,7 +214,7 @@ export default function NewThemePage() {
           <div>
             <label
               htmlFor="category"
-              className="block text-sm font-medium text-gray-800 mb-2"
+              className="block text-sm font-medium text-[var(--color-text-primary)] mb-2"
             >
               カテゴリ <span className="text-red-500">*</span>
             </label>
@@ -221,7 +223,7 @@ export default function NewThemePage() {
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               required
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -233,13 +235,13 @@ export default function NewThemePage() {
 
           {/* 5-7-5 Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-800 mb-2">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               上の句（5-7-5） <span className="text-red-500">*</span>
             </label>
             <div className="space-y-3">
               {/* 第一句（5文字） */}
               <div>
-                <label htmlFor="line1" className="block text-xs text-gray-600 mb-1">
+                <label htmlFor="line1" className="block text-xs text-[var(--color-text-muted)] mb-1">
                   第一句（5音）
                 </label>
                 <input
@@ -249,16 +251,16 @@ export default function NewThemePage() {
                   onChange={(e) => setFormData({ ...formData, line1: e.target.value })}
                   required
                   placeholder="例：春の風"
-                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                   {formData.line1.length}文字
                 </p>
               </div>
 
               {/* 第二句（7文字） */}
               <div>
-                <label htmlFor="line2" className="block text-xs text-gray-600 mb-1">
+                <label htmlFor="line2" className="block text-xs text-[var(--color-text-muted)] mb-1">
                   第二句（7音）
                 </label>
                 <input
@@ -268,16 +270,16 @@ export default function NewThemePage() {
                   onChange={(e) => setFormData({ ...formData, line2: e.target.value })}
                   required
                   placeholder="例：桜舞い散る"
-                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                   {formData.line2.length}文字
                 </p>
               </div>
 
               {/* 第三句（5文字） */}
               <div>
-                <label htmlFor="line3" className="block text-xs text-gray-600 mb-1">
+                <label htmlFor="line3" className="block text-xs text-[var(--color-text-muted)] mb-1">
                   第三句（5音）
                 </label>
                 <input
@@ -287,9 +289,9 @@ export default function NewThemePage() {
                   onChange={(e) => setFormData({ ...formData, line3: e.target.value })}
                   required
                   placeholder="例：花の道"
-                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                   {formData.line3.length}文字
                 </p>
               </div>
@@ -297,9 +299,9 @@ export default function NewThemePage() {
 
             {/* Preview */}
             {(formData.line1 || formData.line2 || formData.line3) && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                <p className="text-xs text-gray-600 mb-2">プレビュー:</p>
-                <p className="text-lg font-medium text-gray-900 text-center">
+              <div className="mt-4 p-6 bg-[var(--color-washi)] rounded-xl border border-[var(--color-border)]">
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">プレビュー:</p>
+                <p className="text-xl font-serif font-bold text-[var(--color-text-primary)] text-center">
                   {formData.line1 || '＿＿＿'} {formData.line2 || '＿＿＿＿＿'} {formData.line3 || '＿＿＿'}
                 </p>
               </div>
@@ -308,7 +310,7 @@ export default function NewThemePage() {
 
           {/* Error */}
           {error && (
-            <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+            <div className="p-4 rounded-xl bg-red-50 border border-red-200">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
@@ -318,14 +320,14 @@ export default function NewThemePage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="flex-1 px-4 py-3 border border-purple-300 text-purple-700 font-medium rounded-lg hover:bg-purple-50 transition-all"
+              className="flex-1 btn-secondary"
             >
               キャンセル
             </button>
             <button
               type="submit"
               disabled={loading || !campaignId}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-medium rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '投稿中...' : '投稿する'}
             </button>
@@ -333,9 +335,11 @@ export default function NewThemePage() {
         </form>
       </div>
 
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-medium text-blue-900 mb-2">📝 投稿のヒント</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
+      <div className="card bg-[var(--color-washi)]/50">
+        <h3 className="font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
+          <span className="text-xl">📝</span> 投稿のヒント
+        </h3>
+        <ul className="text-sm text-[var(--color-text-secondary)] space-y-2">
           <li>• 上の句は3〜140文字以内で入力してください</li>
           <li>• 配信日は翌日以降の日付を選択してください</li>
           <li>• 投稿後、管理者が審査を行います</li>

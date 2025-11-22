@@ -1,0 +1,117 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET(request: Request) {
+    try {
+        // 1. Auth Check
+        const supabase = await createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        // 2. Env Check
+        const projectId = process.env.POSTHOG_PROJECT_ID
+        const apiKey = process.env.POSTHOG_PERSONAL_API_KEY
+
+        if (!projectId || !apiKey) {
+            console.warn('PostHog credentials not configured')
+            // Return empty data instead of error to allow UI to show "No Data" or mock
+            return NextResponse.json({
+                results: [],
+                warning: 'PostHog not configured'
+            })
+        }
+
+        // 3. Fetch Data from PostHog
+        // We want to get event counts broken down by theme_id
+        // API: /api/projects/:id/insights/trend/
+
+        const headers = {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        }
+
+        const params = new URLSearchParams({
+            events: JSON.stringify([
+                { id: 'theme_viewed', math: 'total', name: 'Impressions' },
+                { id: 'work_created', math: 'total', name: 'Submissions' }
+            ]),
+            breakdown: 'theme_id',
+            breakdown_type: 'event',
+            date_from: 'all', // Get all time data
+            display: 'ActionsTable', // Get tabular data
+        })
+
+        const response = await fetch(
+            `https://app.posthog.com/api/projects/${projectId}/insights/trend/?${params.toString()}`,
+            { headers }
+        )
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            console.error('PostHog API Error:', response.status, errorText)
+            throw new Error(`PostHog API Error: ${response.status}`)
+        }
+
+        const data = await response.json()
+
+        // 4. Transform Data
+        // PostHog 'trend' API with breakdown returns a flat array of series.
+        // Each item represents a specific event filtered by a specific breakdown value (theme_id).
+        // We need to aggregate these by theme_id.
+
+        const metricsByTheme: Record<string, { impressions: number; submissions: number }> = {}
+
+        if (Array.isArray(data.result)) {
+            data.result.forEach((item: any) => {
+                // item structure example:
+                // {
+                //   label: "Impressions - theme_123",
+                //   count: 150,
+                //   data: [...],
+                //   breakdown_value: "theme_123",
+                //   action: { id: "theme_viewed", ... }
+                // }
+
+                const themeId = item.breakdown_value
+                if (!themeId || themeId === 'undefined' || themeId === 'null') return
+
+                if (!metricsByTheme[themeId]) {
+                    metricsByTheme[themeId] = { impressions: 0, submissions: 0 }
+                }
+
+                // Identify event type based on action.id or label
+                // We requested: 
+                // 0: theme_viewed (Impressions)
+                // 1: work_created (Submissions)
+
+                // Check action id if available, otherwise infer from order or label
+                const eventId = item.action?.id
+
+                if (eventId === 'theme_viewed') {
+                    metricsByTheme[themeId].impressions += item.count
+                } else if (eventId === 'work_created') {
+                    metricsByTheme[themeId].submissions += item.count
+                }
+            })
+        }
+
+        // Convert map to array format expected by frontend
+        const results = Object.entries(metricsByTheme).map(([themeId, metrics]) => ({
+            theme_id: themeId,
+            impressions: metrics.impressions,
+            submissions: metrics.submissions
+        }))
+
+        return NextResponse.json({ results })
+
+    } catch (error) {
+        console.error('Insights API Error:', error)
+        return NextResponse.json(
+            { error: 'Internal Server Error' },
+            { status: 500 }
+        )
+    }
+}

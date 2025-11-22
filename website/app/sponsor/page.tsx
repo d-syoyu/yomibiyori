@@ -115,41 +115,86 @@ export default function SponsorDashboard() {
 
   return (
     <div className="page-wrapper">
-      <div className="page-container space-y-10">
-        <header className="space-y-2 text-center md:text-left">
-          <span className="badge">スポンサー</span>
-          <h1 className="section-heading text-3xl">ダッシュボード</h1>
-          <p className="section-subheading text-left">
-            投稿したお題の管理状況と審査ステータスを確認できます。
+      <div className="page-container space-y-12">
+        <header className="space-y-4 text-center md:text-left pt-8">
+          <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
+            スポンサーダッシュボード
+          </div>
+          <h1 className="section-heading text-3xl md:text-4xl">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
+              お題管理・インサイト
+            </span>
+          </h1>
+          <p className="section-subheading text-left max-w-2xl">
+            投稿したお題の審査状況や、ユーザーからの反応をリアルタイムで確認できます。
           </p>
         </header>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {statCards.map((card) => (
-            <a key={card.label} href={card.href} className="card group">
-              <div
-                className={`inline-flex p-3 rounded-xl text-white text-2xl font-bold bg-gradient-to-r ${card.color}`}
-              >
-                {card.value}
+            <a key={card.label} href={card.href} className="card group hover:bg-[var(--color-washi)] transition-colors">
+              <div className="flex flex-col h-full justify-between space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-[var(--color-text-secondary)]">{card.label}</span>
+                  <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${card.color}`}></div>
+                </div>
+                <div className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
+                  {card.value}
+                </div>
               </div>
-              <h3 className="mt-4 text-lg font-semibold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent)]">
-                {card.label}
-              </h3>
             </a>
           ))}
         </section>
 
-        <section className="card space-y-4">
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">クイックアクション</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="/sponsor/themes/new" className="btn-secondary w-full justify-between">
-              <span>新しいお題を投稿</span>
-              <span>→</span>
-            </a>
-            <a href="/sponsor/themes?status=pending" className="btn-secondary w-full justify-between">
-              <span>審査待ちお題を確認</span>
-              <span>→</span>
-            </a>
+        <section className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                <span className="text-2xl">🚀</span> クイックアクション
+              </h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <a href="/sponsor/themes/new" className="card group hover:border-[var(--color-igusa)] transition-colors flex flex-col justify-center items-center text-center space-y-3 py-8">
+                <div className="w-12 h-12 rounded-full bg-[var(--color-washi)] flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  ✨
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-[var(--color-text-primary)]">新しいお題を作成</h3>
+                  <p className="text-xs text-[var(--color-text-secondary)]">季節やイベントに合わせたお題を投稿</p>
+                </div>
+              </a>
+              <a href="/sponsor/themes?status=pending" className="card group hover:border-[var(--color-igusa)] transition-colors flex flex-col justify-center items-center text-center space-y-3 py-8">
+                <div className="w-12 h-12 rounded-full bg-[var(--color-washi)] flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  👀
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-[var(--color-text-primary)]">審査状況を確認</h3>
+                  <p className="text-xs text-[var(--color-text-secondary)]">承認待ちのお題をチェック</p>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+              <span className="text-2xl">📢</span> お知らせ
+            </h2>
+            <div className="card space-y-4 bg-[var(--color-washi)]/50">
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-[var(--color-igusa)] border border-[var(--color-igusa)] px-2 py-0.5 rounded-full">New</span>
+                <p className="text-sm text-[var(--color-text-primary)]">
+                  年末年始の特別キャンペーンお題の募集を開始しました。
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">2024/11/20</p>
+              </div>
+              <hr className="border-[var(--color-border)]" />
+              <div className="space-y-2">
+                <p className="text-sm text-[var(--color-text-primary)]">
+                  インサイト機能がアップデートされました。
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">2024/11/15</p>
+              </div>
+            </div>
           </div>
         </section>
       </div>

@@ -80,8 +80,8 @@ export default function SponsorLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <div className="text-purple-900">読み込み中...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-washi)]">
+        <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
       </div>
     )
   }
@@ -91,24 +91,27 @@ export default function SponsorLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <div className="page-wrapper">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-purple-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-[var(--color-border)] sticky top-0 z-10">
+        <div className="page-container">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-purple-900">
-                よみびより スポンサー管理
-              </h1>
+              <a href="/" className="text-2xl font-bold text-[var(--color-igusa)] font-serif hover:text-[var(--color-igusa-light)] transition-colors">
+                よみびより
+              </a>
+              <span className="text-sm text-[var(--color-text-muted)] border-l border-[var(--color-border)] pl-4">
+                スポンサー管理
+              </span>
             </div>
 
             <div className="flex items-center gap-4">
-              <span className="text-sm text-purple-700">
+              <span className="text-sm text-[var(--color-text-secondary)]">
                 {user.display_name || user.email}
               </span>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-purple-700 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-igusa)] hover:bg-[var(--color-washi)] rounded-lg transition-colors"
               >
                 ログアウト
               </button>
@@ -118,33 +121,39 @@ export default function SponsorLayout({
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white/60 backdrop-blur-sm border-b border-purple-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-6 py-3">
+      <nav className="bg-white/60 backdrop-blur-sm border-b border-[var(--color-border)]">
+        <div className="page-container">
+          <div className="flex gap-2 py-3">
             <a
               href="/sponsor"
-              className="px-3 py-2 text-sm font-medium text-purple-900 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-igusa)] hover:bg-[var(--color-washi)] rounded-lg transition-colors"
             >
-              ダッシュボード
+              📊 ダッシュボード
             </a>
             <a
               href="/sponsor/themes"
-              className="px-3 py-2 text-sm font-medium text-purple-900 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-igusa)] hover:bg-[var(--color-washi)] rounded-lg transition-colors"
             >
-              お題管理
+              📝 お題管理
+            </a>
+            <a
+              href="/sponsor/insights"
+              className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-igusa)] hover:bg-[var(--color-washi)] rounded-lg transition-colors"
+            >
+              📈 インサイト
             </a>
             <a
               href="/sponsor/themes/new"
-              className="px-3 py-2 text-sm font-medium text-purple-900 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-igusa)] hover:bg-[var(--color-washi)] rounded-lg transition-colors"
             >
-              新規投稿
+              ✨ 新規投稿
             </a>
           </div>
         </div>
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="page-container py-8">
         {children}
       </main>
     </div>

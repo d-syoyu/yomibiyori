@@ -84,6 +84,13 @@ export default function CompositionScreen({ route }: Props) {
 
       console.log('[CompositionScreen] Work created successfully', { work_id: work.id });
 
+      // Track work creation event
+      trackEvent(EventNames.WORK_CREATED, {
+        theme_id: theme.id,
+        category: theme.category,
+        work_id: work.id,
+      });
+
       // 投稿成功
       showSuccess(SUCCESS_MESSAGES.workCreated);
 
@@ -168,102 +175,102 @@ export default function CompositionScreen({ route }: Props) {
               </View>
             )}
 
-        <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>下の句（第一句：7音）</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="7音で入力してください"
-            value={line1}
-            onChangeText={setLine1}
-            multiline={true}
-            maxLength={20}
-            editable={!!theme}
-          />
-          <Text style={styles.charCount}>{line1.length} / 20</Text>
-        </View>
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>下の句（第一句：7音）</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="7音で入力してください"
+                value={line1}
+                onChangeText={setLine1}
+                multiline={true}
+                maxLength={20}
+                editable={!!theme}
+              />
+              <Text style={styles.charCount}>{line1.length} / 20</Text>
+            </View>
 
-        <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>下の句（第二句：7音）</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="7音で入力してください"
-            value={line2}
-            onChangeText={setLine2}
-            multiline={true}
-            maxLength={20}
-            editable={!!theme}
-          />
-          <Text style={styles.charCount}>{line2.length} / 20</Text>
-        </View>
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>下の句（第二句：7音）</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="7音で入力してください"
+                value={line2}
+                onChangeText={setLine2}
+                multiline={true}
+                maxLength={20}
+                editable={!!theme}
+              />
+              <Text style={styles.charCount}>{line2.length} / 20</Text>
+            </View>
 
-        {/* プレビュー表示 */}
-        {(line1.trim() || line2.trim()) && (
-          <View style={styles.previewSection}>
-            <Text style={styles.previewLabel}>プレビュー</Text>
-            <LinearGradient
-              colors={['#FFFFFF', colors.background.secondary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={styles.previewCard}
+            {/* プレビュー表示 */}
+            {(line1.trim() || line2.trim()) && (
+              <View style={styles.previewSection}>
+                <Text style={styles.previewLabel}>プレビュー</Text>
+                <LinearGradient
+                  colors={['#FFFFFF', colors.background.secondary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={styles.previewCard}
+                >
+                  {/* お題（上の句） */}
+                  {theme && (
+                    <View style={styles.previewTheme}>
+                      <Text style={styles.previewThemeLabel}>お題</Text>
+                      <View style={styles.verticalTextContainer}>
+                        <VerticalText
+                          text={theme.text}
+                          textStyle={styles.previewThemeText}
+                          direction="rtl"
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {/* 下の句 */}
+                  {(line1.trim() || line2.trim()) && (
+                    <View style={styles.previewWork}>
+                      <Text style={styles.previewWorkLabel}>下の句</Text>
+                      <View style={styles.verticalTextContainer}>
+                        <VerticalText
+                          text={`${line1}\n${line2}`}
+                          textStyle={styles.previewWorkText}
+                          direction="rtl"
+                        />
+                      </View>
+                    </View>
+                  )}
+                </LinearGradient>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                (!theme || isSubmitting || !line1.trim() || !line2.trim()) && styles.submitButtonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={!theme || isSubmitting || !line1.trim() || !line2.trim()}
+              activeOpacity={0.8}
             >
-              {/* お題（上の句） */}
-              {theme && (
-                <View style={styles.previewTheme}>
-                  <Text style={styles.previewThemeLabel}>お題</Text>
-                  <View style={styles.verticalTextContainer}>
-                    <VerticalText
-                      text={theme.text}
-                      textStyle={styles.previewThemeText}
-                      direction="rtl"
-                    />
-                  </View>
-                </View>
-              )}
-
-              {/* 下の句 */}
-              {(line1.trim() || line2.trim()) && (
-                <View style={styles.previewWork}>
-                  <Text style={styles.previewWorkLabel}>下の句</Text>
-                  <View style={styles.verticalTextContainer}>
-                    <VerticalText
-                      text={`${line1}\n${line2}`}
-                      textStyle={styles.previewWorkText}
-                      direction="rtl"
-                    />
-                  </View>
-                </View>
-              )}
-            </LinearGradient>
+              <LinearGradient
+                colors={
+                  !theme || isSubmitting || !line1.trim() || !line2.trim()
+                    ? ['#CBD5E0', '#A0AEC0']
+                    : [colors.text.primary, colors.text.secondary]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submitButtonGradient}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? '投稿中...' : '投稿する'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!theme || isSubmitting || !line1.trim() || !line2.trim()) && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={!theme || isSubmitting || !line1.trim() || !line2.trim()}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={
-              !theme || isSubmitting || !line1.trim() || !line2.trim()
-                ? ['#CBD5E0', '#A0AEC0']
-                : [colors.text.primary, colors.text.secondary]
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.submitButtonGradient}
-          >
-            <Text style={styles.submitButtonText}>
-              {isSubmitting ? '投稿中...' : '投稿する'}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -468,6 +475,3 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
   },
 });
-
-
-
