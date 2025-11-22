@@ -55,7 +55,11 @@ def list_themes(
     Returns:
         ThemeListResponse with themes ordered by date descending
     """
-    stmt = select(Theme).order_by(Theme.date.desc(), Theme.created_at.desc())
+    stmt = select(Theme).order_by(
+        Theme.date.desc(),
+        Theme.sponsored.desc(),  # Prioritize sponsored themes
+        Theme.created_at.desc()
+    )
 
     if category:
         stmt = stmt.where(Theme.category == category)
@@ -119,7 +123,9 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
     if category:
         stmt = stmt.where(Theme.category == category)
 
-    stmt = stmt.order_by(Theme.created_at.desc()).limit(1)
+    # Prioritize sponsored themes over AI-generated themes
+    # sponsored=True comes first (descending order)
+    stmt = stmt.order_by(Theme.sponsored.desc(), Theme.created_at.desc()).limit(1)
 
     theme = session.execute(stmt).scalars().first()
     if not theme:
