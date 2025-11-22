@@ -238,20 +238,12 @@ export default function SponsorDashboard() {
               <p className="text-4xl font-bold font-serif">{stats.credits}</p>
               <p className="text-xs opacity-75">1クレジット = お題1件の投稿</p>
             </div>
-            <div className="flex gap-3">
-              <a
-                href="/sponsor/themes/new"
-                className="px-6 py-2.5 bg-white text-[var(--color-igusa)] rounded-lg font-bold hover:bg-opacity-90 transition-colors text-center"
-              >
-                お題を投稿
-              </a>
-              <a
-                href="/sponsor/credits"
-                className="px-6 py-2.5 bg-white text-[var(--color-igusa)] rounded-lg font-bold hover:bg-opacity-90 transition-colors text-center border border-white shadow-md"
-              >
-                クレジット購入
-              </a>
-            </div>
+            <a
+              href="/sponsor/credits"
+              className="px-6 py-2.5 bg-white text-[var(--color-igusa)] rounded-lg font-bold hover:bg-opacity-90 transition-colors text-center shadow-md self-start md:self-center"
+            >
+              クレジット購入
+            </a>
           </div>
         </section>
 
