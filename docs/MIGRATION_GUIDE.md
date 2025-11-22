@@ -1,8 +1,13 @@
-# スポンサー機能マイグレーション実行ガイド
+# データベースマイグレーション実行ガイド
 
 ## 📋 概要
 
-このガイドは、スポンサー機能を追加するためのデータベースマイグレーション（`20250101_01_add_sponsor_features.py`）を実行する手順を説明します。
+このガイドは、データベースマイグレーションを実行する手順を説明します。
+
+### 最新のマイグレーション
+
+- **20250122_01**: スポンサークレジットシステム (枠予約・クレジット購入)
+- **20250101_01**: スポンサー機能の基本 (キャンペーン・お題投稿)
 
 ---
 
@@ -189,13 +194,30 @@ psql $DATABASE_URL
 
 ### 3. 新しいテーブルが作成されているか確認
 
-以下のテーブルが作成されていることを確認：
+#### 20250101_01 で追加されたもの
 
 - ✅ `sponsor_campaigns`
 - ✅ `sponsor_themes`
 - ✅ `users.role` カラムが追加されている
 - ✅ `themes.sponsor_theme_id` カラムが追加されている
 - ✅ `themes.sponsor_company_name` カラムが追加されている
+
+#### 20250122_01 で追加されたもの (最新)
+
+- ✅ `sponsor_slot_reservations` テーブルが作成されている
+- ✅ `sponsor_credit_transactions` テーブルが作成されている
+- ✅ `sponsors.credits` カラムが追加されている
+- ✅ `sponsor_themes.reservation_id` カラムが追加されている
+- ✅ `sponsors.plan_tier` カラムが削除されている
+
+**確認方法**:
+```bash
+# Railway環境で確認
+railway run psql -c "\dt sponsor*"
+
+# creditsカラムの確認
+railway run psql -c "\d sponsors"
+```
 
 ---
 
