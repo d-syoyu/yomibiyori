@@ -134,15 +134,15 @@ export default function SponsorsPage() {
             </p>
             <div className="bg-[var(--color-washi)] rounded-xl p-4 border border-[var(--color-border)] text-sm space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border)]">
-                <span className="text-[var(--color-text-muted)]">2025/01/15 配信予定</span>
-                <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full bg-green-50">✅ 承認済み</span>
+                <span className="text-[var(--color-text-muted)]">配信日: 2025/01/15</span>
+                <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full bg-green-50">承認済み</span>
               </div>
               <div className="font-serif text-[var(--color-text-primary)] text-base">
                 冬の朝 / 白い息吐き / 歩み出す
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
                 <span className="text-xs text-[var(--color-text-muted)]">カテゴリ: 季節</span>
-                <span className="text-xs text-[var(--color-text-muted)]">承認: 2024/12/20</span>
+                <span className="text-xs text-[var(--color-text-muted)]">提出: 2024/12/10</span>
               </div>
             </div>
           </div>
