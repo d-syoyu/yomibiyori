@@ -409,21 +409,6 @@ def create_sponsor_theme(
             detail=f"この日付・カテゴリのお題は既に他のスポンサーによって承認/配信されています",
         )
 
-    # Delete any rejected themes for the same campaign/date/category to allow resubmission
-    # This handles the database unique constraint uq_sponsor_themes_date_category_campaign
-    rejected_theme = session.scalar(
-        select(SponsorTheme).where(
-            SponsorTheme.campaign_id == campaign.id,
-            SponsorTheme.date == payload.date,
-            SponsorTheme.category == payload.category,
-            SponsorTheme.status == "rejected",
-        )
-    )
-    if rejected_theme:
-        logger.info(f"Deleting rejected theme {rejected_theme.id} to allow resubmission")
-        session.delete(rejected_theme)
-        session.flush()  # Ensure deletion is committed before insert
-
     # Deduct credit
     sponsor.credits -= 1
 
