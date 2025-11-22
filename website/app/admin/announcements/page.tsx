@@ -26,10 +26,18 @@ export default function AnnouncementsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string
+    content: string
+    type: 'info' | 'warning' | 'success' | 'update'
+    priority: number
+    is_pinned: boolean
+    is_published: boolean
+    expires_at: string
+  }>({
     title: '',
     content: '',
-    type: 'info' as const,
+    type: 'info',
     priority: 0,
     is_pinned: false,
     is_published: true,
