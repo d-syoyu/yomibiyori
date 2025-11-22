@@ -68,10 +68,10 @@ def get_sponsor_credit_transactions(
 @router.post("/{sponsor_id}/credits/adjust")
 def adjust_sponsor_credits(
     sponsor_id: str,
-    amount: int = Query(..., description="Amount to adjust (positive or negative)"),
-    description: str = Query(..., description="Reason for adjustment"),
     current_admin: Annotated[User, Depends(get_current_admin)],
     session: Annotated[Session, Depends(get_authenticated_db_session)],
+    amount: int = Query(..., description="Amount to adjust (positive or negative)"),
+    description: str = Query(..., description="Reason for adjustment"),
 ):
     """Manually adjust sponsor credits (admin only). Can add or remove credits."""
     sponsor = session.get(Sponsor, sponsor_id)
