@@ -51,6 +51,7 @@ export interface AdminSponsor {
   official_url?: string | null
   plan_tier: string
   verified: boolean
+  credits: number
   created_at: string
   updated_at: string
 }
@@ -94,6 +95,70 @@ export async function updateSponsorVerification(
     {
       method: 'PATCH',
       body: JSON.stringify({ verified }),
+    },
+  )
+}
+
+export interface CreditTransaction {
+  id: string
+  sponsor_id: string
+  amount: number
+  transaction_type: 'purchase' | 'use' | 'refund' | 'admin_adjustment'
+  description: string | null
+  created_at: string
+}
+
+export interface CreditTransactionsPayload {
+  transactions: CreditTransaction[]
+  total: number
+  sponsor: {
+    id: string
+    company_name: string
+    current_credits: number
+  }
+}
+
+export async function fetchSponsorCreditTransactions(
+  sponsorId: string,
+  params: {
+    limit?: number
+    offset?: number
+  } = {},
+): Promise<CreditTransactionsPayload> {
+  const query = new URLSearchParams()
+  if (typeof params.limit === 'number') {
+    query.set('limit', String(params.limit))
+  }
+  if (typeof params.offset === 'number') {
+    query.set('offset', String(params.offset))
+  }
+
+  const queryString = query.toString()
+  const path = queryString
+    ? `/admin/sponsors/${sponsorId}/transactions?${queryString}`
+    : `/admin/sponsors/${sponsorId}/transactions`
+  return authenticatedRequest<CreditTransactionsPayload>(path)
+}
+
+export interface AdjustCreditsPayload {
+  transaction: CreditTransaction
+  new_balance: number
+  message: string
+}
+
+export async function adjustSponsorCredits(
+  sponsorId: string,
+  amount: number,
+  description: string,
+): Promise<AdjustCreditsPayload> {
+  const query = new URLSearchParams()
+  query.set('amount', String(amount))
+  query.set('description', description)
+
+  return authenticatedRequest<AdjustCreditsPayload>(
+    `/admin/sponsors/${sponsorId}/credits/adjust?${query.toString()}`,
+    {
+      method: 'POST',
     },
   )
 }

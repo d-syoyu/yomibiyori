@@ -39,6 +39,7 @@ class SponsorResponse(SponsorBase):
 
     id: str
     verified: bool
+    credits: int
     created_at: datetime
     updated_at: datetime
 

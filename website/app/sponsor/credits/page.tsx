@@ -184,8 +184,8 @@ export default function SponsorCreditsPage() {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-            <div className="flex-1 space-y-2">
+          <div className="space-y-4">
+            <div className="space-y-2">
               <label htmlFor="quantity" className="block text-sm font-medium text-[var(--color-text-primary)]">
                 購入数量
               </label>
@@ -196,19 +196,19 @@ export default function SponsorCreditsPage() {
                 max="100"
                 value={purchaseQuantity}
                 onChange={(e) => setPurchaseQuantity(parseInt(e.target.value) || 1)}
-                className="w-full px-4 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
+                className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
                 disabled={purchasing}
               />
-              <p className="text-xs text-[var(--color-text-muted)]">
+              <p className="text-sm font-bold text-[var(--color-text-primary)]">
                 合計: ¥{(purchaseQuantity * 10000).toLocaleString()}
               </p>
             </div>
             <button
               onClick={handlePurchase}
               disabled={purchasing}
-              className="px-8 py-2.5 bg-[var(--color-igusa)] text-white rounded-lg font-bold hover:bg-[var(--color-igusa-light)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-8 py-3 bg-[var(--color-igusa)] text-white rounded-lg font-bold hover:bg-[var(--color-igusa-light)] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {purchasing ? '処理中...' : 'Stripeで購入'}
+              {purchasing ? '処理中...' : '💳 Stripeで購入'}
             </button>
           </div>
 

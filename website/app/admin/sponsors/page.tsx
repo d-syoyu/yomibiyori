@@ -165,7 +165,7 @@ export default function AdminSponsorsPage() {
                   <h3 className="text-xl font-semibold text-amber-900">
                     {sponsor.company_name}
                   </h3>
-                  <div className="mt-2 text-sm text-amber-700">
+                  <div className="mt-2 text-sm text-amber-700 space-y-1">
                     <p>メール: {sponsor.contact_email || '未登録'}</p>
                     {sponsor.official_url && (
                       <p className="truncate">
@@ -175,6 +175,7 @@ export default function AdminSponsorsPage() {
                       </p>
                     )}
                     <p>プラン: {sponsor.plan_tier}</p>
+                    <p className="font-bold text-amber-900">💳 クレジット残高: {sponsor.credits}</p>
                     <p>登録日: {formatDate(sponsor.created_at)}</p>
                   </div>
                 </div>
@@ -189,6 +190,12 @@ export default function AdminSponsorsPage() {
                   >
                     {sponsor.verified ? '承認済み' : '審査待ち'}
                   </span>
+                  <a
+                    href={`/admin/sponsors/${sponsor.id}`}
+                    className="rounded-xl px-4 py-2 text-sm font-medium bg-white text-amber-900 border border-amber-200 hover:border-amber-400 transition-colors text-center"
+                  >
+                    クレジット管理
+                  </a>
                   <button
                     onClick={() => handleVerificationToggle(sponsor)}
                     disabled={processingId === sponsor.id}
