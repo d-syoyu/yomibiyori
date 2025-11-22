@@ -75,7 +75,7 @@ def create_sponsor_profile(
         contact_email=payload.contact_email or current_user.email,
         official_url=payload.official_url,
         logo_url=payload.logo_url,
-        plan_tier=payload.plan_tier,
+        credits=0,
         verified=False,
         created_at=now,
         updated_at=now,
@@ -111,8 +111,6 @@ def update_sponsor_profile(
         sponsor.official_url = payload.official_url
     if payload.logo_url is not None:
         sponsor.logo_url = payload.logo_url
-    if payload.plan_tier is not None:
-        sponsor.plan_tier = payload.plan_tier
 
     sponsor.updated_at = datetime.now(timezone.utc)
 

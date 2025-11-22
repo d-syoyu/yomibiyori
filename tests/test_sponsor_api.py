@@ -41,7 +41,7 @@ def _create_sponsor_profile(db_session, user: User, *, verified: bool = False) -
         contact_email=user.email,
         official_url="https://example.com",
         logo_url=None,
-        plan_tier="basic",
+        credits=0,
         verified=verified,
         created_at=now,
         updated_at=now,
@@ -89,7 +89,6 @@ def test_campaign_creation_requires_verification(client, db_session):
             "contact_email": "hello@example.com",
             "official_url": "https://example.com",
             "logo_url": None,
-            "plan_tier": "basic",
         },
         headers=_auth_headers(user.id),
     )
@@ -113,7 +112,6 @@ def test_campaign_creation_succeeds_when_verified(client, db_session):
         json={
             "company_name": "月灯り工房",
             "contact_email": "sponsor@example.com",
-            "plan_tier": "premium",
         },
         headers=_auth_headers(user.id),
     )

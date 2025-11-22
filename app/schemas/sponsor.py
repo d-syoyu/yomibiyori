@@ -17,7 +17,6 @@ class SponsorBase(BaseModel):
     contact_email: Optional[EmailStr] = None
     official_url: Optional[str] = None
     logo_url: Optional[str] = None
-    plan_tier: str = Field(default="basic", pattern="^(basic|standard|premium)$")
 
 
 class SponsorCreate(SponsorBase):
@@ -33,7 +32,6 @@ class SponsorUpdate(BaseModel):
     contact_email: Optional[EmailStr] = None
     official_url: Optional[str] = None
     logo_url: Optional[str] = None
-    plan_tier: Optional[str] = Field(None, pattern="^(basic|standard|premium)$")
 
 
 class SponsorResponse(SponsorBase):
