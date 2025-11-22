@@ -127,7 +127,7 @@ class SponsorThemeBase(BaseModel):
 class SponsorThemeCreate(SponsorThemeBase):
     """Create a new sponsor theme."""
 
-    campaign_id: str
+    campaign_id: Optional[str] = None  # Optional - will use/create default campaign if not provided
 
 
 class SponsorThemeUpdate(BaseModel):

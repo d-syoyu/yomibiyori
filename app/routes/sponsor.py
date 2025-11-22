@@ -86,9 +86,23 @@ def create_sponsor_profile(
     current_user.updated_at = now
 
     session.add(sponsor)
+    session.flush()  # Flush to get sponsor.id before creating campaign
+
+    # Create default campaign for the sponsor
+    default_campaign = SponsorCampaign(
+        id=str(uuid4()),
+        sponsor_id=sponsor.id,
+        name="デフォルトキャンペーン",
+        status="active",
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(default_campaign)
+
     session.commit()
     session.refresh(sponsor)
 
+    logger.info(f"Created sponsor {sponsor.id} with default campaign {default_campaign.id}")
     return SponsorResponse.model_validate(sponsor)
 
 
@@ -303,14 +317,31 @@ def create_sponsor_theme(
     """Create a new sponsor theme (theme submission). Consumes 1 credit."""
     now = datetime.now(timezone.utc)
 
-    # Verify campaign ownership
-    campaign = session.get(SponsorCampaign, payload.campaign_id)
+    # Get or create campaign
+    campaign = session.get(SponsorCampaign, payload.campaign_id) if payload.campaign_id else None
+
     if not campaign:
-        logger.error(f"Campaign {payload.campaign_id} not found")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Campaign not found",
+        # Check if user has an active campaign
+        campaign = session.scalar(
+            select(SponsorCampaign).where(
+                SponsorCampaign.sponsor_id == current_user.id,
+                SponsorCampaign.status == "active",
+            ).limit(1)
         )
+
+        if not campaign:
+            # Create default campaign for the sponsor
+            campaign = SponsorCampaign(
+                id=str(uuid4()),
+                sponsor_id=current_user.id,
+                name="デフォルトキャンペーン",
+                status="active",
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(campaign)
+            session.flush()  # Get campaign.id
+            logger.info(f"Auto-created default campaign {campaign.id} for sponsor {current_user.id}")
 
     logger.info(
         f"Checking campaign ownership: campaign.sponsor_id={campaign.sponsor_id}, "
