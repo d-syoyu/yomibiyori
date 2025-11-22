@@ -7,7 +7,6 @@ from app.models.ranking import Ranking
 from app.models.user import User
 from app.models.work import Work
 from app.models.sponsor import Sponsor, SponsorCampaign, SponsorTheme
-from app.models.sponsor_slot_reservation import SponsorSlotReservation
 from app.models.sponsor_credit_transaction import SponsorCreditTransaction
 from app.models.notification import NotificationToken
 
@@ -21,7 +20,6 @@ __all__ = [
     "Sponsor",
     "SponsorCampaign",
     "SponsorTheme",
-    "SponsorSlotReservation",
     "SponsorCreditTransaction",
     "NotificationToken",
 ]
