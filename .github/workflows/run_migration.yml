@@ -1,0 +1,54 @@
+name: Run Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: 'Target migration version (default: head)'
+        required: false
+        default: 'head'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Alembic migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Running migration to ${{ github.event.inputs.target_version }}"
+          alembic upgrade ${{ github.event.inputs.target_version }}
+
+      - name: Verify migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Current migration version:"
+          alembic current
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Migration completed successfully!"
+          echo "Current version: $(alembic current)"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Migration failed!"
+          exit 1
