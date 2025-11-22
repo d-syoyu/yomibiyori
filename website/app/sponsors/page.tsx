@@ -158,22 +158,16 @@ export default function SponsorsPage() {
               リアルタイムで集計されたデータをもとに、ユーザーの反応を分析し、次のキャンペーン企画に活かせます。
             </p>
             <div className="bg-[var(--color-washi)] rounded-xl p-4 border border-[var(--color-border)] space-y-3">
-              <div className="grid grid-cols-3 gap-3 pb-3 border-b border-[var(--color-border)]">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-[var(--color-igusa)]">2,847</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">表示回数</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-[var(--color-sakura)]">203</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">投稿数</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-[var(--color-ai)]">7.1%</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">エンゲージメント</div>
-                </div>
+              <div className="flex items-end gap-2 justify-center">
+                <div className="h-16 w-8 bg-[var(--color-igusa-pale)] rounded-t"></div>
+                <div className="h-24 w-8 bg-[var(--color-igusa-light)] rounded-t"></div>
+                <div className="h-20 w-8 bg-[var(--color-igusa-pale)] rounded-t"></div>
+                <div className="h-32 w-8 bg-[var(--color-igusa)] rounded-t"></div>
+                <div className="h-28 w-8 bg-[var(--color-igusa-light)] rounded-t"></div>
               </div>
-              <div className="text-xs text-[var(--color-text-muted)] text-center">
-                お題「冬の朝 / 白い息吐き / 歩み出す」の実績
+              <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
+                <span>パフォーマンス推移</span>
+                <span className="font-bold text-[var(--color-igusa)]">成長中</span>
               </div>
             </div>
           </div>
