@@ -154,26 +154,26 @@ export default function SponsorsPage() {
             </div>
             <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">詳細なインサイト</h3>
             <p className="text-[var(--color-text-secondary)]">
-              配信したお題に対する作品投稿数、いいね数、人気作品をリアルタイムで確認できます。
-              ユーザーがどのように反応したか、どんな作品が生まれたかを分析し、次のキャンペーンに活かせます。
+              配信したお題の表示回数、投稿数、エンゲージメント率を確認できます。
+              PostHogで集計されたデータをもとに、ユーザーの反応を分析し、次のキャンペーン企画に活かせます。
             </p>
             <div className="bg-[var(--color-washi)] rounded-xl p-4 border border-[var(--color-border)] space-y-3">
               <div className="grid grid-cols-3 gap-3 pb-3 border-b border-[var(--color-border)]">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[var(--color-igusa)]">47</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">作品数</div>
+                  <div className="text-2xl font-bold text-[var(--color-igusa)]">2,847</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">表示回数</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-[var(--color-sakura)]">203</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">いいね</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">投稿数</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[var(--color-ai)]">12</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">ランクイン</div>
+                  <div className="text-2xl font-bold text-[var(--color-ai)]">7.1%</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">エンゲージメント</div>
                 </div>
               </div>
               <div className="text-xs text-[var(--color-text-muted)] text-center">
-                お題「冬の朝」の実績（2025/01/15配信）
+                お題「冬の朝 / 白い息吐き / 歩み出す」の実績
               </div>
             </div>
           </div>
