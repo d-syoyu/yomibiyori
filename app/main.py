@@ -31,9 +31,10 @@ app.add_middleware(
         "http://yomibiyori.com",  # Marketing/admin site without www (http)
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Register global error handlers
@@ -63,12 +64,6 @@ def health_check():
     return {"status": "ok", "message": "Yomibiyori API is running"}
 
 
-@app.options("/{full_path:path}")
-async def options_handler(full_path: str):
-    """Handle OPTIONS requests for CORS preflight."""
-    return {"status": "ok"}
-
-
 @app.get("/reset-password")
 def password_reset_page():
     """Serve password reset HTML page."""
@@ -79,3 +74,10 @@ def password_reset_page():
 
 
 app.include_router(api_router, prefix="/api/v1")
+
+
+# Handle OPTIONS requests for CORS preflight (must be after routers)
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handle OPTIONS requests for CORS preflight."""
+    return {"status": "ok"}
