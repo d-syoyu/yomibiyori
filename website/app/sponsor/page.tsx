@@ -13,6 +13,7 @@ interface Stats {
   approvedThemes: number
   rejectedThemes: number
   publishedThemes: number
+  credits: number
 }
 
 interface Announcement {
@@ -41,6 +42,7 @@ export default function SponsorDashboard() {
     approvedThemes: 0,
     rejectedThemes: 0,
     publishedThemes: 0,
+    credits: 0,
   })
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [themeNotifications, setThemeNotifications] = useState<ThemeNotification[]>([])
@@ -58,12 +60,23 @@ export default function SponsorDashboard() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
+      // Get sponsor credits
+      const { data: sponsor } = await supabase
+        .from('sponsors')
+        .select('credits')
+        .eq('id', session.user.id)
+        .single()
+
       const { data: campaigns } = await supabase
         .from('sponsor_campaigns')
         .select('id')
         .eq('sponsor_id', session.user.id)
 
       if (!campaigns || campaigns.length === 0) {
+        setStats(prev => ({
+          ...prev,
+          credits: sponsor?.credits || 0,
+        }))
         setLoading(false)
         return
       }
@@ -91,6 +104,7 @@ export default function SponsorDashboard() {
         approvedThemes: approved?.length || 0,
         rejectedThemes: rejected?.length || 0,
         publishedThemes: published?.length || 0,
+        credits: sponsor?.credits || 0,
       })
     } catch (error) {
       console.error('Failed to load stats:', error)
@@ -215,6 +229,31 @@ export default function SponsorDashboard() {
             投稿したお題の審査状況や、ユーザーからの反応をリアルタイムで確認できます。
           </p>
         </header>
+
+        {/* Credit Balance Banner */}
+        <section className="card bg-gradient-to-br from-[var(--color-igusa)] to-[var(--color-igusa-light)] text-white">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm opacity-90">利用可能クレジット</p>
+              <p className="text-4xl font-bold font-serif">{stats.credits}</p>
+              <p className="text-xs opacity-75">1クレジット = 1枠 (日付 × カテゴリ)</p>
+            </div>
+            <div className="flex gap-3">
+              <a
+                href="/sponsor/slots"
+                className="px-6 py-2.5 bg-white text-[var(--color-igusa)] rounded-lg font-bold hover:bg-opacity-90 transition-colors text-center"
+              >
+                枠を予約
+              </a>
+              <a
+                href="/sponsor/credits"
+                className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white rounded-lg font-bold hover:bg-white/30 transition-colors text-center border border-white/40"
+              >
+                購入する
+              </a>
+            </div>
+          </div>
+        </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {statCards.map((card) => (

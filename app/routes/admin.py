@@ -252,7 +252,14 @@ def reject_theme(
     current_admin: Annotated[User, Depends(get_current_admin)],
     session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> ThemeReviewResponse:
-    """Reject a sponsor theme and remove it from themes table if registered."""
+    """Reject a sponsor theme and remove it from themes table if registered.
+
+    When a theme is rejected, the associated slot reservation is cancelled
+    and the credit is refunded to the sponsor.
+    """
+    from app.models.sponsor_slot_reservation import SponsorSlotReservation
+    from app.services.slot_reservation import cancel_slot_reservation
+
     sponsor_theme = session.get(SponsorTheme, theme_id)
     if not sponsor_theme:
         raise HTTPException(
@@ -275,6 +282,26 @@ def reject_theme(
             )
             session.delete(existing_theme)
 
+    # Get the associated reservation and cancel it (refund credit)
+    if sponsor_theme.reservation_id:
+        try:
+            campaign = session.get(SponsorCampaign, sponsor_theme.campaign_id)
+            if campaign:
+                cancel_slot_reservation(
+                    session=session,
+                    reservation_id=sponsor_theme.reservation_id,
+                    sponsor_id=campaign.sponsor_id,
+                )
+                logger.info(
+                    f"Cancelled slot reservation {sponsor_theme.reservation_id} "
+                    f"and refunded credit due to theme rejection"
+                )
+        except Exception as e:
+            logger.warning(
+                f"Failed to cancel reservation {sponsor_theme.reservation_id}: {e}"
+            )
+            # Continue with rejection even if reservation cancellation fails
+
     # Update sponsor theme status
     sponsor_theme.status = "rejected"
     sponsor_theme.rejection_reason = payload.rejection_reason
@@ -288,7 +315,7 @@ def reject_theme(
     return ThemeReviewResponse(
         id=sponsor_theme.id,
         status="rejected",
-        message=f"Theme has been rejected",
+        message=f"Theme has been rejected and credit has been refunded",
     )
 
 
