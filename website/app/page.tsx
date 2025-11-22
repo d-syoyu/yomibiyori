@@ -140,7 +140,7 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-[var(--color-igusa)]">企業・団体の方へ</h2>
               <p className="text-[var(--color-text-secondary)] max-w-2xl mx-auto">
                 和の世界観を大切にしたまま、ブランドメッセージを短歌の形で届けられます。<br />
-                verified スポンサーには、お題投稿・配信管理ダッシュボードを提供しています。
+                スポンサーには、お題投稿・配信管理ダッシュボードを提供しています。
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <Link href="/sponsors" className="btn-primary">
