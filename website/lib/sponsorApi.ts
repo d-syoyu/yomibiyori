@@ -74,3 +74,10 @@ export function createSponsorProfile(payload: SponsorProfilePayload): Promise<Sp
     body: JSON.stringify(payload),
   })
 }
+
+export function updateSponsorProfile(payload: Partial<SponsorProfilePayload>): Promise<SponsorProfile> {
+  return authenticatedRequest<SponsorProfile>('/sponsor/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}

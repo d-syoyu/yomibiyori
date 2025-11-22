@@ -195,8 +195,16 @@ export default function SponsorDashboard() {
     <div className="page-wrapper">
       <div className="page-container space-y-12">
         <header className="space-y-4 text-center md:text-left pt-8">
-          <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
-            スポンサーダッシュボード
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
+              スポンサーダッシュボード
+            </div>
+            <a
+              href="/sponsor/profile"
+              className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-ai)] transition-colors flex items-center gap-1"
+            >
+              ⚙️ プロフィール設定
+            </a>
           </div>
           <h1 className="section-heading text-3xl md:text-4xl">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
