@@ -137,31 +137,31 @@ export default function SponsorCreditsPage() {
           </div>
           <h1 className="section-heading text-3xl md:text-4xl">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
-              スポンサー枠クレジット
+              クレジット購入
             </span>
           </h1>
           <p className="section-subheading text-left max-w-2xl">
-            クレジットを購入して、お題を配信する日時と カテゴリの枠を予約できます。
+            クレジットを購入して、オリジナルのお題を投稿できます。1クレジット = お題1件の投稿です。
           </p>
         </header>
 
         {/* Credit Balance Card */}
-        <section className="card bg-gradient-to-br from-[var(--color-igusa)] to-[var(--color-igusa-light)] text-white p-8">
+        <section className="card border-2 border-[var(--color-igusa)] bg-gradient-to-br from-[var(--color-washi)] to-white p-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-2">
-              <p className="text-sm opacity-90">利用可能クレジット</p>
-              <p className="text-5xl font-bold font-serif">{credits}</p>
-              <p className="text-xs opacity-75">1クレジット = 1枠 (日付 × カテゴリ)</p>
+              <p className="text-sm font-medium text-[var(--color-igusa)]">利用可能クレジット</p>
+              <p className="text-6xl font-bold font-serif text-[var(--color-igusa)]">{credits}</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">1クレジット = お題1件の投稿</p>
             </div>
             <div className="flex flex-col gap-3">
               <a
-                href="/sponsor/slots"
-                className="px-6 py-3 bg-white text-[var(--color-igusa)] rounded-lg font-bold text-center hover:bg-opacity-90 transition-colors"
+                href="/sponsor/themes/new"
+                className="px-8 py-3 bg-[var(--color-igusa)] text-white rounded-lg font-bold text-center hover:bg-[var(--color-igusa-light)] transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                枠を予約する
+                ✨ お題を投稿
               </a>
-              <p className="text-xs text-center opacity-75">
-                予約した枠でお題を投稿できます
+              <p className="text-xs text-center text-[var(--color-text-secondary)]">
+                クレジットを消費してお題を投稿
               </p>
             </div>
           </div>
@@ -218,7 +218,7 @@ export default function SponsorCreditsPage() {
               <li>お支払いはStripeの安全な決済システムを利用します</li>
               <li>クレジットカードでのお支払いが可能です</li>
               <li>購入後すぐにクレジットが反映されます</li>
-              <li>使用したクレジットは、お題が却下された場合に自動返金されます</li>
+              <li>お題投稿時に1クレジット自動消費、却下時は自動返金されます</li>
             </ul>
           </div>
         </section>
