@@ -575,3 +575,25 @@ def delete_sponsor_theme(
 
     session.delete(theme)
     session.commit()
+
+
+# Credit-related endpoints for backward compatibility with frontend
+@router.get("/credits/transactions")
+def get_sponsor_credit_transactions(
+    current_user: Annotated[User, Depends(get_current_sponsor)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+):
+    """Get all credit transactions for the current sponsor.
+
+    Returns all purchases, uses, refunds, and adjustments.
+    This endpoint is for backward compatibility with frontend expecting /sponsor/credits/transactions.
+    """
+    from app.services import credit_purchase as credit_service
+    from app.schemas.credit_purchase import CreditTransactionResponse
+
+    transactions = credit_service.get_sponsor_transactions(
+        session=session,
+        sponsor_id=current_user.id,
+    )
+
+    return [CreditTransactionResponse.model_validate(t) for t in transactions]
