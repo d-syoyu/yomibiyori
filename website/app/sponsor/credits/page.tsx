@@ -47,7 +47,7 @@ export default function SponsorCreditsPage() {
       }
 
       // Get transaction history from backend API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/sponsor/credits/transactions`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/credits/transactions`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -81,7 +81,7 @@ export default function SponsorCreditsPage() {
       }
 
       // Create Stripe checkout session
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/sponsor/credits/purchase`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/credits/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

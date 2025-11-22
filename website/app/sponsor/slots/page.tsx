@@ -59,7 +59,7 @@ export default function SponsorSlotsPage() {
 
       // Get slot availability (next 30 days)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/sponsor/slots/availability?days_ahead=30`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/slots/availability?days_ahead=30`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -74,7 +74,7 @@ export default function SponsorSlotsPage() {
 
       // Get my reservations
       const reservationsResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/sponsor/slots/my-reservations`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/slots/my-reservations`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -110,7 +110,7 @@ export default function SponsorSlotsPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/sponsor/slots/reserve`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/slots/reserve`,
         {
           method: 'POST',
           headers: {
@@ -150,7 +150,7 @@ export default function SponsorSlotsPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/sponsor/slots/cancel`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/slots/cancel`,
         {
           method: 'POST',
           headers: {
