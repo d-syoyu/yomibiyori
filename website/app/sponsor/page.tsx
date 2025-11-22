@@ -269,10 +269,10 @@ export default function SponsorDashboard() {
                   {themeNotifications.map((notification, index) => (
                     <div key={notification.id}>
                       {index > 0 && <hr className="border-[var(--color-border)]" />}
-                      <div
-                        className={`space-y-2 ${notification.is_read ? 'opacity-60' : ''}`}
+                      <a
+                        href={`/sponsor/themes?status=${notification.status}`}
+                        className={`block space-y-2 hover:opacity-75 transition-opacity ${notification.is_read ? 'opacity-60' : ''}`}
                         onClick={() => !notification.is_read && markAsRead(notification.id)}
-                        style={{ cursor: notification.is_read ? 'default' : 'pointer' }}
                       >
                         <div className="flex items-center gap-2">
                           {!notification.is_read && (
@@ -297,7 +297,7 @@ export default function SponsorDashboard() {
                         <p className="text-xs text-[var(--color-text-muted)]">
                           {new Date(notification.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
-                      </div>
+                      </a>
                     </div>
                   ))}
                 </div>
