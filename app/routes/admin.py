@@ -190,6 +190,11 @@ def approve_theme(
     sponsor_theme.approved_by = current_admin.id
     sponsor_theme.updated_at = now
 
+    logger.info(
+        f"[Admin] Approving sponsor theme {sponsor_theme.id} "
+        f"for {sponsor_theme.date} {sponsor_theme.category} by admin {current_admin.id}"
+    )
+
     # Check if a theme already exists for this date and category
     existing_theme = session.execute(
         select(Theme).where(
@@ -197,6 +202,24 @@ def approve_theme(
             Theme.category == sponsor_theme.category
         )
     ).scalar_one_or_none()
+
+    logger.info(
+        f"[Admin] Existing theme check: "
+        f"{'Found' if existing_theme else 'Not found'} theme for {sponsor_theme.date} {sponsor_theme.category}"
+    )
+
+    # Format sponsor theme text: convert spaces to newlines for proper display
+    # Haiku format should be: line1\nline2\nline3
+    formatted_text = sponsor_theme.text_575
+    if ' ' in formatted_text and '\n' not in formatted_text:
+        # Split by spaces and join with newlines
+        parts = [part.strip() for part in formatted_text.split(' ') if part.strip()]
+        if len(parts) == 3:  # Standard haiku format (5-7-5)
+            formatted_text = '\n'.join(parts)
+            logger.info(
+                f"[Admin] Formatted sponsor theme text from '{sponsor_theme.text_575}' "
+                f"to '{formatted_text}'"
+            )
 
     if existing_theme:
         if existing_theme.sponsored:
@@ -210,22 +233,30 @@ def approve_theme(
         else:
             # Replace AI-generated theme with sponsor theme
             logger.info(
-                f"Replacing AI theme {existing_theme.id} with sponsor theme {sponsor_theme.id} "
+                f"[Admin] Replacing AI theme {existing_theme.id} with sponsor theme {sponsor_theme.id} "
                 f"for {sponsor_theme.date} {sponsor_theme.category}"
             )
-            existing_theme.text = sponsor_theme.text_575
+            logger.info(
+                f"[Admin] Theme update - Text: '{formatted_text}', "
+                f"Company: '{sponsor.company_name}'"
+            )
+            existing_theme.text = formatted_text
             existing_theme.sponsored = True
             existing_theme.sponsor_theme_id = sponsor_theme.id
             existing_theme.sponsor_company_name = sponsor.company_name
     else:
         # Create new theme entry
         logger.info(
-            f"Creating new theme from sponsor theme {sponsor_theme.id} "
+            f"[Admin] Creating new theme from sponsor theme {sponsor_theme.id} "
             f"for {sponsor_theme.date} {sponsor_theme.category}"
+        )
+        logger.info(
+            f"[Admin] New theme - Text: '{formatted_text}', "
+            f"Company: '{sponsor.company_name}'"
         )
         new_theme = Theme(
             id=str(uuid4()),
-            text=sponsor_theme.text_575,
+            text=formatted_text,
             category=sponsor_theme.category,
             date=sponsor_theme.date,
             sponsored=True,
@@ -235,8 +266,14 @@ def approve_theme(
         )
         session.add(new_theme)
 
+    logger.info(f"[Admin] Committing theme approval transaction for sponsor theme {sponsor_theme.id}")
     session.commit()
     session.refresh(sponsor_theme)
+
+    logger.info(
+        f"[Admin] Successfully approved and registered sponsor theme {sponsor_theme.id} "
+        f"for {sponsor_theme.date} {sponsor_theme.category}"
+    )
 
     return ThemeReviewResponse(
         id=sponsor_theme.id,

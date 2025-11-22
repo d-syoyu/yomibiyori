@@ -183,12 +183,17 @@ def generate_tweet_text(theme: Theme) -> str:
         date_jst = datetime.combine(theme.date, datetime.min.time()).replace(tzinfo=jst)
     date_str = date_jst.strftime("%Y年%m月%d日")
 
+    # スポンサー情報
+    sponsor_suffix = ""
+    if theme.sponsored and theme.sponsor_company_name:
+        sponsor_suffix = f" (提供: {theme.sponsor_company_name}様)"
+
     # App Store URL
     app_store_url = "https://apps.apple.com/jp/app/%E3%82%88%E3%81%BF%E3%81%B3%E3%82%88%E3%82%8A/id6754638890"
 
     # カテゴリごとの投稿文（お題テキストは画像に含まれているため省略）
     category_messages = {
-        "romance": f"""💕 {date_str}のお題【恋愛】
+        "romance": f"""💕 {date_str}のお題【恋愛】{sponsor_suffix}
 
 胸がときめく恋の一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -197,7 +202,7 @@ def generate_tweet_text(theme: Theme) -> str:
 
 #よみびより #短歌 #詩 #恋愛""",
 
-        "season": f"""🍃 {date_str}のお題【季節】
+        "season": f"""🍃 {date_str}のお題【季節】{sponsor_suffix}
 
 季節の移ろいを感じる一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -206,7 +211,7 @@ def generate_tweet_text(theme: Theme) -> str:
 
 #よみびより #短歌 #詩 #季節""",
 
-        "daily": f"""☕ {date_str}のお題【日常】
+        "daily": f"""☕ {date_str}のお題【日常】{sponsor_suffix}
 
 何気ない日々の中にある美しさを詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -215,7 +220,7 @@ def generate_tweet_text(theme: Theme) -> str:
 
 #よみびより #短歌 #詩 #日常""",
 
-        "humor": f"""😄 {date_str}のお題【ユーモア】
+        "humor": f"""😄 {date_str}のお題【ユーモア】{sponsor_suffix}
 
 クスッと笑える一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -228,7 +233,7 @@ def generate_tweet_text(theme: Theme) -> str:
     # カテゴリに応じた投稿文を返す（デフォルトは汎用的な文章）
     tweet_text = category_messages.get(
         theme.category,
-        f"""🌸 {date_str}のお題【{category_label}】
+        f"""🌸 {date_str}のお題【{category_label}】{sponsor_suffix}
 
 よみびよりアプリで下の句を詠んでみませんか？
 
@@ -303,6 +308,10 @@ def main():
         else:
             date_jst = datetime.combine(theme.date, datetime.min.time()).replace(tzinfo=jst)
         date_label = date_jst.strftime("%Y/%m/%d")
+
+        # スポンサー情報を追加
+        if theme.sponsored and theme.sponsor_company_name:
+            date_label = f"{date_label} (提供: {theme.sponsor_company_name}様)"
 
         # お題画像を生成
         try:

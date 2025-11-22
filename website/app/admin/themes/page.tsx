@@ -69,21 +69,25 @@ export default function ThemesPage() {
         return
       }
 
-      const { error } = await supabase
-        .from('sponsor_themes')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: session.user.id,
-        })
-        .eq('id', themeId)
+      // Use FastAPI endpoint to approve theme
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://yomibiyori-production.up.railway.app'}/api/v1/admin/review/themes/${themeId}/approve`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({}),
+        }
+      )
 
-      if (error) {
-        // RLS policy violation
-        if (error.code === 'PGRST301' || error.code === '42501') {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
+        if (response.status === 403) {
           alert('管理者権限が必要です')
         } else {
-          alert(`承認に失敗しました: ${error.message}`)
+          alert(`承認に失敗しました: ${errorData.detail || response.statusText}`)
         }
         setProcessingId(null)
         return
@@ -117,20 +121,25 @@ export default function ThemesPage() {
         return
       }
 
-      const { error } = await supabase
-        .from('sponsor_themes')
-        .update({
-          status: 'rejected',
-          rejection_reason: reason,
-        })
-        .eq('id', themeId)
+      // Use FastAPI endpoint to reject theme
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://yomibiyori-production.up.railway.app'}/api/v1/admin/review/themes/${themeId}/reject`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ rejection_reason: reason }),
+        }
+      )
 
-      if (error) {
-        // RLS policy violation
-        if (error.code === 'PGRST301' || error.code === '42501') {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
+        if (response.status === 403) {
           alert('管理者権限が必要です')
         } else {
-          alert(`却下に失敗しました: ${error.message}`)
+          alert(`却下に失敗しました: ${errorData.detail || response.statusText}`)
         }
         setProcessingId(null)
         return
@@ -139,7 +148,7 @@ export default function ThemesPage() {
       // 即座にリストから削除
       setThemes(prevThemes => prevThemes.filter(t => t.id !== themeId))
 
-      alert('お題を却下しました')
+      alert('お題を却下しました（クレジットは返金されました）')
     } catch (error) {
       console.error('Failed to reject theme:', error)
       alert('予期しないエラーが発生しました')

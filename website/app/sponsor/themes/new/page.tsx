@@ -128,8 +128,8 @@ export default function NewThemePage() {
       return
     }
 
-    // Combine lines
-    const text_575 = `${formData.line1} ${formData.line2} ${formData.line3}`
+    // Combine lines with newlines for proper display
+    const text_575 = `${formData.line1}\n${formData.line2}\n${formData.line3}`
 
     // Validate combined length
     if (text_575.length > 140) {
@@ -359,9 +359,11 @@ export default function NewThemePage() {
             {(formData.line1 || formData.line2 || formData.line3) && (
               <div className="mt-4 p-6 bg-[var(--color-washi)] rounded-xl border border-[var(--color-border)]">
                 <p className="text-xs text-[var(--color-text-muted)] mb-3">プレビュー:</p>
-                <p className="text-xl font-serif font-bold text-[var(--color-text-primary)] text-center">
-                  {formData.line1 || '＿＿＿'} {formData.line2 || '＿＿＿＿＿'} {formData.line3 || '＿＿＿'}
-                </p>
+                <div className="text-xl font-serif font-bold text-[var(--color-text-primary)] text-center space-y-1">
+                  <p>{formData.line1 || '＿＿＿'}</p>
+                  <p>{formData.line2 || '＿＿＿＿＿'}</p>
+                  <p>{formData.line3 || '＿＿＿'}</p>
+                </div>
               </div>
             )}
           </div>
