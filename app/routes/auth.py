@@ -43,8 +43,34 @@ from app.services.auth import (
     update_user_profile,
     verify_token_and_update_password,
 )
+from app.models.user import User
+from fastapi import HTTPException
 
 router = APIRouter()
+
+
+def get_current_sponsor(
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> User:
+    """Get current user and verify they have sponsor role.
+
+    Raises HTTPException if user is not a sponsor.
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if user.role != "sponsor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is only available to sponsors",
+        )
+
+    return user
 
 
 @router.post(
