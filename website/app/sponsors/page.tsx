@@ -128,18 +128,22 @@ export default function SponsorsPage() {
             </div>
             <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">直感的なお題管理</h3>
             <p className="text-[var(--color-text-secondary)]">
-              専用ダッシュボードから、簡単にお題（上の句）を作成・配信予約できます。
-              季節やキャンペーンに合わせたタイミングで、ユーザーに問いかけることができます。
+              専用ダッシュボードから、お題（上の句）を作成・提出できます。
+              運営の審査を経て承認されたお題が、指定した日付にユーザーに配信されます。
+              審査結果や配信状況は、リアルタイムで通知されます。
             </p>
-            <div className="bg-[var(--color-washi)] rounded-xl p-4 border border-[var(--color-border)] text-sm text-[var(--color-text-muted)]">
-              <div className="flex items-center justify-between mb-2 border-b border-[var(--color-border)] pb-2">
-                <span>2024/12/01 配信予定</span>
-                <span className="text-[var(--color-igusa)] font-bold">予約済み</span>
+            <div className="bg-[var(--color-washi)] rounded-xl p-4 border border-[var(--color-border)] text-sm space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border)]">
+                <span className="text-[var(--color-text-muted)]">2025/01/15 配信予定</span>
+                <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full bg-green-50">✅ 承認済み</span>
               </div>
-              <div className="font-serif text-[var(--color-text-primary)] text-lg mb-1">
-                冬の朝、白い息吐き...
+              <div className="font-serif text-[var(--color-text-primary)] text-base">
+                冬の朝 / 白い息吐き / 歩み出す
               </div>
-              <div className="text-xs text-right">作成者: マーケティング部</div>
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+                <span className="text-xs text-[var(--color-text-muted)]">カテゴリ: 季節</span>
+                <span className="text-xs text-[var(--color-text-muted)]">承認: 2024/12/20</span>
+              </div>
             </div>
           </div>
 
@@ -150,20 +154,26 @@ export default function SponsorsPage() {
             </div>
             <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">詳細なインサイト</h3>
             <p className="text-[var(--color-text-secondary)]">
-              投稿数、いいね数、リーチ数などをリアルタイムで可視化。
-              どのような言葉がユーザーの心に響いたのか、定量的・定性的に分析できます。
+              配信したお題に対する作品投稿数、いいね数、人気作品をリアルタイムで確認できます。
+              ユーザーがどのように反応したか、どんな作品が生まれたかを分析し、次のキャンペーンに活かせます。
             </p>
             <div className="bg-[var(--color-washi)] rounded-xl p-4 border border-[var(--color-border)] space-y-3">
-              <div className="flex items-end gap-2">
-                <div className="h-16 w-8 bg-[var(--color-igusa-pale)] rounded-t"></div>
-                <div className="h-24 w-8 bg-[var(--color-igusa-light)] rounded-t"></div>
-                <div className="h-20 w-8 bg-[var(--color-igusa-pale)] rounded-t"></div>
-                <div className="h-32 w-8 bg-[var(--color-igusa)] rounded-t"></div>
-                <div className="h-28 w-8 bg-[var(--color-igusa-light)] rounded-t"></div>
+              <div className="grid grid-cols-3 gap-3 pb-3 border-b border-[var(--color-border)]">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-[var(--color-igusa)]">47</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">作品数</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-[var(--color-sakura)]">203</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">いいね</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-[var(--color-ai)]">12</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">ランクイン</div>
+                </div>
               </div>
-              <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
-                <span>投稿数推移</span>
-                <span className="font-bold text-[var(--color-igusa)]">+124%</span>
+              <div className="text-xs text-[var(--color-text-muted)] text-center">
+                お題「冬の朝」の実績（2025/01/15配信）
               </div>
             </div>
           </div>
