@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.auth_helpers import get_current_sponsor
+from app.core.auth_helpers import get_current_sponsor, get_current_user
 from app.db.session import get_authenticated_db_session
 from app.models import Sponsor, SponsorCampaign, SponsorTheme, User
 from app.schemas.sponsor import (
@@ -56,7 +56,7 @@ def get_sponsor_profile(
 @router.post("/profile", response_model=SponsorResponse, status_code=status.HTTP_201_CREATED)
 def create_sponsor_profile(
     payload: SponsorCreate,
-    current_user: Annotated[User, Depends(get_current_sponsor)],
+    current_user: Annotated[User, Depends(get_current_user)],  # Use get_current_user instead of get_current_sponsor
     session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> SponsorResponse:
     """Create a sponsor profile bound to the authenticated sponsor's user ID."""
@@ -80,6 +80,10 @@ def create_sponsor_profile(
         created_at=now,
         updated_at=now,
     )
+
+    # Update user role to sponsor
+    current_user.role = "sponsor"
+    current_user.updated_at = now
 
     session.add(sponsor)
     session.commit()
