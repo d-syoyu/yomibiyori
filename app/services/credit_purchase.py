@@ -59,8 +59,8 @@ def create_checkout_session(
                     "price_data": {
                         "currency": "jpy",
                         "product_data": {
-                            "name": "よみびより スポンサー枠クレジット",
-                            "description": f"{quantity}クレジット - お題配信枠の予約に使用できます",
+                            "name": "よみびより スポンサークレジット",
+                            "description": f"{quantity}クレジット - オリジナルお題の投稿に使用できます（1クレジット = お題1件）",
                         },
                         "unit_amount": unit_price,
                     },
