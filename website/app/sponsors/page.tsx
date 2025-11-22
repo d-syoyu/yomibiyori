@@ -95,7 +95,7 @@ export default function SponsorsPage() {
 
   return (
     <div className="page-wrapper">
-      <main className="page-container space-y-12 md:space-y-24 px-4">
+      <main className="page-container space-y-12 md:space-y-24 px-4 pb-12">
         {/* Hero Section */}
         <header className="text-center space-y-4 md:space-y-6 pt-8 md:pt-12">
           <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
@@ -280,20 +280,20 @@ export default function SponsorsPage() {
             )}
           </div>
         </section>
-
-        <footer className="py-12 border-t border-[var(--color-border)] bg-white/30">
-          <div className="page-container text-center space-y-6 px-4">
-            <div className="text-xl md:text-2xl font-bold text-[var(--color-igusa)]">よみびより</div>
-            <nav className="flex flex-wrap justify-center gap-4 md:gap-8 text-sm text-[var(--color-text-secondary)]">
-              <Link href="/" className="hover:text-[var(--color-ai)] transition-colors">トップページ</Link>
-              <Link href="/privacy" className="hover:text-[var(--color-ai)] transition-colors">プライバシーポリシー</Link>
-              <Link href="/terms" className="hover:text-[var(--color-ai)] transition-colors">利用規約</Link>
-              <Link href="/support" className="hover:text-[var(--color-ai)] transition-colors">サポート</Link>
-            </nav>
-            <p className="text-xs text-[var(--color-text-muted)]">© 2024 Yomibiyori. All rights reserved.</p>
-          </div>
-        </footer>
       </main>
+
+      <footer className="py-8 md:py-12 border-t border-[var(--color-border)] bg-white/30 mt-12 md:mt-24">
+        <div className="max-w-7xl mx-auto text-center space-y-4 md:space-y-6 px-4">
+          <div className="text-xl md:text-2xl font-bold text-[var(--color-igusa)]">よみびより</div>
+          <nav className="flex flex-wrap justify-center gap-3 md:gap-8 text-xs md:text-sm text-[var(--color-text-secondary)]">
+            <Link href="/" className="hover:text-[var(--color-ai)] transition-colors">トップページ</Link>
+            <Link href="/privacy" className="hover:text-[var(--color-ai)] transition-colors">プライバシーポリシー</Link>
+            <Link href="/terms" className="hover:text-[var(--color-ai)] transition-colors">利用規約</Link>
+            <Link href="/support" className="hover:text-[var(--color-ai)] transition-colors">サポート</Link>
+          </nav>
+          <p className="text-xs text-[var(--color-text-muted)]">© 2024 Yomibiyori. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   )
 }
