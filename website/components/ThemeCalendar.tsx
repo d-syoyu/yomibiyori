@@ -12,11 +12,12 @@ interface ThemeCalendarProps {
   selectedDate?: string
   selectedCategory?: string
   onDateSelect?: (date: string) => void
+  onSlotSelect?: (date: string, category: string) => void
 }
 
 const CATEGORIES: Array<'恋愛' | '季節' | '日常' | 'ユーモア'> = ['恋愛', '季節', '日常', 'ユーモア']
 
-export default function ThemeCalendar({ selectedDate, selectedCategory, onDateSelect }: ThemeCalendarProps) {
+export default function ThemeCalendar({ selectedDate, selectedCategory, onDateSelect, onSlotSelect }: ThemeCalendarProps) {
   const [calendarData, setCalendarData] = useState<ThemeCalendarDay[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -107,7 +108,12 @@ export default function ThemeCalendar({ selectedDate, selectedCategory, onDateSe
   function handleCellClick(date: string, category: string, dateInfo: ThemeCalendarDay | undefined) {
     // Only allow selection of available slots
     if (dateInfo && !dateInfo.has_approved_theme) {
-      onDateSelect?.(date)
+      // Use onSlotSelect if provided (includes category), otherwise use onDateSelect
+      if (onSlotSelect) {
+        onSlotSelect(date, category)
+      } else {
+        onDateSelect?.(date)
+      }
     }
   }
 

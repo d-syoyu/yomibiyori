@@ -240,7 +240,7 @@ export default function NewThemePage() {
         <ThemeCalendar
           selectedDate={formData.date}
           selectedCategory={formData.category}
-          onDateSelect={(date) => setFormData({ ...formData, date })}
+          onSlotSelect={(date, category) => setFormData({ ...formData, date, category })}
         />
       </div>
 
