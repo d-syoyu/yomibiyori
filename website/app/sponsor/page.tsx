@@ -305,43 +305,56 @@ export default function SponsorDashboard() {
             )}
 
             {/* 一般お知らせ */}
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <span className="text-2xl">📢</span> お知らせ
-            </h2>
-            <div className="card space-y-4 bg-[var(--color-washi)]/50">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                <span className="text-2xl">📢</span> お知らせ
+              </h2>
+              {announcements.length > 0 && (
+                <a
+                  href="/sponsor/announcements"
+                  className="text-sm text-[var(--color-igusa)] hover:text-[var(--color-igusa-light)] transition-colors"
+                >
+                  すべて見る →
+                </a>
+              )}
+            </div>
+            <div className="card space-y-3 bg-[var(--color-washi)]/50">
               {announcements.length === 0 ? (
                 <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
                   現在お知らせはありません
                 </p>
               ) : (
-                announcements.map((announcement, index) => (
+                announcements.slice(0, 5).map((announcement, index) => (
                   <div key={announcement.id}>
                     {index > 0 && <hr className="border-[var(--color-border)]" />}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
+                    <a
+                      href="/sponsor/announcements"
+                      className="block space-y-2 hover:opacity-75 transition-opacity"
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
                         {announcement.is_pinned && (
-                          <span className="text-xs font-medium text-red-600 border border-red-600 px-2 py-0.5 rounded-full">📌 重要</span>
+                          <span className="text-xs font-medium text-red-600 border border-red-600 px-2 py-0.5 rounded-full bg-red-50">📌 重要</span>
                         )}
                         {announcement.type === 'success' && (
-                          <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full">✨ New</span>
+                          <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full bg-green-50">✨ New</span>
                         )}
                         {announcement.type === 'warning' && (
-                          <span className="text-xs font-medium text-orange-600 border border-orange-600 px-2 py-0.5 rounded-full">⚠️ 注意</span>
+                          <span className="text-xs font-medium text-orange-600 border border-orange-600 px-2 py-0.5 rounded-full bg-orange-50">⚠️ 注意</span>
                         )}
                         {announcement.type === 'update' && (
-                          <span className="text-xs font-medium text-[var(--color-igusa)] border border-[var(--color-igusa)] px-2 py-0.5 rounded-full">🔄 更新</span>
+                          <span className="text-xs font-medium text-[var(--color-igusa)] border border-[var(--color-igusa)] px-2 py-0.5 rounded-full bg-[var(--color-washi)]">🔄 更新</span>
                         )}
+                        {announcement.type === 'info' && (
+                          <span className="text-xs font-medium text-blue-600 border border-blue-600 px-2 py-0.5 rounded-full bg-blue-50">ℹ️ 情報</span>
+                        )}
+                        <span className="text-xs text-[var(--color-text-muted)]">
+                          {new Date(announcement.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                        </span>
                       </div>
                       <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
                         {announcement.title}
                       </h3>
-                      <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">
-                        {announcement.content}
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        {new Date(announcement.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' })}
-                      </p>
-                    </div>
+                    </a>
                   </div>
                 ))
               )}

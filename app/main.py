@@ -25,10 +25,12 @@ app.add_middleware(
         "http://localhost:19006",  # Alternative Expo port
         "https://yomibiyori-production.up.railway.app",  # Production domain
         "https://www.yomibiyori.com",  # Marketing/admin site
+        "http://www.yomibiyori.com",  # Marketing/admin site (http)
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Register global error handlers
