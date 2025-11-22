@@ -11,12 +11,23 @@ from app.core.logging import logger
 
 settings = get_settings()
 
-_engine_kwargs: dict[str, object] = {"pool_pre_ping": True, "future": True}
+_engine_kwargs: dict[str, object] = {
+    "pool_pre_ping": True,  # Test connections before using them
+    "pool_size": 5,  # Maximum number of permanent connections
+    "max_overflow": 10,  # Maximum number of connections that can be created beyond pool_size
+    "pool_recycle": 3600,  # Recycle connections after 1 hour
+    "pool_timeout": 30,  # Timeout for getting a connection from the pool
+    "future": True,
+}
+
 if settings.database_url.startswith("sqlite"):  # pragma: no cover - branch tested via sqlite URL
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
 elif "pooler.supabase.com" in settings.database_url:
     # Connection pooler requires different SSL settings
-    _engine_kwargs["connect_args"] = {"sslmode": "prefer"}
+    _engine_kwargs["connect_args"] = {
+        "sslmode": "require",  # Require SSL connection
+        "connect_timeout": 10,  # Connection timeout in seconds
+    }
 
 engine = create_engine(settings.database_url, **_engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
