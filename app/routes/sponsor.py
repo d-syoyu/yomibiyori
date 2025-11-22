@@ -322,17 +322,19 @@ def create_sponsor_theme(
         )
 
     # Check for duplicate (same campaign, date, category)
+    # Only block if there's already a pending or approved theme (not rejected)
     existing = session.scalar(
         select(SponsorTheme).where(
             SponsorTheme.campaign_id == payload.campaign_id,
             SponsorTheme.date == payload.date,
             SponsorTheme.category == payload.category,
+            SponsorTheme.status.in_(["pending", "approved", "published"]),
         )
     )
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A theme for this campaign, date, and category already exists",
+            detail=f"A theme for this date and category already exists with status: {existing.status}",
         )
 
     # Deduct credit
