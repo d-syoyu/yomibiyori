@@ -24,7 +24,7 @@ router = APIRouter(prefix="/credits", tags=["Sponsor Credits"])
 @router.post("/purchase", response_model=CreditPurchaseSessionResponse, status_code=201)
 def create_purchase_session(
     payload: CreditPurchaseCreate,
-    current_user: Annotated[User, Depends(get_current_sponsor)] = None,
+    current_user: Annotated[User, Depends(get_current_sponsor)],
 ):
     """Create a Stripe Checkout session for purchasing credits.
 
@@ -50,8 +50,8 @@ def create_purchase_session(
 @router.post("/webhook")
 async def stripe_webhook(
     request: Request,
+    session: Annotated[Session, Depends(get_db_session)],
     stripe_signature: Annotated[str | None, Header(alias="Stripe-Signature")] = None,
-    session: Annotated[Session, Depends(get_db_session)] = None,
 ):
     """Handle Stripe webhook events.
 
@@ -127,8 +127,8 @@ async def stripe_webhook(
 
 @router.get("/transactions", response_model=list[CreditTransactionResponse])
 def get_my_transactions(
-    current_user: Annotated[User, Depends(get_current_sponsor)] = None,
-    session: Annotated[Session, Depends(get_authenticated_db_session)] = None,
+    current_user: Annotated[User, Depends(get_current_sponsor)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
 ):
     """Get all credit transactions for the current sponsor.
 
