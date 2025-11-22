@@ -81,7 +81,7 @@ export default function SponsorCreditsPage() {
       }
 
       // Create Stripe checkout session
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/credits/purchase`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/credit-purchase/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
