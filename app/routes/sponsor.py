@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Annotated
 from uuid import uuid4
 
@@ -28,6 +28,8 @@ from app.schemas.sponsor import (
     SponsorThemeListResponse,
     SponsorThemeResponse,
     SponsorThemeUpdate,
+    ThemeCalendarDay,
+    ThemeCalendarResponse,
 )
 
 router = APIRouter(prefix="/sponsor", tags=["sponsor"])
@@ -468,6 +470,70 @@ def list_sponsor_themes(
     return SponsorThemeListResponse(
         themes=[SponsorThemeResponse.model_validate(t) for t in themes],
         total=total,
+    )
+
+
+@router.get("/themes/calendar", response_model=ThemeCalendarResponse)
+def get_theme_calendar(
+    current_user: Annotated[User, Depends(get_current_sponsor)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+    start_date: Annotated[date | None, Query(description="Start date for calendar range")] = None,
+    end_date: Annotated[date | None, Query(description="End date for calendar range")] = None,
+) -> ThemeCalendarResponse:
+    """Get calendar showing which dates/categories have approved themes.
+
+    This helps sponsors identify available slots for theme submissions.
+    By default, shows the next 30 days from today.
+    """
+    from datetime import timedelta
+    from app.models import Theme
+
+    # Default range: next 30 days from today
+    today = date.today()
+    if not start_date:
+        start_date = today
+    if not end_date:
+        end_date = start_date + timedelta(days=30)
+
+    # Get all categories
+    categories = ["恋愛", "季節", "日常", "ユーモア"]
+
+    # Query approved themes in the date range
+    approved_themes_query = (
+        select(Theme.date, Theme.category, Theme.sponsored)
+        .where(
+            Theme.date >= start_date,
+            Theme.date <= end_date,
+        )
+    )
+    approved_themes = session.execute(approved_themes_query).all()
+
+    # Create a set of (date, category) tuples that have approved themes
+    approved_slots = {(t.date, t.category): t.sponsored for t in approved_themes}
+
+    # Build calendar days
+    days = []
+    for category in categories:
+        current_date = start_date
+        while current_date <= end_date:
+            key = (current_date, category)
+            has_approved = key in approved_slots
+            is_sponsored = approved_slots.get(key, False) if has_approved else False
+
+            days.append(
+                ThemeCalendarDay(
+                    date=current_date,
+                    category=category,
+                    has_approved_theme=has_approved,
+                    is_sponsored=is_sponsored,
+                )
+            )
+            current_date += timedelta(days=1)
+
+    return ThemeCalendarResponse(
+        days=days,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 

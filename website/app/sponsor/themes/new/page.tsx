@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import ThemeCalendar from '@/components/ThemeCalendar'
 
 const CATEGORIES = ['恋愛', '季節', '日常', 'ユーモア']
 
@@ -232,6 +233,15 @@ export default function NewThemePage() {
             <p className="text-lg font-bold text-[var(--color-text-primary)]">1 クレジット</p>
           </div>
         </div>
+      </div>
+
+      {/* Theme Calendar */}
+      <div className="card">
+        <ThemeCalendar
+          selectedDate={formData.date}
+          selectedCategory={formData.category}
+          onDateSelect={(date) => setFormData({ ...formData, date })}
+        />
       </div>
 
       <div className="card">

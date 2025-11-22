@@ -586,6 +586,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /sponsor/themes/calendar:
+    get:
+      tags: [sponsor]
+      summary: Get theme calendar
+      description: >
+        Returns a calendar showing which dates and categories have approved themes.
+        This helps sponsors identify available slots for theme submissions.
+        By default shows the next 30 days from today.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: false
+          description: Start date for calendar range (defaults to today)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: false
+          description: End date for calendar range (defaults to start_date + 30 days)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Theme calendar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeCalendarResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     bearerAuth:
@@ -977,3 +1011,44 @@ components:
       properties:
         detail:
           type: string
+    ThemeCalendarDay:
+      type: object
+      required:
+        - date
+        - category
+        - has_approved_theme
+        - is_sponsored
+      properties:
+        date:
+          type: string
+          format: date
+          description: Date for this calendar entry
+        category:
+          type: string
+          description: Theme category
+        has_approved_theme:
+          type: boolean
+          description: Whether an approved theme exists for this date/category
+        is_sponsored:
+          type: boolean
+          description: Whether the approved theme is a sponsored theme
+    ThemeCalendarResponse:
+      type: object
+      required:
+        - days
+        - start_date
+        - end_date
+      properties:
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThemeCalendarDay'
+          description: Calendar entries for all dates and categories in the range
+        start_date:
+          type: string
+          format: date
+          description: Start of the calendar range
+        end_date:
+          type: string
+          format: date
+          description: End of the calendar range

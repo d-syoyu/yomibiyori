@@ -81,3 +81,27 @@ export function updateSponsorProfile(payload: Partial<SponsorProfilePayload>): P
     body: JSON.stringify(payload),
   })
 }
+
+export interface ThemeCalendarDay {
+  date: string  // ISO 8601 date (YYYY-MM-DD)
+  category: '恋愛' | '季節' | '日常' | 'ユーモア'
+  has_approved_theme: boolean
+  is_sponsored: boolean
+}
+
+export interface ThemeCalendarResponse {
+  days: ThemeCalendarDay[]
+  start_date: string  // ISO 8601 date (YYYY-MM-DD)
+  end_date: string    // ISO 8601 date (YYYY-MM-DD)
+}
+
+export function fetchThemeCalendar(startDate?: string, endDate?: string): Promise<ThemeCalendarResponse> {
+  const params = new URLSearchParams()
+  if (startDate) params.append('start_date', startDate)
+  if (endDate) params.append('end_date', endDate)
+
+  const queryString = params.toString()
+  const path = `/sponsor/themes/calendar${queryString ? `?${queryString}` : ''}`
+
+  return authenticatedRequest<ThemeCalendarResponse>(path)
+}

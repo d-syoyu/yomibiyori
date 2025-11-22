@@ -189,3 +189,23 @@ class SponsorVerificationRequest(BaseModel):
     """Admin request payload for toggling sponsor verification."""
 
     verified: bool
+
+
+# ===== Calendar Schemas =====
+
+
+class ThemeCalendarDay(BaseModel):
+    """Individual day in the theme calendar."""
+
+    date: date
+    category: str
+    has_approved_theme: bool
+    is_sponsored: bool = False
+
+
+class ThemeCalendarResponse(BaseModel):
+    """Calendar response showing which dates/categories have approved themes."""
+
+    days: list[ThemeCalendarDay]
+    start_date: date
+    end_date: date
