@@ -247,7 +247,7 @@ export default function SponsorDashboard() {
               </a>
               <a
                 href="/sponsor/credits"
-                className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white rounded-lg font-bold hover:bg-white/30 transition-colors text-center border border-white/40"
+                className="px-6 py-2.5 bg-white text-[var(--color-igusa)] rounded-lg font-bold hover:bg-opacity-90 transition-colors text-center border border-white shadow-md"
               >
                 クレジット購入
               </a>
