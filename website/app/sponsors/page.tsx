@@ -155,7 +155,7 @@ export default function SponsorsPage() {
             <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">詳細なインサイト</h3>
             <p className="text-[var(--color-text-secondary)]">
               配信したお題の表示回数、投稿数、エンゲージメント率を確認できます。
-              PostHogで集計されたデータをもとに、ユーザーの反応を分析し、次のキャンペーン企画に活かせます。
+              リアルタイムで集計されたデータをもとに、ユーザーの反応を分析し、次のキャンペーン企画に活かせます。
             </p>
             <div className="bg-[var(--color-washi)] rounded-xl p-4 border border-[var(--color-border)] space-y-3">
               <div className="grid grid-cols-3 gap-3 pb-3 border-b border-[var(--color-border)]">
