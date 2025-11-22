@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import uuid4
@@ -9,6 +10,8 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.core.auth_helpers import get_current_sponsor, get_current_user
 from app.db.session import get_authenticated_db_session
