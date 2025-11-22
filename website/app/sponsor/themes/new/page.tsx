@@ -148,22 +148,29 @@ export default function NewThemePage() {
     setLoading(true)
 
     try {
-      const { error: insertError } = await supabase
-        .from('sponsor_themes')
-        .insert({
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error('ログインしてください')
+      }
+
+      // Use backend API to submit theme (handles credit deduction)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/themes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
           campaign_id: campaignId,
           date: formData.date,
           category: formData.category,
           text_575: text_575,
-          status: 'pending',
-        })
+        }),
+      })
 
-      if (insertError) {
-        console.error('Failed to insert theme:', insertError)
-        if (insertError.code === '23505') {
-          throw new Error('この日付・カテゴリではすでにお題を投稿しています')
-        }
-        throw new Error('お題の投稿に失敗しました')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'お題の投稿に失敗しました')
       }
 
       alert('お題を投稿しました。審査をお待ちください。')
