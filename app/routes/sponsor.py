@@ -321,9 +321,9 @@ def create_sponsor_theme(
             detail="Insufficient credits. Please purchase more credits to submit themes.",
         )
 
-    # Check for duplicate (same campaign, date, category)
+    # Check for duplicate in the same campaign (same sponsor)
     # Only block if there's already a pending or approved theme (not rejected)
-    existing = session.scalar(
+    existing_in_campaign = session.scalar(
         select(SponsorTheme).where(
             SponsorTheme.campaign_id == payload.campaign_id,
             SponsorTheme.date == payload.date,
@@ -331,10 +331,24 @@ def create_sponsor_theme(
             SponsorTheme.status.in_(["pending", "approved", "published"]),
         )
     )
-    if existing:
+    if existing_in_campaign:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A theme for this date and category already exists with status: {existing.status}",
+            detail=f"このキャンペーンで同じ日付・カテゴリのお題が既に投稿されています（ステータス: {existing_in_campaign.status}）",
+        )
+
+    # Check for duplicate across all sponsors (any date/category combination can only have one approved/published theme)
+    existing_global = session.scalar(
+        select(SponsorTheme).where(
+            SponsorTheme.date == payload.date,
+            SponsorTheme.category == payload.category,
+            SponsorTheme.status.in_(["approved", "published"]),
+        )
+    )
+    if existing_global:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"この日付・カテゴリのお題は既に他のスポンサーによって承認/配信されています",
         )
 
     # Deduct credit
