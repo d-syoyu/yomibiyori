@@ -14,6 +14,9 @@ settings = get_settings()
 _engine_kwargs: dict[str, object] = {"pool_pre_ping": True, "future": True}
 if settings.database_url.startswith("sqlite"):  # pragma: no cover - branch tested via sqlite URL
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
+elif "pooler.supabase.com" in settings.database_url:
+    # Connection pooler requires different SSL settings
+    _engine_kwargs["connect_args"] = {"sslmode": "prefer"}
 
 engine = create_engine(settings.database_url, **_engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
