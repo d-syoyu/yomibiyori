@@ -14,6 +14,7 @@ export default function NewThemePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [campaignId, setCampaignId] = useState<string | null>(null)
+  const [credits, setCredits] = useState<number>(0)
   const [formData, setFormData] = useState({
     date: '',
     category: '恋愛',
@@ -32,12 +33,17 @@ export default function NewThemePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      // Check if sponsor record exists
+      // Check if sponsor record exists and get credits
       let { data: sponsor } = await supabase
         .from('sponsors')
-        .select('id')
+        .select('id, credits')
         .eq('id', session.user.id)
         .single()
+
+      // Set credits if sponsor exists
+      if (sponsor) {
+        setCredits(sponsor.credits || 0)
+      }
 
       // Create sponsor record if not exists
       if (!sponsor) {
@@ -186,6 +192,41 @@ export default function NewThemePage() {
         </p>
       </div>
 
+      {/* Credit Balance Warning */}
+      {credits < 1 && (
+        <div className="card bg-amber-50 border-amber-200">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <h3 className="font-bold text-amber-900 mb-1">クレジットが不足しています</h3>
+              <p className="text-sm text-amber-800 mb-3">
+                お題を投稿するには1クレジットが必要です。クレジットを購入してください。
+              </p>
+              <a
+                href="/sponsor/credits"
+                className="inline-block px-4 py-2 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-700 transition-colors"
+              >
+                クレジットを購入
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Balance Display */}
+      <div className="card bg-gradient-to-r from-[var(--color-igusa)]/10 to-[var(--color-igusa-light)]/10 border-[var(--color-igusa)]/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-1">利用可能クレジット</p>
+            <p className="text-3xl font-bold font-serif text-[var(--color-igusa)]">{credits}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-[var(--color-text-muted)] mb-1">お題投稿に必要</p>
+            <p className="text-lg font-bold text-[var(--color-text-primary)]">1 クレジット</p>
+          </div>
+        </div>
+      </div>
+
       <div className="card">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Date */}
@@ -326,7 +367,7 @@ export default function NewThemePage() {
             </button>
             <button
               type="submit"
-              disabled={loading || !campaignId}
+              disabled={loading || !campaignId || credits < 1}
               className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '投稿中...' : '投稿する'}
