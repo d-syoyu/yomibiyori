@@ -344,20 +344,9 @@ def create_sponsor_theme(
             )
             session.add(campaign)
             session.flush()  # Get campaign.id
-            logger.info(f"Auto-created default campaign {campaign.id} for sponsor {current_user.id}")
-
-    logger.info(
-        f"Checking campaign ownership: campaign.sponsor_id={campaign.sponsor_id} (type: {type(campaign.sponsor_id).__name__}), "
-        f"current_user.id={current_user.id} (type: {type(current_user.id).__name__}), "
-        f"current_user.role={current_user.role}, "
-        f"comparison result: {str(campaign.sponsor_id) == str(current_user.id)}"
-    )
 
     # Ensure both IDs are strings for comparison
     if str(campaign.sponsor_id) != str(current_user.id) and current_user.role != "admin":
-        logger.warning(
-            f"Permission denied: campaign.sponsor_id={campaign.sponsor_id} != current_user.id={current_user.id}"
-        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to add themes to this campaign",
@@ -373,9 +362,6 @@ def create_sponsor_theme(
 
     # Check for duplicate across all campaigns from the same sponsor
     # Only block if there's already a pending or approved theme (not rejected)
-    logger.info(
-        f"Checking duplicates for sponsor {campaign.sponsor_id}, date={payload.date}, category={payload.category}"
-    )
     existing_in_sponsor = session.scalar(
         select(SponsorTheme)
         .join(SponsorCampaign)
@@ -387,9 +373,6 @@ def create_sponsor_theme(
         )
     )
     if existing_in_sponsor:
-        logger.warning(
-            f"Duplicate found: {existing_in_sponsor.id}, status={existing_in_sponsor.status}"
-        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"この日付・カテゴリではすでにお題を投稿しています（ステータス: {existing_in_sponsor.status}）",
