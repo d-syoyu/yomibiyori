@@ -85,7 +85,9 @@ async def stripe_webhook(
             raise HTTPException(status_code=400, detail="Invalid signature")
 
         # Handle the event
-        if event["type"] == "checkout.session.completed":
+        event_type = event["type"]
+
+        if event_type == "checkout.session.completed":
             session_data = event["data"]["object"]
 
             # Extract sponsor_id and quantity from metadata
@@ -115,8 +117,73 @@ async def stripe_webhook(
                 logger.error(f"Failed to process payment: {e}", exc_info=True)
                 return {"status": "error", "message": str(e)}
 
+        elif event_type == "checkout.session.async_payment_succeeded":
+            # Handle async payment success (e.g., bank transfer)
+            session_data = event["data"]["object"]
+            sponsor_id = session_data.get("client_reference_id")
+            metadata = session_data.get("metadata", {})
+            quantity = int(metadata.get("credit_quantity", 0))
+            payment_intent_id = session_data.get("payment_intent")
+
+            if sponsor_id and quantity:
+                try:
+                    credit_service.process_successful_payment(
+                        session=session,
+                        sponsor_id=sponsor_id,
+                        quantity=quantity,
+                        payment_intent_id=payment_intent_id,
+                    )
+                    logger.info(
+                        f"Async payment succeeded for sponsor {sponsor_id}: +{quantity} credits"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to process async payment: {e}", exc_info=True)
+                    return {"status": "error", "message": str(e)}
+
+        elif event_type == "checkout.session.async_payment_failed":
+            # Handle async payment failure
+            session_data = event["data"]["object"]
+            sponsor_id = session_data.get("client_reference_id")
+            logger.warning(
+                f"Async payment failed for sponsor {sponsor_id}: {session_data.get('id')}"
+            )
+
+        elif event_type == "checkout.session.expired":
+            # Handle session expiration (30 minutes timeout)
+            session_data = event["data"]["object"]
+            sponsor_id = session_data.get("client_reference_id")
+            logger.info(
+                f"Checkout session expired for sponsor {sponsor_id}: {session_data.get('id')}"
+            )
+
+        elif event_type == "charge.refunded":
+            # Handle refund (future implementation)
+            charge = event["data"]["object"]
+            logger.warning(
+                f"Charge refunded: {charge.get('id')} - Amount: {charge.get('amount_refunded')}"
+            )
+            # TODO: Implement credit deduction logic when refund is processed
+
+        elif event_type == "charge.dispute.created":
+            # Handle chargeback/dispute
+            dispute = event["data"]["object"]
+            logger.error(
+                f"Dispute created for charge {dispute.get('charge')}: {dispute.get('reason')}"
+            )
+            # TODO: Send notification to admin
+
+        elif event_type in [
+            "payment_intent.succeeded",
+            "payment_intent.payment_failed",
+            "payment_intent.canceled",
+            "charge.dispute.closed",
+        ]:
+            # Log other events for monitoring
+            logger.info(f"Received Stripe webhook event: {event_type}")
+
         else:
-            logger.info(f"Received Stripe webhook event: {event['type']}")
+            # Unknown event type
+            logger.info(f"Unhandled Stripe webhook event: {event_type}")
 
         return {"status": "success"}
 
