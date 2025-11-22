@@ -323,6 +323,9 @@ def create_sponsor_theme(
 
     # Check for duplicate across all campaigns from the same sponsor
     # Only block if there's already a pending or approved theme (not rejected)
+    logger.info(
+        f"Checking duplicates for sponsor {campaign.sponsor_id}, date={payload.date}, category={payload.category}"
+    )
     existing_in_sponsor = session.scalar(
         select(SponsorTheme)
         .join(SponsorCampaign)
@@ -334,6 +337,9 @@ def create_sponsor_theme(
         )
     )
     if existing_in_sponsor:
+        logger.warning(
+            f"Duplicate found: {existing_in_sponsor.id}, status={existing_in_sponsor.status}"
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"この日付・カテゴリではすでにお題を投稿しています（ステータス: {existing_in_sponsor.status}）",
