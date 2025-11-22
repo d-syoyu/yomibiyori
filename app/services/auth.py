@@ -117,11 +117,13 @@ def _decode_with_jwks(token: str, settings) -> dict[str, Any]:  # type: ignore[n
 
 
 def _decode_jwt(token: str) -> dict[str, Any]:
+    import logging
+    logger = logging.getLogger(__name__)
     settings = get_settings()
     secret = settings.supabase_jwt_secret
     if secret:
         try:
-            return jwt.decode(
+            decoded = jwt.decode(
                 token,
                 secret,
                 algorithms=["HS256"],
@@ -134,18 +136,21 @@ def _decode_jwt(token: str) -> dict[str, Any]:
                     "verify_iss": False,  # Don't verify issuer for now
                 },
             )
+            logger.info(f"HS256 JWT decode successful. Keys: {list(decoded.keys())}")
+            return decoded
         except jwt.ExpiredSignatureError:
             # Token has expired - client should refresh token or re-login
+            logger.error("JWT token has expired")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired. Please refresh your token or login again.",
             )
         except JWTError as e:
             # Other JWT errors - try JWKS fallback
-            import logging
-            logging.warning(f"HS256 JWT decode failed: {e}. Falling back to JWKS (RS256).")
+            logger.warning(f"HS256 JWT decode failed: {e}. Falling back to JWKS (RS256).")
             pass
 
+    logger.info("Attempting JWKS (RS256) decode")
     return _decode_with_jwks(token, settings)
 
 
@@ -193,25 +198,34 @@ def get_current_user_id(
     This function also sets the request user context for Row Level Security (RLS)
     to work correctly in PostgreSQL.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     if not credentials:
+        logger.warning("Authentication failed: Missing bearer token")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 
     token = credentials.credentials
     try:
         payload: dict[str, Any] = _decode_jwt(token)
+        logger.info(f"JWT decoded successfully. Payload keys: {list(payload.keys())}, sub={payload.get('sub')}, role={payload.get('role')}")
     except JWTError as exc:
+        logger.error(f"JWT decode failed: {exc}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
     user_id = payload.get("sub")
     if not user_id:
+        logger.error(f"Token missing subject. Payload keys: {list(payload.keys())}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token missing subject")
 
     role = payload.get("role", "authenticated")
     if role not in {"authenticated", "service_role"}:
+        logger.error(f"Insufficient role: {role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role")
 
     # Set request context for RLS policies
     set_request_user_context(str(user_id), role)
+    logger.info(f"User authenticated successfully: {user_id} with role: {role}")
 
     return str(user_id)
 
