@@ -347,11 +347,14 @@ def create_sponsor_theme(
             logger.info(f"Auto-created default campaign {campaign.id} for sponsor {current_user.id}")
 
     logger.info(
-        f"Checking campaign ownership: campaign.sponsor_id={campaign.sponsor_id}, "
-        f"current_user.id={current_user.id}, current_user.role={current_user.role}"
+        f"Checking campaign ownership: campaign.sponsor_id={campaign.sponsor_id} (type: {type(campaign.sponsor_id).__name__}), "
+        f"current_user.id={current_user.id} (type: {type(current_user.id).__name__}), "
+        f"current_user.role={current_user.role}, "
+        f"comparison result: {str(campaign.sponsor_id) == str(current_user.id)}"
     )
 
-    if campaign.sponsor_id != current_user.id and current_user.role != "admin":
+    # Ensure both IDs are strings for comparison
+    if str(campaign.sponsor_id) != str(current_user.id) and current_user.role != "admin":
         logger.warning(
             f"Permission denied: campaign.sponsor_id={campaign.sponsor_id} != current_user.id={current_user.id}"
         )
