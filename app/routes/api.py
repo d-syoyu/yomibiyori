@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.routes import (
     admin,
+    admin_credits,
     auth,
     credit_purchase,
     notifications,
@@ -25,4 +26,5 @@ api_router.include_router(sponsor.router, tags=["sponsor"])
 api_router.include_router(slot_reservation.router, prefix="/sponsor", tags=["sponsor"])
 api_router.include_router(credit_purchase.router, prefix="/sponsor", tags=["sponsor"])
 api_router.include_router(admin.router, tags=["admin"])
+api_router.include_router(admin_credits.router, tags=["admin"])
 api_router.include_router(notifications.router)

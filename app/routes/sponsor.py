@@ -296,7 +296,7 @@ def create_sponsor_theme(
     current_user: Annotated[User, Depends(get_current_sponsor)],
     session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> SponsorThemeResponse:
-    """Create a new sponsor theme (theme submission)."""
+    """Create a new sponsor theme (theme submission). Consumes 1 credit."""
     now = datetime.now(timezone.utc)
 
     # Verify campaign ownership
@@ -313,6 +313,14 @@ def create_sponsor_theme(
             detail="You do not have permission to add themes to this campaign",
         )
 
+    # Check sponsor credits
+    sponsor = session.get(Sponsor, campaign.sponsor_id)
+    if not sponsor or sponsor.credits < 1:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Insufficient credits. Please purchase more credits to submit themes.",
+        )
+
     # Check for duplicate (same campaign, date, category)
     existing = session.scalar(
         select(SponsorTheme).where(
@@ -326,6 +334,21 @@ def create_sponsor_theme(
             status_code=status.HTTP_409_CONFLICT,
             detail="A theme for this campaign, date, and category already exists",
         )
+
+    # Deduct credit
+    sponsor.credits -= 1
+
+    # Create credit transaction record
+    from app.models.sponsor_credit_transaction import SponsorCreditTransaction
+    credit_transaction = SponsorCreditTransaction(
+        id=str(uuid4()),
+        sponsor_id=sponsor.id,
+        amount=-1,
+        transaction_type="use",
+        description=f"Theme submission: {payload.date} / {payload.category}",
+        created_at=now,
+    )
+    session.add(credit_transaction)
 
     theme = SponsorTheme(
         id=str(uuid4()),

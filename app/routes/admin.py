@@ -254,11 +254,9 @@ def reject_theme(
 ) -> ThemeReviewResponse:
     """Reject a sponsor theme and remove it from themes table if registered.
 
-    When a theme is rejected, the associated slot reservation is cancelled
-    and the credit is refunded to the sponsor.
+    When a theme is rejected, the credit is automatically refunded to the sponsor.
     """
-    from app.models.sponsor_slot_reservation import SponsorSlotReservation
-    from app.services.slot_reservation import cancel_slot_reservation
+    from app.models.sponsor_credit_transaction import SponsorCreditTransaction
 
     sponsor_theme = session.get(SponsorTheme, theme_id)
     if not sponsor_theme:
@@ -282,25 +280,33 @@ def reject_theme(
             )
             session.delete(existing_theme)
 
-    # Get the associated reservation and cancel it (refund credit)
-    if sponsor_theme.reservation_id:
-        try:
-            campaign = session.get(SponsorCampaign, sponsor_theme.campaign_id)
-            if campaign:
-                cancel_slot_reservation(
-                    session=session,
-                    reservation_id=sponsor_theme.reservation_id,
-                    sponsor_id=campaign.sponsor_id,
+    # Refund credit to sponsor
+    try:
+        campaign = session.get(SponsorCampaign, sponsor_theme.campaign_id)
+        if campaign:
+            sponsor = session.get(Sponsor, campaign.sponsor_id)
+            if sponsor:
+                # Add credit back
+                sponsor.credits += 1
+
+                # Create refund transaction record
+                now = datetime.now(timezone.utc)
+                refund_transaction = SponsorCreditTransaction(
+                    id=str(uuid4()),
+                    sponsor_id=sponsor.id,
+                    amount=1,
+                    transaction_type="refund",
+                    description=f"Theme rejection refund: {sponsor_theme.date} / {sponsor_theme.category} - {payload.rejection_reason}",
+                    created_at=now,
                 )
+                session.add(refund_transaction)
+
                 logger.info(
-                    f"Cancelled slot reservation {sponsor_theme.reservation_id} "
-                    f"and refunded credit due to theme rejection"
+                    f"Refunded 1 credit to sponsor {sponsor.id} due to theme rejection"
                 )
-        except Exception as e:
-            logger.warning(
-                f"Failed to cancel reservation {sponsor_theme.reservation_id}: {e}"
-            )
-            # Continue with rejection even if reservation cancellation fails
+    except Exception as e:
+        logger.error(f"Failed to refund credit for theme {theme_id}: {e}", exc_info=True)
+        # Continue with rejection even if refund fails
 
     # Update sponsor theme status
     sponsor_theme.status = "rejected"
