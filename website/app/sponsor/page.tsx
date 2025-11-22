@@ -15,6 +15,25 @@ interface Stats {
   publishedThemes: number
 }
 
+interface Announcement {
+  id: string
+  title: string
+  content: string
+  type: 'info' | 'warning' | 'success' | 'update'
+  is_pinned: boolean
+  created_at: string
+}
+
+interface ThemeNotification {
+  id: string
+  sponsor_theme_id: string
+  status: 'approved' | 'rejected' | 'published'
+  title: string
+  message: string
+  is_read: boolean
+  created_at: string
+}
+
 export default function SponsorDashboard() {
   const [stats, setStats] = useState<Stats>({
     totalThemes: 0,
@@ -23,10 +42,14 @@ export default function SponsorDashboard() {
     rejectedThemes: 0,
     publishedThemes: 0,
   })
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [themeNotifications, setThemeNotifications] = useState<ThemeNotification[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadStats()
+    loadAnnouncements()
+    loadThemeNotifications()
   }, [])
 
   async function loadStats() {
@@ -73,6 +96,61 @@ export default function SponsorDashboard() {
       console.error('Failed to load stats:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadAnnouncements() {
+    try {
+      const { data, error } = await supabase
+        .from('sponsor_announcements')
+        .select('id, title, content, type, is_pinned, created_at')
+        .eq('is_published', true)
+        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (error) throw error
+      setAnnouncements(data || [])
+    } catch (error) {
+      console.error('Failed to load announcements:', error)
+    }
+  }
+
+  async function loadThemeNotifications() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const { data, error } = await supabase
+        .from('sponsor_theme_notifications')
+        .select('*')
+        .eq('sponsor_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (error) throw error
+      setThemeNotifications(data || [])
+    } catch (error) {
+      console.error('Failed to load theme notifications:', error)
+    }
+  }
+
+  async function markAsRead(notificationId: string) {
+    try {
+      const { error } = await supabase
+        .from('sponsor_theme_notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+
+      if (error) throw error
+
+      // Update local state
+      setThemeNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      )
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error)
     }
   }
 
@@ -176,24 +254,97 @@ export default function SponsorDashboard() {
           </div>
 
           <div className="space-y-6">
+            {/* お題の通知 */}
+            {themeNotifications.length > 0 && (
+              <>
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                  <span className="text-2xl">🔔</span> お題の通知
+                  {themeNotifications.filter(n => !n.is_read).length > 0 && (
+                    <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
+                      {themeNotifications.filter(n => !n.is_read).length}
+                    </span>
+                  )}
+                </h2>
+                <div className="card space-y-3 bg-[var(--color-washi)]/50 max-h-96 overflow-y-auto">
+                  {themeNotifications.map((notification, index) => (
+                    <div key={notification.id}>
+                      {index > 0 && <hr className="border-[var(--color-border)]" />}
+                      <div
+                        className={`space-y-2 ${notification.is_read ? 'opacity-60' : ''}`}
+                        onClick={() => !notification.is_read && markAsRead(notification.id)}
+                        style={{ cursor: notification.is_read ? 'default' : 'pointer' }}
+                      >
+                        <div className="flex items-center gap-2">
+                          {!notification.is_read && (
+                            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                          )}
+                          {notification.status === 'approved' && (
+                            <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full">✅ 承認</span>
+                          )}
+                          {notification.status === 'rejected' && (
+                            <span className="text-xs font-medium text-red-600 border border-red-600 px-2 py-0.5 rounded-full">❌ 却下</span>
+                          )}
+                          {notification.status === 'published' && (
+                            <span className="text-xs font-medium text-blue-600 border border-blue-600 px-2 py-0.5 rounded-full">🚀 配信</span>
+                          )}
+                        </div>
+                        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
+                          {notification.title}
+                        </h3>
+                        <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                          {new Date(notification.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 一般お知らせ */}
             <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
               <span className="text-2xl">📢</span> お知らせ
             </h2>
             <div className="card space-y-4 bg-[var(--color-washi)]/50">
-              <div className="space-y-2">
-                <span className="text-xs font-medium text-[var(--color-igusa)] border border-[var(--color-igusa)] px-2 py-0.5 rounded-full">New</span>
-                <p className="text-sm text-[var(--color-text-primary)]">
-                  年末年始の特別キャンペーンお題の募集を開始しました。
+              {announcements.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
+                  現在お知らせはありません
                 </p>
-                <p className="text-xs text-[var(--color-text-muted)]">2024/11/20</p>
-              </div>
-              <hr className="border-[var(--color-border)]" />
-              <div className="space-y-2">
-                <p className="text-sm text-[var(--color-text-primary)]">
-                  インサイト機能がアップデートされました。
-                </p>
-                <p className="text-xs text-[var(--color-text-muted)]">2024/11/15</p>
-              </div>
+              ) : (
+                announcements.map((announcement, index) => (
+                  <div key={announcement.id}>
+                    {index > 0 && <hr className="border-[var(--color-border)]" />}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        {announcement.is_pinned && (
+                          <span className="text-xs font-medium text-red-600 border border-red-600 px-2 py-0.5 rounded-full">📌 重要</span>
+                        )}
+                        {announcement.type === 'success' && (
+                          <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full">✨ New</span>
+                        )}
+                        {announcement.type === 'warning' && (
+                          <span className="text-xs font-medium text-orange-600 border border-orange-600 px-2 py-0.5 rounded-full">⚠️ 注意</span>
+                        )}
+                        {announcement.type === 'update' && (
+                          <span className="text-xs font-medium text-[var(--color-igusa)] border border-[var(--color-igusa)] px-2 py-0.5 rounded-full">🔄 更新</span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
+                        {announcement.title}
+                      </h3>
+                      <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">
+                        {announcement.content}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        {new Date(announcement.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </section>

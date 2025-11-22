@@ -146,6 +146,28 @@ export default function AdminDashboard() {
               →
             </span>
           </a>
+          <a
+            href="/admin/announcements"
+            className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:border-blue-300 transition-all group"
+          >
+            <span className="font-medium text-blue-900">
+              お知らせを管理
+            </span>
+            <span className="text-blue-600 group-hover:translate-x-1 transition-transform">
+              →
+            </span>
+          </a>
+          <a
+            href="/admin/sponsors"
+            className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 hover:border-green-300 transition-all group"
+          >
+            <span className="font-medium text-green-900">
+              スポンサーを管理
+            </span>
+            <span className="text-green-600 group-hover:translate-x-1 transition-transform">
+              →
+            </span>
+          </a>
         </div>
       </div>
     </div>

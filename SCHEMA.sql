@@ -22,6 +22,72 @@ begin
 end;
 $$;
 
+-- スポンサーお題ステータス変更通知トリガ
+create or replace function app_public.notify_sponsor_theme_status_change()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_sponsor_id uuid;
+  v_title text;
+  v_message text;
+begin
+  -- ステータスが変更された場合のみ処理
+  if (TG_OP = 'UPDATE' and old.status = new.status) then
+    return new;
+  end if;
+
+  -- approved, rejected, published の場合のみ通知
+  if new.status not in ('approved', 'rejected', 'published') then
+    return new;
+  end if;
+
+  -- スポンサーIDを取得（campaign経由）
+  select sc.sponsor_id into v_sponsor_id
+  from app_public.sponsor_campaigns sc
+  where sc.id = new.campaign_id;
+
+  if v_sponsor_id is null then
+    return new;
+  end if;
+
+  -- 通知メッセージを生成
+  case new.status
+    when 'approved' then
+      v_title := 'お題が承認されました';
+      v_message := 'お題「' || new.text_575 || '」が審査を通過し、承認されました。配信日: ' || to_char(new.date, 'YYYY年MM月DD日');
+    when 'rejected' then
+      v_title := 'お題が却下されました';
+      if new.rejection_reason is not null and new.rejection_reason != '' then
+        v_message := 'お題「' || new.text_575 || '」は審査の結果、却下されました。理由: ' || new.rejection_reason;
+      else
+        v_message := 'お題「' || new.text_575 || '」は審査の結果、却下されました。';
+      end if;
+    when 'published' then
+      v_title := 'お題が配信されました';
+      v_message := 'お題「' || new.text_575 || '」が配信されました。ユーザーの反応をインサイトページでご確認いただけます。';
+  end case;
+
+  -- 通知を作成
+  insert into app_public.sponsor_theme_notifications (
+    sponsor_theme_id,
+    sponsor_id,
+    status,
+    title,
+    message
+  ) values (
+    new.id,
+    v_sponsor_id,
+    new.status,
+    v_title,
+    v_message
+  );
+
+  return new;
+end;
+$$;
+
 -- ========= ユーザー =========
 -- Supabase利用時: auth.users(id) が存在する想定。
 -- 直接参照しない場合に備え、ローカル独立運用も可能とする。
@@ -210,6 +276,9 @@ create table if not exists sponsor_themes (
 create trigger trg_sponsor_themes_updated_at
 before update on sponsor_themes
 for each row execute function app_public.set_updated_at();
+create trigger trg_sponsor_themes_status_notify
+after insert or update on sponsor_themes
+for each row execute function app_public.notify_sponsor_theme_status_change();
 create index if not exists idx_sponsor_themes_campaign_id on sponsor_themes(campaign_id);
 create index if not exists idx_sponsor_themes_date_category on sponsor_themes(date, category);
 create index if not exists idx_sponsor_themes_status on sponsor_themes(status);
@@ -219,6 +288,50 @@ comment on table sponsor_themes is 'スポンサー入稿お題（審査待ち�
 comment on column sponsor_themes.text_575 is '上の句（5-7-5）';
 comment on column sponsor_themes.priority is 'スロット優先度（高いほど優先）';
 comment on column sponsor_themes.status is 'ステータス: pending（審査待ち） / approved（承認済み） / rejected（却下） / published（配信済み）';
+
+-- ========= スポンサーお知らせ =========
+create table if not exists sponsor_announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (length(title) between 1 and 200),
+  content text not null check (length(content) between 1 and 2000),
+  type text not null default 'info' check (type in ('info', 'warning', 'success', 'update')),
+  priority integer not null default 0,
+  is_pinned boolean not null default false,
+  is_published boolean not null default true,
+  expires_at timestamptz,
+  created_by uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create trigger trg_sponsor_announcements_updated_at
+before update on sponsor_announcements
+for each row execute function app_public.set_updated_at();
+create index if not exists idx_sponsor_announcements_published on sponsor_announcements(is_published, created_at desc);
+create index if not exists idx_sponsor_announcements_pinned on sponsor_announcements(is_pinned) where is_pinned = true;
+
+comment on table sponsor_announcements is 'スポンサー向けお知らせ（管理者が作成）';
+comment on column sponsor_announcements.type is 'お知らせタイプ: info / warning / success / update';
+comment on column sponsor_announcements.priority is '表示優先度（高いほど上位表示）';
+comment on column sponsor_announcements.is_pinned is 'ピン留めフラグ（常に上部に表示）';
+comment on column sponsor_announcements.expires_at is '有効期限（nullの場合は無期限）';
+
+-- ========= スポンサーお題ステータス通知 =========
+create table if not exists sponsor_theme_notifications (
+  id uuid primary key default gen_random_uuid(),
+  sponsor_theme_id uuid not null references sponsor_themes(id) on delete cascade,
+  sponsor_id uuid not null references users(id) on delete cascade,
+  status text not null check (status in ('approved', 'rejected', 'published')),
+  title text not null,
+  message text not null,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_sponsor_theme_notifications_sponsor on sponsor_theme_notifications(sponsor_id, is_read, created_at desc);
+create index if not exists idx_sponsor_theme_notifications_theme on sponsor_theme_notifications(sponsor_theme_id);
+
+comment on table sponsor_theme_notifications is 'スポンサーお題のステータス変更通知';
+comment on column sponsor_theme_notifications.status is '変更後のステータス: approved / rejected / published';
+comment on column sponsor_theme_notifications.is_read is '既読フラグ';
 
 -- ========= ビュー：作品のメタ（いいね数を集約） =========
 -- SECURITY INVOKER を明示してRLSポリシーを適用
@@ -243,6 +356,8 @@ alter table themes enable row level security;
 alter table sponsors enable row level security;
 alter table sponsor_campaigns enable row level security;
 alter table sponsor_themes enable row level security;
+alter table sponsor_announcements enable row level security;
+alter table sponsor_theme_notifications enable row level security;
 
 -- 役割補助（Supabase互換）。Supabaseで動作する場合は auth.uid(), auth.role() を利用可能。
 -- ここでは存在しない環境でも動くようフォールバック関数を用意（no-op的）。
@@ -282,6 +397,42 @@ create policy if not exists read_sponsor_campaigns on sponsor_campaigns
   for select using (true);
 create policy if not exists read_sponsor_themes on sponsor_themes
   for select using (true);
+create policy if not exists read_sponsor_announcements on sponsor_announcements
+  for select using (
+    is_published = true
+    and (expires_at is null or expires_at > now())
+  );
+
+-- sponsor_announcements: 管理者のみ作成・更新・削除可能
+create policy if not exists write_admin_announcements on sponsor_announcements
+  for all
+  using (
+    exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  )
+  with check (
+    exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  );
+
+-- sponsor_theme_notifications: 自分宛の通知のみ閲覧可能
+create policy if not exists read_own_theme_notifications on sponsor_theme_notifications
+  for select
+  using (sponsor_id = app_public.current_uid());
+
+-- sponsor_theme_notifications: 自分の通知のみ更新可能（既読状態など）
+create policy if not exists update_own_theme_notifications on sponsor_theme_notifications
+  for update
+  using (sponsor_id = app_public.current_uid())
+  with check (sponsor_id = app_public.current_uid());
+
+-- sponsor_theme_notifications: システムと管理者のみ作成可能
+create policy if not exists insert_theme_notifications on sponsor_theme_notifications
+  for insert
+  with check (
+    exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    or app_public.is_service_role()
+  );
 
 -- users: 自分のプロフィールのみ書き込みを許可
 create policy if not exists write_own_user on users
