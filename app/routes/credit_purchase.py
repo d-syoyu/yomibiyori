@@ -58,14 +58,11 @@ async def stripe_webhook(
     This endpoint is called by Stripe when payment events occur.
     It verifies the webhook signature and processes successful payments.
     """
-    logger.info(f"Received Stripe webhook request with signature header present: {bool(stripe_signature)}")
-
     if not settings.stripe_webhook_secret:
         logger.error("Stripe webhook secret is not configured")
         raise HTTPException(status_code=503, detail="Webhook not configured")
 
     if not stripe_signature:
-        logger.error("Missing Stripe-Signature header in webhook request")
         raise HTTPException(status_code=400, detail="Missing Stripe-Signature header")
 
     try:
@@ -75,7 +72,6 @@ async def stripe_webhook(
 
         # Get raw body
         payload = await request.body()
-        logger.info(f"Webhook payload size: {len(payload)} bytes")
 
         # Verify signature
         try:
@@ -84,18 +80,15 @@ async def stripe_webhook(
                 stripe_signature,
                 settings.stripe_webhook_secret,
             )
-            logger.info(f"Webhook signature verified successfully")
         except stripe.error.SignatureVerificationError as e:
             logger.error(f"Invalid Stripe webhook signature: {e}")
             raise HTTPException(status_code=400, detail="Invalid signature")
 
         # Handle the event
         event_type = event["type"]
-        logger.info(f"Processing Stripe webhook event: {event_type} (event_id: {event.get('id', 'unknown')})")
 
         if event_type == "checkout.session.completed":
             session_data = event["data"]["object"]
-            logger.info(f"checkout.session.completed - session_id: {session_data.get('id')}")
 
             # Extract sponsor_id and quantity from metadata
             sponsor_id = session_data.get("client_reference_id")
@@ -103,20 +96,14 @@ async def stripe_webhook(
             quantity = int(metadata.get("credit_quantity", 0))
             payment_intent_id = session_data.get("payment_intent")
 
-            logger.info(
-                f"Extracted data - sponsor_id: {sponsor_id}, quantity: {quantity}, payment_intent: {payment_intent_id}"
-            )
-
             if not sponsor_id or not quantity:
                 logger.error(
-                    f"Missing sponsor_id or quantity in webhook data. "
-                    f"sponsor_id: {sponsor_id}, quantity: {quantity}, metadata: {metadata}"
+                    f"Missing sponsor_id or quantity in webhook. sponsor_id: {sponsor_id}, quantity: {quantity}"
                 )
                 return {"status": "error", "message": "Missing required data"}
 
             # Process the successful payment
             try:
-                logger.info(f"Calling process_successful_payment for sponsor {sponsor_id}")
                 credit_service.process_successful_payment(
                     session=session,
                     sponsor_id=sponsor_id,
@@ -124,10 +111,10 @@ async def stripe_webhook(
                     payment_intent_id=payment_intent_id,
                 )
                 logger.info(
-                    f"✅ Successfully processed payment for sponsor {sponsor_id}: +{quantity} credits (payment_intent: {payment_intent_id})"
+                    f"Payment processed: sponsor {sponsor_id} +{quantity} credits (payment_intent: {payment_intent_id})"
                 )
             except Exception as e:
-                logger.error(f"❌ Failed to process payment for sponsor {sponsor_id}: {e}", exc_info=True)
+                logger.error(f"Failed to process payment for sponsor {sponsor_id}: {e}", exc_info=True)
                 return {"status": "error", "message": str(e)}
 
         elif event_type == "checkout.session.async_payment_succeeded":
