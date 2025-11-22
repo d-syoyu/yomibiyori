@@ -209,6 +209,27 @@ class Settings(BaseSettings):
         description="Timeout (seconds) for Expo Push API calls.",
         ge=1.0,
     )
+    stripe_api_key: str | None = Field(
+        default=None,
+        alias="STRIPE_API_KEY",
+        description="Stripe secret API key for payment processing.",
+    )
+    stripe_publishable_key: str | None = Field(
+        default=None,
+        alias="STRIPE_PUBLISHABLE_KEY",
+        description="Stripe publishable key for client-side.",
+    )
+    stripe_webhook_secret: str | None = Field(
+        default=None,
+        alias="STRIPE_WEBHOOK_SECRET",
+        description="Stripe webhook signing secret for verifying webhook events.",
+    )
+    sponsor_credit_price_jpy: int = Field(
+        default=10000,
+        alias="SPONSOR_CREDIT_PRICE_JPY",
+        description="Price of one sponsor credit in Japanese Yen.",
+        ge=1,
+    )
     notification_batch_size: int = Field(
         default=100,
         alias="NOTIFICATION_BATCH_SIZE",

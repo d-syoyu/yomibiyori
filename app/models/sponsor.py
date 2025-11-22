@@ -24,7 +24,7 @@ class Sponsor(Base):
     contact_email: Mapped[str | None] = mapped_column(String(320))
     official_url: Mapped[str | None] = mapped_column(Text)
     logo_url: Mapped[str | None] = mapped_column(Text)
-    plan_tier: Mapped[str] = mapped_column(String(20), default="basic")
+    credits: Mapped[int] = mapped_column(Integer, default=0)  # Available credits for slot reservations
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     text: Mapped[str | None] = mapped_column(Text)
     category: Mapped[str | None] = mapped_column(String(50))
@@ -38,6 +38,16 @@ class Sponsor(Base):
     # Relationships
     campaigns: Mapped[list["SponsorCampaign"]] = relationship(
         "SponsorCampaign",
+        back_populates="sponsor",
+        cascade="all, delete-orphan",
+    )
+    slot_reservations: Mapped[list["SponsorSlotReservation"]] = relationship(
+        "SponsorSlotReservation",
+        back_populates="sponsor",
+        cascade="all, delete-orphan",
+    )
+    credit_transactions: Mapped[list["SponsorCreditTransaction"]] = relationship(
+        "SponsorCreditTransaction",
         back_populates="sponsor",
         cascade="all, delete-orphan",
     )
@@ -81,6 +91,11 @@ class SponsorTheme(Base):
         UUID(as_uuid=False),
         ForeignKey("sponsor_campaigns.id", ondelete="CASCADE"),
     )
+    reservation_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("sponsor_slot_reservations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     date: Mapped[date] = mapped_column(Date)
     category: Mapped[str] = mapped_column(String(50))
     text_575: Mapped[str] = mapped_column(String(140))
@@ -94,3 +109,4 @@ class SponsorTheme(Base):
 
     # Relationships
     campaign: Mapped["SponsorCampaign"] = relationship("SponsorCampaign", back_populates="themes")
+    reservation: Mapped["SponsorSlotReservation"] = relationship("SponsorSlotReservation", back_populates="themes")
