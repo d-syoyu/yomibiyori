@@ -115,3 +115,120 @@ def adjust_sponsor_credits(
         "new_balance": sponsor.credits,
         "message": f"Credits adjusted by {amount}. New balance: {sponsor.credits}",
     }
+
+
+@router.post("/{sponsor_id}/credits/refund")
+def refund_stripe_payment(
+    sponsor_id: str,
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+    payment_intent_id: str = Query(..., description="Stripe Payment Intent ID to refund"),
+    amount_credits: int = Query(..., ge=1, description="Number of credits to refund"),
+    reason: str = Query(..., description="Reason for refund"),
+):
+    """Issue a Stripe refund and deduct credits (admin only).
+
+    This will:
+    1. Create a refund in Stripe for the original payment
+    2. Deduct the specified credits from the sponsor
+    3. Record the refund transaction
+    """
+    from app.core.config import get_settings
+
+    settings = get_settings()
+
+    if not settings.stripe_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe is not configured",
+        )
+
+    # Verify sponsor exists
+    sponsor = session.get(Sponsor, sponsor_id)
+    if not sponsor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sponsor not found",
+        )
+
+    # Check if sponsor has enough credits to deduct
+    if sponsor.credits < amount_credits:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sponsor only has {sponsor.credits} credits, cannot refund {amount_credits}",
+        )
+
+    try:
+        import stripe
+
+        stripe.api_key = settings.stripe_api_key
+
+        # Calculate refund amount (price per credit * number of credits)
+        credit_price_jpy = settings.sponsor_credit_price_jpy
+        refund_amount_jpy = credit_price_jpy * amount_credits
+
+        # Create refund in Stripe
+        refund = stripe.Refund.create(
+            payment_intent=payment_intent_id,
+            amount=refund_amount_jpy,  # Amount in smallest currency unit (JPY)
+            reason="requested_by_customer",
+            metadata={
+                "sponsor_id": sponsor_id,
+                "credits_refunded": amount_credits,
+                "admin_email": current_admin.email,
+                "refund_reason": reason,
+            },
+        )
+
+        logger.info(
+            f"Stripe refund created: {refund.id} for {refund_amount_jpy} JPY (payment_intent: {payment_intent_id})"
+        )
+
+    except stripe.error.InvalidRequestError as e:
+        logger.error(f"Invalid Stripe refund request: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Stripe refund failed: {str(e)}",
+        )
+    except ImportError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe library not installed",
+        )
+    except Exception as e:
+        logger.error(f"Stripe refund error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Refund processing failed: {str(e)}",
+        )
+
+    # Deduct credits
+    sponsor.credits -= amount_credits
+
+    # Create refund transaction record
+    now = datetime.now(timezone.utc)
+    transaction = SponsorCreditTransaction(
+        id=str(uuid4()),
+        sponsor_id=sponsor.id,
+        amount=-amount_credits,  # Negative amount for refund
+        transaction_type="refund",
+        stripe_payment_intent_id=payment_intent_id,
+        description=f"Stripe refund by {current_admin.email}: {reason} (Refund ID: {refund.id})",
+        created_at=now,
+    )
+    session.add(transaction)
+    session.commit()
+    session.refresh(transaction)
+
+    logger.info(
+        f"Admin {current_admin.email} refunded {amount_credits} credits for sponsor {sponsor.id} "
+        f"(Stripe refund: {refund.id}, Payment Intent: {payment_intent_id})"
+    )
+
+    return {
+        "transaction": CreditTransactionResponse.model_validate(transaction),
+        "stripe_refund_id": refund.id,
+        "refund_amount_jpy": refund_amount_jpy,
+        "new_balance": sponsor.credits,
+        "message": f"Refunded {refund_amount_jpy} JPY ({amount_credits} credits). New balance: {sponsor.credits}",
+    }
