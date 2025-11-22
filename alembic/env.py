@@ -43,7 +43,17 @@ def run_migrations_online() -> None:
 
     # Use settings.database_url directly to avoid interpolation issues with % in URL
     from sqlalchemy import create_engine
-    connectable = create_engine(settings.database_url, poolclass=pool.NullPool)
+
+    # Add SSL configuration for Supabase connections
+    connect_args = {}
+    if "supabase.co" in settings.database_url:
+        connect_args = {"sslmode": "require"}
+
+    connectable = create_engine(
+        settings.database_url,
+        poolclass=pool.NullPool,
+        connect_args=connect_args
+    )
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
