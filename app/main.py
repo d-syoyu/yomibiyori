@@ -18,17 +18,20 @@ from app.routes.api import api_router
 app = FastAPI(title="Yomibiyori API", version="1.0.0")
 
 # CORS configuration for local development and production
+# Allow both http and https for yomibiyori.com to support redirects
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8081",  # Expo web dev server
         "http://localhost:19006",  # Alternative Expo port
         "https://yomibiyori-production.up.railway.app",  # Production domain
-        "https://www.yomibiyori.com",  # Marketing/admin site
+        "https://www.yomibiyori.com",  # Marketing/admin site (https)
         "http://www.yomibiyori.com",  # Marketing/admin site (http)
+        "https://yomibiyori.com",  # Marketing/admin site without www (https)
+        "http://yomibiyori.com",  # Marketing/admin site without www (http)
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
@@ -58,6 +61,12 @@ async def clear_user_context_middleware(request: Request, call_next):
 def health_check():
     """Health check endpoint."""
     return {"status": "ok", "message": "Yomibiyori API is running"}
+
+
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handle OPTIONS requests for CORS preflight."""
+    return {"status": "ok"}
 
 
 @app.get("/reset-password")
