@@ -328,7 +328,7 @@ export default function SponsorDashboard() {
                   <div key={announcement.id}>
                     {index > 0 && <hr className="border-[var(--color-border)]" />}
                     <a
-                      href="/sponsor/announcements"
+                      href={`/sponsor/announcements/${announcement.id}`}
                       className="block space-y-2 hover:opacity-75 transition-opacity"
                     >
                       <div className="flex items-center gap-2 flex-wrap">
