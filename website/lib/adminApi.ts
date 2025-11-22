@@ -105,6 +105,7 @@ export interface CreditTransaction {
   amount: number
   transaction_type: 'purchase' | 'use' | 'refund' | 'admin_adjustment'
   description: string | null
+  stripe_payment_intent_id?: string | null
   created_at: string
 }
 
@@ -157,6 +158,33 @@ export async function adjustSponsorCredits(
 
   return authenticatedRequest<AdjustCreditsPayload>(
     `/admin/sponsors/${sponsorId}/credits/adjust?${query.toString()}`,
+    {
+      method: 'POST',
+    },
+  )
+}
+
+export interface RefundPayload {
+  transaction: CreditTransaction
+  stripe_refund_id: string
+  refund_amount_jpy: number
+  new_balance: number
+  message: string
+}
+
+export async function refundStripePayment(
+  sponsorId: string,
+  paymentIntentId: string,
+  amountCredits: number,
+  reason: string,
+): Promise<RefundPayload> {
+  const query = new URLSearchParams()
+  query.set('payment_intent_id', paymentIntentId)
+  query.set('amount_credits', String(amountCredits))
+  query.set('reason', reason)
+
+  return authenticatedRequest<RefundPayload>(
+    `/admin/sponsors/${sponsorId}/credits/refund?${query.toString()}`,
     {
       method: 'POST',
     },

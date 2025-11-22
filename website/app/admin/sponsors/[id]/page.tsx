@@ -5,6 +5,7 @@ import {
   adjustSponsorCredits,
   CreditTransaction,
   fetchSponsorCreditTransactions,
+  refundStripePayment,
 } from '@/lib/adminApi'
 import Link from 'next/link'
 
@@ -26,6 +27,10 @@ export default function AdminSponsorDetailPage({
   const [adjustAmount, setAdjustAmount] = useState<number>(0)
   const [adjustDescription, setAdjustDescription] = useState<string>('')
   const [adjusting, setAdjusting] = useState(false)
+  const [refundPaymentIntentId, setRefundPaymentIntentId] = useState<string>('')
+  const [refundAmountCredits, setRefundAmountCredits] = useState<number>(0)
+  const [refundReason, setRefundReason] = useState<string>('')
+  const [refunding, setRefunding] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const loadData = useCallback(async () => {
@@ -69,6 +74,45 @@ export default function AdminSponsorDetailPage({
       alert(err instanceof Error ? err.message : 'クレジット調整に失敗しました')
     } finally {
       setAdjusting(false)
+    }
+  }
+
+  async function handleRefund() {
+    if (!refundPaymentIntentId.trim()) {
+      alert('Payment Intent IDを入力してください')
+      return
+    }
+    if (refundAmountCredits <= 0) {
+      alert('返金クレジット数を入力してください')
+      return
+    }
+    if (!refundReason.trim()) {
+      alert('返金理由を入力してください')
+      return
+    }
+
+    if (!confirm(`${refundAmountCredits}クレジットを返金します。よろしいですか？`)) {
+      return
+    }
+
+    setRefunding(true)
+    try {
+      const result = await refundStripePayment(
+        id,
+        refundPaymentIntentId,
+        refundAmountCredits,
+        refundReason
+      )
+      alert(result.message)
+      setRefundPaymentIntentId('')
+      setRefundAmountCredits(0)
+      setRefundReason('')
+      setRefreshKey((v) => v + 1)
+    } catch (err) {
+      console.error('Failed to refund payment:', err)
+      alert(err instanceof Error ? err.message : '返金処理に失敗しました')
+    } finally {
+      setRefunding(false)
     }
   }
 
@@ -172,6 +216,74 @@ export default function AdminSponsorDetailPage({
         </div>
       </div>
 
+      {/* Stripe Refund */}
+      <div className="rounded-2xl border border-red-100 bg-white/80 p-6 space-y-4">
+        <h2 className="text-xl font-bold text-red-900">Stripe返金処理</h2>
+        <p className="text-sm text-red-700">
+          ⚠️ この操作はStripeで実際の返金を実行し、クレジットを減算します。元に戻すことはできません。
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="paymentIntentId" className="block text-sm font-medium text-amber-900 mb-2">
+              Payment Intent ID
+            </label>
+            <input
+              type="text"
+              id="paymentIntentId"
+              value={refundPaymentIntentId}
+              onChange={(e) => setRefundPaymentIntentId(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              disabled={refunding}
+              placeholder="pi_xxxxxxxxxxxxxxxxxxxxx"
+            />
+            <p className="text-xs text-amber-600 mt-1">
+              取引履歴からPayment Intent IDをコピーしてください
+            </p>
+          </div>
+          <div>
+            <label htmlFor="refundCredits" className="block text-sm font-medium text-amber-900 mb-2">
+              返金クレジット数
+            </label>
+            <input
+              type="number"
+              id="refundCredits"
+              value={refundAmountCredits}
+              onChange={(e) => setRefundAmountCredits(parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              disabled={refunding}
+              placeholder="例: 10"
+              min="1"
+            />
+          </div>
+          <div>
+            <label htmlFor="refundReason" className="block text-sm font-medium text-amber-900 mb-2">
+              返金理由
+            </label>
+            <textarea
+              id="refundReason"
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              disabled={refunding}
+              rows={3}
+              placeholder="返金の理由を詳しく入力してください"
+            />
+          </div>
+          <button
+            onClick={handleRefund}
+            disabled={
+              refunding ||
+              !refundPaymentIntentId.trim() ||
+              refundAmountCredits <= 0 ||
+              !refundReason.trim()
+            }
+            className="w-full px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {refunding ? '処理中...' : 'Stripe返金を実行'}
+          </button>
+        </div>
+      </div>
+
       {/* Transaction History */}
       <div className="rounded-2xl border border-amber-100 bg-white/80 p-6 space-y-4">
         <h2 className="text-xl font-bold text-amber-900">取引履歴（{total}件）</h2>
@@ -187,6 +299,7 @@ export default function AdminSponsorDetailPage({
                   <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">日時</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">種類</th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-amber-700">増減</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">Payment Intent ID</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">詳細</th>
                 </tr>
               </thead>
@@ -209,6 +322,22 @@ export default function AdminSponsorDetailPage({
                     </td>
                     <td className={`py-3 px-4 text-sm font-bold text-right ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {transaction.amount > 0 ? '+' : ''}{transaction.amount}
+                    </td>
+                    <td className="py-3 px-4 text-xs font-mono text-amber-600">
+                      {transaction.stripe_payment_intent_id ? (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(transaction.stripe_payment_intent_id!)
+                            alert('Payment Intent IDをコピーしました')
+                          }}
+                          className="hover:text-amber-800 underline"
+                          title="クリックしてコピー"
+                        >
+                          {transaction.stripe_payment_intent_id}
+                        </button>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td className="py-3 px-4 text-sm text-amber-700">
                       {transaction.description || '—'}
