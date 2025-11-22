@@ -18,7 +18,7 @@ from app.schemas.credit_purchase import (
 from app.services import credit_purchase as credit_service
 
 settings = get_settings()
-router = APIRouter(prefix="/credits", tags=["Sponsor Credits"])
+router = APIRouter(tags=["Sponsor Credits"])
 
 
 @router.post("/purchase", response_model=CreditPurchaseSessionResponse, status_code=201)
