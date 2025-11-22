@@ -306,12 +306,21 @@ def create_sponsor_theme(
     # Verify campaign ownership
     campaign = session.get(SponsorCampaign, payload.campaign_id)
     if not campaign:
+        logger.error(f"Campaign {payload.campaign_id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Campaign not found",
         )
 
+    logger.info(
+        f"Checking campaign ownership: campaign.sponsor_id={campaign.sponsor_id}, "
+        f"current_user.id={current_user.id}, current_user.role={current_user.role}"
+    )
+
     if campaign.sponsor_id != current_user.id and current_user.role != "admin":
+        logger.warning(
+            f"Permission denied: campaign.sponsor_id={campaign.sponsor_id} != current_user.id={current_user.id}"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to add themes to this campaign",
