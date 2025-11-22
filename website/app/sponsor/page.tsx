@@ -231,18 +231,18 @@ export default function SponsorDashboard() {
         </header>
 
         {/* Credit Balance Banner */}
-        <section className="card bg-gradient-to-br from-[var(--color-igusa)] to-[var(--color-igusa-light)] text-white">
+        <section className="card border-2 border-[var(--color-igusa)] bg-gradient-to-br from-[var(--color-washi)] to-white">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-sm opacity-90">利用可能クレジット</p>
-              <p className="text-4xl font-bold font-serif">{stats.credits}</p>
-              <p className="text-xs opacity-75">1クレジット = お題1件の投稿</p>
+              <p className="text-sm font-medium text-[var(--color-igusa)]">利用可能クレジット</p>
+              <p className="text-5xl font-bold font-serif text-[var(--color-igusa)]">{stats.credits}</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">1クレジット = お題1件の投稿</p>
             </div>
             <a
               href="/sponsor/credits"
-              className="px-6 py-2.5 bg-white text-[var(--color-igusa)] rounded-lg font-bold hover:bg-opacity-90 transition-colors text-center shadow-md self-start md:self-center"
+              className="px-8 py-3 bg-[var(--color-igusa)] text-white rounded-lg font-bold hover:bg-[var(--color-igusa-light)] transition-all text-center shadow-lg hover:shadow-xl transform hover:scale-105 self-start md:self-center"
             >
-              クレジット購入
+              💳 クレジット購入
             </a>
           </div>
         </section>
