@@ -5,9 +5,16 @@ export async function GET(request: Request) {
     try {
         // 1. Auth Check
         const supabase = await createClient()
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        console.log('[Insights API] Auth check:', {
+            hasSession: !!session,
+            sessionError: sessionError?.message,
+            userId: session?.user?.id
+        })
 
         if (!session) {
+            console.warn('[Insights API] No session found, returning 401')
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 

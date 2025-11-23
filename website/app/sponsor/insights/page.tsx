@@ -120,7 +120,10 @@ export default function SponsorInsightsPage() {
 
             try {
                 console.log('[Insights] Fetching data from API...')
-                const res = await fetch('/api/sponsor/insights')
+                const res = await fetch('/api/sponsor/insights', {
+                    credentials: 'include', // クッキーを含める
+                    cache: 'no-store' // キャッシュを無効化
+                })
                 console.log('[Insights] API response status:', res.status, res.statusText)
 
                 const apiResult = await res.json()
