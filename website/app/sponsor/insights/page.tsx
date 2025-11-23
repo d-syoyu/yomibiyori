@@ -62,13 +62,12 @@ export default function SponsorInsightsPage() {
 
             const campaignIds = campaigns.map(c => c.id)
 
-            // 承認済み（かつ配信対象）のスポンサーお題を取得
+            // 承認済みスポンサーお題のIDリストを取得
             const { data: sponsorThemes, error: sponsorThemesError } = await supabase
                 .from('sponsor_themes')
-                .select('id, text_575, date')
+                .select('id')
                 .in('campaign_id', campaignIds)
                 .in('status', ['approved', 'published'])
-                .order('date', { ascending: false })
 
             if (sponsorThemesError) {
                 throw sponsorThemesError
@@ -79,40 +78,31 @@ export default function SponsorInsightsPage() {
                 return
             }
 
-            // themesテーブルに登録され、実際に配信対象になっているものを紐付ける
-            const sponsorThemeIds = sponsorThemes.map(theme => theme.id)
-            const { data: registeredThemes, error: themeLookupError } = await supabase
-                .from('themes')
-                .select('id, sponsor_theme_id, text, date')
-                .in('sponsor_theme_id', sponsorThemeIds)
+            const sponsorThemeIds = sponsorThemes.map(st => st.id)
 
-            if (themeLookupError) {
-                throw themeLookupError
+            // themesテーブルから、sponsor_theme_idが一致するお題を取得
+            // または、sponsored=trueのお題を取得（承認後にコピーされたお題に対応）
+            const { data: distributedThemes, error: themesError } = await supabase
+                .from('themes')
+                .select('id, text, date, sponsor_theme_id')
+                .or(`sponsor_theme_id.in.(${sponsorThemeIds.join(',')}),and(sponsored.eq.true,sponsor_theme_id.in.(${sponsorThemeIds.join(',')}))`)
+                .order('date', { ascending: false })
+
+            if (themesError) {
+                throw themesError
             }
 
-            const themeMap = new Map(
-                (registeredThemes || []).map(theme => [theme.sponsor_theme_id, theme])
-            )
-
-            const distributedThemes = sponsorThemes
-                .map(theme => {
-                    const linkedTheme = themeMap.get(theme.id)
-                    if (!linkedTheme) return null
-                    return {
-                        id: linkedTheme.id,
-                        text_575: linkedTheme.text || theme.text_575,
-                        date: linkedTheme.date || theme.date,
-                    }
-                })
-                .filter(
-                    (theme): theme is Pick<ThemeInsight, 'id' | 'text_575' | 'date'> =>
-                        Boolean(theme)
-                )
-
-            if (distributedThemes.length === 0) {
+            if (!distributedThemes || distributedThemes.length === 0) {
                 setThemes([])
                 return
             }
+
+            // text_575 という名前に変換（PostHogとの整合性のため）
+            const formattedThemes = distributedThemes.map(theme => ({
+                id: theme.id,
+                text_575: theme.text,
+                date: theme.date
+            }))
 
             // 2. Fetch metrics from API (PostHog)
             let insightsData: ThemeInsight[] = []
@@ -162,7 +152,7 @@ export default function SponsorInsightsPage() {
 
                     console.log('[Insights] Metrics map:', Object.fromEntries(metricsMap))
 
-                    insightsData = distributedThemes.map(theme => {
+                    insightsData = formattedThemes.map(theme => {
                         const metrics = metricsMap.get(theme.id)
                         const impressions = metrics?.impressions || 0
                         const submissions = metrics?.submissions || 0
@@ -189,7 +179,7 @@ export default function SponsorInsightsPage() {
 
             if (usedMockData) {
                 console.log('Using mock data for insights')
-                insightsData = distributedThemes.map(theme => {
+                insightsData = formattedThemes.map(theme => {
                     const impressions = Math.floor(Math.random() * 5000) + 500
                     const submissions = Math.floor(impressions * (Math.random() * 0.1 + 0.05))
                     const likes = Math.floor(submissions * (Math.random() * 0.5 + 0.2))
