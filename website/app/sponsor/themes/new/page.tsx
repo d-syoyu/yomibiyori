@@ -204,7 +204,9 @@ export default function NewThemePage() {
       {credits < 1 && (
         <div className="card bg-amber-50 border-amber-200">
           <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-amber-600">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
             <div className="flex-1">
               <h3 className="font-bold text-amber-900 mb-1">クレジットが不足しています</h3>
               <p className="text-sm text-amber-800 mb-3">
@@ -397,7 +399,9 @@ export default function NewThemePage() {
 
       <div className="card bg-[var(--color-washi)]/50">
         <h3 className="font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
-          <span className="text-xl">📝</span> 投稿のヒント
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-[var(--color-igusa)]">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+          </svg> 投稿のヒント
         </h3>
         <ul className="text-sm text-[var(--color-text-secondary)] space-y-2">
           <li>• 上の句は3〜140文字以内で入力してください</li>

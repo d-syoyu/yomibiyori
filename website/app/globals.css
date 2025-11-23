@@ -221,3 +221,21 @@ h6 {
 .animate-fade-in {
   animation: fadeIn 0.8s ease-out forwards;
 }
+
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-10px, 10px); }
+}
+
+@keyframes float-slower {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(10px, -10px); }
+}
+
+.animate-float-slow {
+  animation: float-slow 15s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slower 20s ease-in-out infinite;
+}

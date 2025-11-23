@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import BackgroundDecoration from "@/components/BackgroundDecoration";
 
 export default function Home() {
   return (
-    <div className="page-wrapper overflow-hidden">
-      <main className="flex-grow">
+    <div className="page-wrapper overflow-hidden relative">
+      <BackgroundDecoration />
+      <main className="flex-grow relative z-10">
         {/* Hero Section */}
         <section className="relative pt-20 pb-32 lg:pt-32 overflow-hidden">
           <div className="page-container grid lg:grid-cols-2 gap-12 items-center relative z-10">
@@ -74,7 +76,11 @@ export default function Home() {
                 />
               </div>
               <div className="order-1 lg:order-2 space-y-6 text-center lg:text-left">
-                <div className="w-12 h-12 rounded-2xl bg-[#F5F3ED] text-[#6B7B4F] flex items-center justify-center text-2xl mx-auto lg:mx-0">🎋</div>
+                <div className="w-12 h-12 rounded-2xl bg-[#F5F3ED] text-[#6B7B4F] flex items-center justify-center mx-auto lg:mx-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                </div>
                 <h2 className="text-3xl font-bold text-[var(--color-igusa)]">毎朝届く、季節のお題</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
                   恋愛、季節、日常、ユーモア。<br />
@@ -87,7 +93,11 @@ export default function Home() {
             {/* Feature 2 */}
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-6 text-center lg:text-left">
-                <div className="w-12 h-12 rounded-2xl bg-[#FFE4E8] text-[#FFB7C5] flex items-center justify-center text-2xl mx-auto lg:mx-0">📱</div>
+                <div className="w-12 h-12 rounded-2xl bg-[#FFE4E8] text-[#FFB7C5] flex items-center justify-center mx-auto lg:mx-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                  </svg>
+                </div>
                 <h2 className="text-3xl font-bold text-[var(--color-igusa)]">縦書きで綴る、日本語の美</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
                   古来より続く「縦書き」の心地よさを、<br />
@@ -120,7 +130,11 @@ export default function Home() {
                 />
               </div>
               <div className="order-1 lg:order-2 space-y-6 text-center lg:text-left">
-                <div className="w-12 h-12 rounded-2xl bg-[#F0E68C]/20 text-[#D4AF37] flex items-center justify-center text-2xl mx-auto lg:mx-0">✨</div>
+                <div className="w-12 h-12 rounded-2xl bg-[#F0E68C]/20 text-[#D4AF37] flex items-center justify-center mx-auto lg:mx-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                  </svg>
+                </div>
                 <h2 className="text-3xl font-bold text-[var(--color-igusa)]">感性を共有する</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
                   他のユーザーが詠んだ歌に触れる。<br />

@@ -8,6 +8,7 @@ import {
   createSponsorProfile,
   fetchSponsorProfile,
 } from '@/lib/sponsorApi'
+import BackgroundDecoration from '@/components/BackgroundDecoration'
 
 export default function SponsorsPage() {
   const supabase = useMemo(() => getSupabase(), [])
@@ -94,8 +95,9 @@ export default function SponsorsPage() {
   }
 
   return (
-    <div className="page-wrapper">
-      <main className="page-container space-y-12 md:space-y-24 px-4 pb-12">
+    <div className="page-wrapper relative overflow-hidden">
+      <BackgroundDecoration />
+      <main className="page-container space-y-12 md:space-y-24 px-4 pb-12 relative z-10">
         {/* Hero Section */}
         <header className="text-center space-y-4 md:space-y-6 pt-8 md:pt-12">
           <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
@@ -115,8 +117,10 @@ export default function SponsorsPage() {
         <section className="grid md:grid-cols-2 gap-6 md:gap-12">
           {/* Topic Management */}
           <div className="card space-y-6">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--color-washi-dark)] text-[var(--color-igusa)] flex items-center justify-center text-2xl">
-              📝
+            <div className="w-12 h-12 rounded-2xl bg-[var(--color-washi-dark)] text-[var(--color-igusa)] flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
             </div>
             <h3 className="text-xl md:text-2xl font-bold text-[var(--color-text-primary)]">直感的なお題管理</h3>
             <p className="text-[var(--color-text-secondary)]">
@@ -141,8 +145,10 @@ export default function SponsorsPage() {
 
           {/* Insights */}
           <div className="card space-y-6">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--color-sakura-pale)] text-[var(--color-sakura)] flex items-center justify-center text-2xl">
-              📊
+            <div className="w-12 h-12 rounded-2xl bg-[var(--color-sakura-pale)] text-[var(--color-sakura)] flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+              </svg>
             </div>
             <h3 className="text-xl md:text-2xl font-bold text-[var(--color-text-primary)]">詳細なインサイト</h3>
             <p className="text-[var(--color-text-secondary)]">

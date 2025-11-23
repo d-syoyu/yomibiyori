@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import BackgroundDecoration from '@/components/BackgroundDecoration'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -57,7 +58,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper relative overflow-hidden">
+      <BackgroundDecoration />
       <div className="page-container flex justify-center">
         <div className="content-card w-full max-w-md">
           <div className="text-center space-y-2 mb-6">

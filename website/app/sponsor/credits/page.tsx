@@ -158,7 +158,9 @@ export default function SponsorCreditsPage() {
                 href="/sponsor/themes/new"
                 className="px-8 py-3 bg-[var(--color-igusa)] text-white rounded-lg font-bold text-center hover:bg-[var(--color-igusa-light)] transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                ✨ お題を投稿
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-1 inline-block">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg> お題を投稿
               </a>
               <p className="text-xs text-center text-[var(--color-text-secondary)]">
                 クレジットを消費してお題を投稿
@@ -171,7 +173,9 @@ export default function SponsorCreditsPage() {
         <section className="card space-y-6">
           <div className="space-y-2">
             <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <span className="text-2xl">💳</span> クレジットを購入
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-[var(--color-igusa)]">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+              </svg> クレジットを購入
             </h2>
             <p className="text-sm text-[var(--color-text-secondary)]">
               1クレジット = ¥10,000 (税込)
@@ -208,12 +212,24 @@ export default function SponsorCreditsPage() {
               disabled={purchasing}
               className="w-full px-8 py-3 bg-[var(--color-igusa)] text-white rounded-lg font-bold hover:bg-[var(--color-igusa-light)] transition-all shadow-lg hover:shadow-xl transform hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              {purchasing ? '処理中...' : '💳 Stripeで購入'}
+              {purchasing ? '処理中...' : (
+                <span className="flex items-center justify-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                  </svg>
+                  Stripeで購入
+                </span>
+              )}
             </button>
           </div>
 
           <div className="bg-[var(--color-washi)] p-4 rounded-lg space-y-2 text-sm">
-            <p className="font-bold text-[var(--color-text-primary)]">💡 購入について</p>
+            <p className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-yellow-500">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+              </svg>
+              購入について
+            </p>
             <ul className="list-disc list-inside space-y-1 text-[var(--color-text-secondary)]">
               <li>お支払いはStripeの安全な決済システムを利用します</li>
               <li>クレジットカードでのお支払いが可能です</li>
@@ -226,7 +242,9 @@ export default function SponsorCreditsPage() {
         {/* Transaction History */}
         <section className="card space-y-6">
           <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-            <span className="text-2xl">📊</span> 取引履歴
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-[var(--color-igusa)]">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" />
+            </svg> 取引履歴
           </h2>
 
           {transactions.length === 0 ? (
