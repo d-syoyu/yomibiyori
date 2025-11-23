@@ -46,28 +46,71 @@ export default function SponsorInsightsPage() {
             const { data: { session } } = await supabase.auth.getSession()
             if (!session) return
 
-            const { data: campaigns } = await supabase
+            const { data: campaigns, error: campaignsError } = await supabase
                 .from('sponsor_campaigns')
                 .select('id')
                 .eq('sponsor_id', session.user.id)
 
+            if (campaignsError) {
+                throw campaignsError
+            }
+
             if (!campaigns || campaigns.length === 0) {
-                setLoading(false)
+                setThemes([])
                 return
             }
 
             const campaignIds = campaigns.map(c => c.id)
 
-            const { data: approvedThemes } = await supabase
+            // 承認済み（かつ配信対象）のスポンサーお題を取得
+            const { data: sponsorThemes, error: sponsorThemesError } = await supabase
                 .from('sponsor_themes')
                 .select('id, text_575, date')
                 .in('campaign_id', campaignIds)
-                .eq('status', 'published')
+                .in('status', ['approved', 'published'])
                 .order('date', { ascending: false })
 
-            if (!approvedThemes || approvedThemes.length === 0) {
+            if (sponsorThemesError) {
+                throw sponsorThemesError
+            }
+
+            if (!sponsorThemes || sponsorThemes.length === 0) {
                 setThemes([])
-                setLoading(false)
+                return
+            }
+
+            // themesテーブルに登録され、実際に配信対象になっているものを紐付ける
+            const sponsorThemeIds = sponsorThemes.map(theme => theme.id)
+            const { data: registeredThemes, error: themeLookupError } = await supabase
+                .from('themes')
+                .select('id, sponsor_theme_id, text, date')
+                .in('sponsor_theme_id', sponsorThemeIds)
+
+            if (themeLookupError) {
+                throw themeLookupError
+            }
+
+            const themeMap = new Map(
+                (registeredThemes || []).map(theme => [theme.sponsor_theme_id, theme])
+            )
+
+            const distributedThemes = sponsorThemes
+                .map(theme => {
+                    const linkedTheme = themeMap.get(theme.id)
+                    if (!linkedTheme) return null
+                    return {
+                        id: linkedTheme.id,
+                        text_575: linkedTheme.text || theme.text_575,
+                        date: linkedTheme.date || theme.date,
+                    }
+                })
+                .filter(
+                    (theme): theme is Pick<ThemeInsight, 'id' | 'text_575' | 'date'> =>
+                        Boolean(theme)
+                )
+
+            if (distributedThemes.length === 0) {
+                setThemes([])
                 return
             }
 
@@ -89,7 +132,7 @@ export default function SponsorInsightsPage() {
                         apiResult.results.map((r: any) => [r.theme_id, { impressions: r.impressions || 0, submissions: r.submissions || 0 }])
                     )
 
-                    insightsData = approvedThemes.map(theme => {
+                    insightsData = distributedThemes.map(theme => {
                         const metrics = metricsMap.get(theme.id)
                         const impressions = metrics?.impressions || 0
                         const submissions = metrics?.submissions || 0
@@ -115,7 +158,7 @@ export default function SponsorInsightsPage() {
 
             if (usedMockData) {
                 console.log('Using mock data for insights')
-                insightsData = approvedThemes.map(theme => {
+                insightsData = distributedThemes.map(theme => {
                     const impressions = Math.floor(Math.random() * 5000) + 500
                     const submissions = Math.floor(impressions * (Math.random() * 0.1 + 0.05))
                     const likes = Math.floor(submissions * (Math.random() * 0.5 + 0.2))

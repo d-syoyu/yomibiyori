@@ -411,7 +411,7 @@ def create_sponsor_theme(
 
     theme = SponsorTheme(
         id=str(uuid4()),
-        campaign_id=payload.campaign_id,
+        campaign_id=campaign.id,
         date=payload.date,
         category=payload.category,
         text_575=payload.text_575,
