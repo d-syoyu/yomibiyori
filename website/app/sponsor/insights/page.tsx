@@ -353,7 +353,7 @@ export default function SponsorInsightsPage() {
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
                     <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
                         総表示回数
-                        <InfoTooltip text="ユーザーがお題を閲覧した回数の合計です。アプリ内でお題画面が表示された回数を示します。" />
+                        <InfoTooltip text="ユーザーがお題を閲覧した回数の合計です。アプリ内でお題画面が表示された回数を示します。" position="bottom" />
                     </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.total_impressions.toLocaleString()}
@@ -363,7 +363,7 @@ export default function SponsorInsightsPage() {
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
                     <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
                         総投稿数
-                        <InfoTooltip text="ユーザーがお題に対して下の句を投稿した回数の合計です。実際にコンテンツが作成された回数を示します。" />
+                        <InfoTooltip text="ユーザーがお題に対して下の句を投稿した回数の合計です。実際にコンテンツが作成された回数を示します。" position="bottom" />
                     </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.total_submissions.toLocaleString()}
@@ -373,7 +373,7 @@ export default function SponsorInsightsPage() {
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
                     <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
                         平均エンゲージメント率
-                        <InfoTooltip text="表示回数に対する投稿数の割合です。お題を見たユーザーのうち、実際に下の句を投稿した割合を示します。" />
+                        <InfoTooltip text="表示回数に対する投稿数の割合です。お題を見たユーザーのうち、実際に下の句を投稿した割合を示します。" position="bottom" />
                     </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.avg_engagement_rate.toFixed(1)}
