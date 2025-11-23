@@ -73,9 +73,8 @@ export async function GET(request: Request) {
             breakdown_type: 'event',
             date_from: 'all', // Get all time data
             display: 'ActionsTable', // Get tabular data
-            properties: JSON.stringify([
-                { key: 'is_sample_account', value: ['false'], operator: 'exact', type: 'event' }
-            ]),
+            // Note: is_sample_account filter removed because it excludes events without the property
+            // (i.e., all events before the property was added). We'll filter in post-processing instead.
         })
 
         const response = await fetch(
