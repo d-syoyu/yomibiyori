@@ -48,6 +48,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login via Supabase
+      description: Authenticate the user via Supabase and return a session token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: User authenticated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Supabase rejected the login request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Supabase service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/oauth/google:
     get:
       tags: [auth]
@@ -185,6 +215,23 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [auth]
+      summary: Delete user account
+      description: Delete the authenticated user's account and all associated data.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Account deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Profile not found locally
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/profile/sync:
     post:
       tags: [auth]
@@ -210,6 +257,31 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '503':
           description: Supabase service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh access token
+      description: >
+        Exchange a refresh_token for a new access token (and optional refresh token).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Refreshed session token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionToken'
+        '400':
+          description: Invalid refresh token
           content:
             application/json:
               schema:
@@ -312,6 +384,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /notifications/tokens:
+    post:
+      tags: [notifications]
+      summary: Register Expo push token
+      description: Register or update an Expo push notification token for the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTokenRequest'
+      responses:
+        '201':
+          description: Token registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTokenResponse'
+        '400':
+          description: Invalid token payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /works:
     post:
       tags: [works]
@@ -519,6 +619,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /themes:
+    get:
+      tags: [themes]
+      summary: List themes
+      description: >
+        Return themes ordered by date descending with optional category filter.
+        Date-based filtering is not supported; unknown query parameters are ignored by the server.
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Category filter (e.g., '����', '�G��', '����', '���[���A')
+          schema:
+            type: string
+          example: ����
+        - name: limit
+          in: query
+          required: false
+          description: Number of themes to return (1-100)
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          required: false
+          description: Number of themes to skip before returning results
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Theme list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeListResponse'
   /themes/today:
     get:
       tags: [themes]
@@ -586,6 +725,667 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /sponsor/profile:
+    get:
+      tags: [sponsor]
+      summary: Get sponsor profile
+      description: Return the sponsor profile associated with the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sponsor profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Sponsor profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [sponsor]
+      summary: Create sponsor profile
+      description: Create a sponsor profile for the authenticated user and set their role to sponsor.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SponsorCreate'
+      responses:
+        '201':
+          description: Sponsor profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Sponsor profile already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [sponsor]
+      summary: Update sponsor profile
+      description: Update sponsor profile fields such as company name or contact email.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SponsorUpdate'
+      responses:
+        '200':
+          description: Sponsor profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Sponsor profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /sponsor/campaigns:
+    post:
+      tags: [sponsor]
+      summary: Create sponsor campaign
+      description: Create a new sponsor campaign for the authenticated sponsor.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignCreate'
+      responses:
+        '201':
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sponsor profile pending verification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [sponsor]
+      summary: List sponsor campaigns
+      description: List campaigns for the authenticated sponsor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status_filter
+          in: query
+          required: false
+          description: Filter by campaign status
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of campaigns to return (1-200)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          description: Number of campaigns to skip before returning results
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /sponsor/campaigns/{campaign_id}:
+    get:
+      tags: [sponsor]
+      summary: Get sponsor campaign
+      description: Return a specific campaign owned by the authenticated sponsor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          description: Campaign identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden for this sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [sponsor]
+      summary: Update sponsor campaign
+      description: Update mutable fields on a sponsor campaign.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          description: Campaign identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignUpdate'
+      responses:
+        '200':
+          description: Campaign updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden for this sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [sponsor]
+      summary: Delete sponsor campaign
+      description: Delete a campaign owned by the authenticated sponsor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          description: Campaign identifier
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Campaign deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden for this sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /sponsor/themes:
+    post:
+      tags: [sponsor]
+      summary: Submit sponsor theme
+      description: Submit a sponsor theme for review. Consumes 1 sponsor credit.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SponsorThemeCreate'
+      responses:
+        '201':
+          description: Sponsor theme created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorThemeResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Insufficient sponsor credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden for this sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate submission for the date/category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [sponsor]
+      summary: List sponsor themes
+      description: List themes submitted by the authenticated sponsor, with optional filters.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaign_id
+          in: query
+          required: false
+          description: Filter by campaign ID
+          schema:
+            type: string
+        - name: status_filter
+          in: query
+          required: false
+          description: Filter by status
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of themes to return (1-200)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          description: Number of themes to skip before returning results
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Sponsor themes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorThemeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /sponsor/themes/{theme_id}:
+    get:
+      tags: [sponsor]
+      summary: Get sponsor theme
+      description: Retrieve a specific sponsor theme owned by the authenticated sponsor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          description: Sponsor theme identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sponsor theme
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorThemeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden for this sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Sponsor theme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [sponsor]
+      summary: Update sponsor theme
+      description: Update a sponsor theme prior to approval.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          description: Sponsor theme identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SponsorThemeUpdate'
+      responses:
+        '200':
+          description: Sponsor theme updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorThemeResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden for this sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Sponsor theme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [sponsor]
+      summary: Delete sponsor theme
+      description: Delete a sponsor theme that belongs to the authenticated sponsor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          description: Sponsor theme identifier
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Sponsor theme deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden for this sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Sponsor theme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /sponsor/credits/transactions:
+    get:
+      tags: [sponsor]
+      summary: List sponsor credit transactions
+      description: Return all credit transactions for the authenticated sponsor (backward compatibility endpoint).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Credit transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditTransaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /credit-purchase/purchase:
+    post:
+      tags: [sponsor]
+      summary: Create Stripe Checkout session for credits
+      description: Create a Stripe Checkout session to purchase sponsor credits.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditPurchaseCreate'
+      responses:
+        '201':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditPurchaseSessionResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /credit-purchase/transactions:
+    get:
+      tags: [sponsor]
+      summary: List sponsor credit transactions (primary)
+      description: Return all credit transactions for the authenticated sponsor.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Credit transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditTransaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/review/themes:
+    get:
+      tags: [admin]
+      summary: List sponsor themes pending review
+      description: List sponsor themes for admin review with optional status filter.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status_filter
+          in: query
+          required: false
+          description: Filter by status (e.g., pending/approved/rejected/published)
+          schema:
+            type: string
+            default: pending
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of themes to return (1-200)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          description: Number of themes to skip before returning results
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Sponsor themes for review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorThemeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/review/themes/{theme_id}/approve:
+    post:
+      tags: [admin]
+      summary: Approve sponsor theme
+      description: Approve a sponsor theme and register it for distribution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          description: Sponsor theme identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Theme approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeReviewResponse'
+        '400':
+          description: Theme already approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Theme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/review/themes/{theme_id}/reject:
+    post:
+      tags: [admin]
+      summary: Reject sponsor theme
+      description: Reject a sponsor theme with a rejection reason.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          description: Sponsor theme identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThemeReviewRejectRequest'
+      responses:
+        '200':
+          description: Theme rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeReviewResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Theme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /sponsor/themes/calendar:
     get:
       tags: [sponsor]
@@ -620,6 +1420,275 @@ paths:
                 $ref: '#/components/schemas/ThemeCalendarResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /admin/sponsors:
+    get:
+      tags: [admin]
+      summary: List sponsors (admin)
+      description: List sponsor profiles for administrative review with optional filters.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: verified
+          in: query
+          required: false
+          description: Filter by verification status
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          required: false
+          description: Search by company name or email (case-insensitive)
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of sponsors to return (1-200)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          description: Number of sponsors to skip before returning results
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Sponsor list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/sponsors/{sponsor_id}:
+    get:
+      tags: [admin]
+      summary: Get sponsor profile (admin)
+      description: Return sponsor profile details for the specified sponsor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sponsor_id
+          in: path
+          required: true
+          description: Sponsor identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sponsor profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Sponsor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/sponsors/{sponsor_id}/verification:
+    patch:
+      tags: [admin]
+      summary: Update sponsor verification status
+      description: Approve or revoke sponsor verification.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sponsor_id
+          in: path
+          required: true
+          description: Sponsor identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SponsorVerificationRequest'
+      responses:
+        '200':
+          description: Updated sponsor profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Sponsor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/sponsors/{sponsor_id}/transactions:
+    get:
+      tags: [admin]
+      summary: List sponsor credit transactions (admin)
+      description: Return credit transactions for a sponsor, including totals.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sponsor_id
+          in: path
+          required: true
+          description: Sponsor identifier
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of transactions to return (1-500)
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 500
+        - name: offset
+          in: query
+          required: false
+          description: Number of transactions to skip before returning results
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Sponsor credit transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCreditTransactionsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Sponsor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/sponsors/{sponsor_id}/credits/adjust:
+    post:
+      tags: [admin]
+      summary: Adjust sponsor credits (admin)
+      description: Add or remove credits for a sponsor with an admin-adjustment transaction.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sponsor_id
+          in: path
+          required: true
+          description: Sponsor identifier
+          schema:
+            type: string
+        - name: amount
+          in: query
+          required: true
+          description: Amount to adjust (positive or negative)
+          schema:
+            type: integer
+        - name: description
+          in: query
+          required: true
+          description: Reason for the adjustment
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Credits adjusted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdjustCreditsResponse'
+        '400':
+          description: Invalid request or would result in negative balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Sponsor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/sponsors/{sponsor_id}/credits/refund:
+    post:
+      tags: [admin]
+      summary: Refund sponsor payment (admin)
+      description: Create a Stripe refund and deduct credits from the sponsor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sponsor_id
+          in: path
+          required: true
+          description: Sponsor identifier
+          schema:
+            type: string
+        - name: payment_intent_id
+          in: query
+          required: true
+          description: Stripe Payment Intent ID to refund
+          schema:
+            type: string
+        - name: amount_credits
+          in: query
+          required: true
+          description: Number of credits to refund
+          schema:
+            type: integer
+            minimum: 1
+        - name: reason
+          in: query
+          required: true
+          description: Reason for refund
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundResponse'
+        '400':
+          description: Invalid request or insufficient credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Sponsor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Stripe not configured or library missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -1006,6 +2075,19 @@ components:
           type: string
           format: date-time
           description: Timestamp when theme was created
+    ThemeListResponse:
+      type: object
+      required:
+        - themes
+        - count
+      properties:
+        themes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThemeResponse'
+        count:
+          type: integer
+          description: Number of themes returned in this response (page size), not total dataset size
     ErrorResponse:
       type: object
       properties:
@@ -1052,3 +2134,495 @@ components:
           type: string
           format: date
           description: End of the calendar range
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+    LoginResponse:
+      type: object
+      required:
+        - user_id
+        - email
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+        session:
+          $ref: '#/components/schemas/SessionToken'
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+    NotificationTokenRequest:
+      type: object
+      required:
+        - expo_push_token
+      properties:
+        expo_push_token:
+          type: string
+          minLength: 10
+          maxLength: 255
+          description: ExponentPushToken[...] value from Expo SDK
+        device_id:
+          type: string
+          nullable: true
+        platform:
+          type: string
+          nullable: true
+        app_version:
+          type: string
+          nullable: true
+    NotificationTokenResponse:
+      type: object
+      required:
+        - id
+        - expo_push_token
+        - is_active
+        - last_registered_at
+      properties:
+        id:
+          type: string
+        expo_push_token:
+          type: string
+        device_id:
+          type: string
+          nullable: true
+        platform:
+          type: string
+          nullable: true
+        app_version:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        last_registered_at:
+          type: string
+          format: date-time
+    SponsorCreate:
+      type: object
+      required:
+        - company_name
+      properties:
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+          nullable: true
+        official_url:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+    SponsorUpdate:
+      type: object
+      properties:
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+          nullable: true
+        official_url:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+    SponsorResponse:
+      type: object
+      required:
+        - id
+        - company_name
+        - verified
+        - credits
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        company_name:
+          type: string
+        contact_email:
+          type: string
+          format: email
+          nullable: true
+        official_url:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        verified:
+          type: boolean
+        credits:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SponsorListResponse:
+      type: object
+      required:
+        - sponsors
+        - total
+      properties:
+        sponsors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SponsorResponse'
+        total:
+          type: integer
+    CampaignTargeting:
+      type: object
+      properties:
+        region:
+          type: array
+          items:
+            type: string
+        age_band:
+          type: array
+          items:
+            type: string
+        os:
+          type: array
+          items:
+            type: string
+    CampaignCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        budget:
+          type: number
+          nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        targeting:
+          $ref: '#/components/schemas/CampaignTargeting'
+    CampaignUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: string
+          pattern: '^(draft|active|paused|completed|cancelled)$'
+        budget:
+          type: number
+          nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        targeting:
+          $ref: '#/components/schemas/CampaignTargeting'
+    CampaignResponse:
+      type: object
+      required:
+        - id
+        - sponsor_id
+        - name
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        sponsor_id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        budget:
+          type: number
+          nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        targeting:
+          $ref: '#/components/schemas/CampaignTargeting'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CampaignListResponse:
+      type: object
+      required:
+        - campaigns
+        - total
+      properties:
+        campaigns:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignResponse'
+        total:
+          type: integer
+    SponsorThemeCreate:
+      type: object
+      required:
+        - date
+        - category
+        - text_575
+      properties:
+        campaign_id:
+          type: string
+          nullable: true
+          description: Optional campaign ID (defaults to the active campaign)
+        date:
+          type: string
+          format: date
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+        text_575:
+          type: string
+          minLength: 3
+          maxLength: 140
+          description: Upper verse (5-7-5) text
+        priority:
+          type: integer
+          default: 0
+    SponsorThemeUpdate:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+        text_575:
+          type: string
+          minLength: 3
+          maxLength: 140
+        priority:
+          type: integer
+    SponsorThemeResponse:
+      type: object
+      required:
+        - id
+        - campaign_id
+        - date
+        - category
+        - text_575
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        campaign_id:
+          type: string
+        date:
+          type: string
+          format: date
+        category:
+          type: string
+        text_575:
+          type: string
+        priority:
+          type: integer
+        status:
+          type: string
+        rejection_reason:
+          type: string
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        approved_by:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SponsorThemeListResponse:
+      type: object
+      required:
+        - themes
+        - total
+      properties:
+        themes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SponsorThemeResponse'
+        total:
+          type: integer
+    SponsorVerificationRequest:
+      type: object
+      required:
+        - verified
+      properties:
+        verified:
+          type: boolean
+    CreditTransaction:
+      type: object
+      required:
+        - id
+        - sponsor_id
+        - amount
+        - transaction_type
+        - created_at
+      properties:
+        id:
+          type: string
+        sponsor_id:
+          type: string
+        amount:
+          type: integer
+        transaction_type:
+          type: string
+          description: purchase/use/refund/admin_adjustment
+        description:
+          type: string
+          nullable: true
+        stripe_payment_intent_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    AdminCreditTransactionsResponse:
+      type: object
+      required:
+        - transactions
+        - total
+        - sponsor
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditTransaction'
+        total:
+          type: integer
+        sponsor:
+          type: object
+          required:
+            - id
+            - company_name
+            - current_credits
+          properties:
+            id:
+              type: string
+            company_name:
+              type: string
+            current_credits:
+              type: integer
+    AdjustCreditsResponse:
+      type: object
+      required:
+        - transaction
+        - new_balance
+        - message
+      properties:
+        transaction:
+          $ref: '#/components/schemas/CreditTransaction'
+        new_balance:
+          type: integer
+        message:
+          type: string
+    RefundResponse:
+      type: object
+      required:
+        - transaction
+        - stripe_refund_id
+        - refund_amount_jpy
+        - new_balance
+        - message
+      properties:
+        transaction:
+          $ref: '#/components/schemas/CreditTransaction'
+        stripe_refund_id:
+          type: string
+        refund_amount_jpy:
+          type: integer
+        new_balance:
+          type: integer
+        message:
+          type: string
+    CreditPurchaseCreate:
+      type: object
+      required:
+        - quantity
+        - success_url
+        - cancel_url
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of credits to purchase
+        success_url:
+          type: string
+          description: URL to redirect after successful payment
+        cancel_url:
+          type: string
+          description: URL to redirect if payment is cancelled
+    CreditPurchaseSessionResponse:
+      type: object
+      required:
+        - session_id
+        - url
+      properties:
+        session_id:
+          type: string
+          description: Stripe Checkout Session ID
+        url:
+          type: string
+          description: URL to redirect user to Stripe Checkout
