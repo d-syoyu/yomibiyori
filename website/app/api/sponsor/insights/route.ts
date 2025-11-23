@@ -175,14 +175,91 @@ export async function GET(request: Request) {
             console.warn('[PostHog API] data.result is not an array, type:', typeof data.result)
         }
 
-        // Convert map to array format expected by frontend
-        const results = Object.entries(metricsByTheme).map(([themeId, metrics]) => ({
-            theme_id: themeId,
-            impressions: metrics.impressions,
-            submissions: metrics.submissions
+        // 5. Fetch additional metrics from database (likes, top works, ranking entries)
+        const themeIds = Object.keys(metricsByTheme)
+
+        // Get works data for each theme from Supabase
+        const enrichedResults = await Promise.all(themeIds.map(async (themeId) => {
+            const metrics = metricsByTheme[themeId]
+
+            // Fetch works for this theme with likes count
+            const { data: works, error: worksError } = await supabase
+                .from('works')
+                .select(`
+                    id,
+                    text,
+                    user_id,
+                    likes:likes(count)
+                `)
+                .eq('theme_id', themeId)
+                .order('created_at', { ascending: false })
+
+            if (worksError) {
+                console.error(`[Insights API] Failed to fetch works for theme ${themeId}:`, worksError)
+                return {
+                    theme_id: themeId,
+                    impressions: metrics.impressions,
+                    submissions: metrics.submissions,
+                    total_likes: 0,
+                    avg_likes_per_work: 0,
+                    top_work: null,
+                    ranking_entries: 0,
+                }
+            }
+
+            // Calculate likes metrics
+            const worksWithLikes = (works || []).map(work => ({
+                ...work,
+                likes_count: Array.isArray(work.likes) ? work.likes[0]?.count || 0 : 0
+            }))
+
+            const totalLikes = worksWithLikes.reduce((sum, work) => sum + work.likes_count, 0)
+            const avgLikes = worksWithLikes.length > 0 ? totalLikes / worksWithLikes.length : 0
+
+            // Get top work by likes
+            const topWork = worksWithLikes.length > 0
+                ? worksWithLikes.reduce((prev, current) =>
+                    (current.likes_count > prev.likes_count) ? current : prev
+                  )
+                : null
+
+            // Get user display name for top work
+            let topWorkData = null
+            if (topWork && topWork.likes_count > 0) {
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('name, email')
+                    .eq('id', topWork.user_id)
+                    .single()
+
+                topWorkData = {
+                    text: topWork.text,
+                    likes: topWork.likes_count,
+                    author_name: userData?.name || userData?.email?.split('@')[0] || '匿名'
+                }
+            }
+
+            // Get ranking entries (works that have ranking > 0)
+            const { data: rankingWorks, error: rankingError } = await supabase
+                .from('daily_rankings')
+                .select('work_id, rank')
+                .in('work_id', worksWithLikes.map(w => w.id))
+                .order('rank', { ascending: true })
+
+            const rankingEntries = rankingError ? 0 : (rankingWorks?.length || 0)
+
+            return {
+                theme_id: themeId,
+                impressions: metrics.impressions,
+                submissions: metrics.submissions,
+                total_likes: totalLikes,
+                avg_likes_per_work: Number(avgLikes.toFixed(1)),
+                top_work: topWorkData,
+                ranking_entries: rankingEntries,
+            }
         }))
 
-        return NextResponse.json({ results })
+        return NextResponse.json({ results: enrichedResults })
 
     } catch (error) {
         console.error('Insights API Error:', error)

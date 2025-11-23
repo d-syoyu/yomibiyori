@@ -17,6 +17,14 @@ interface ThemeInsight {
     submissions: number
     likes: number
     engagement_rate: number
+    total_likes: number
+    avg_likes_per_work: number
+    top_work: {
+        text: string
+        likes: number
+        author_name: string
+    } | null
+    ranking_entries: number
 }
 
 interface SummaryStats {
@@ -144,10 +152,17 @@ export default function SponsorInsightsPage() {
                     console.log('[Insights] Using real data from PostHog')
                     console.log('[Insights] API results:', apiResult.results)
 
-                    // Map PostHog results to themes
-                    type MetricsData = { impressions: number; submissions: number }
-                    const metricsMap = new Map<string, MetricsData>(
-                        apiResult.results.map((r: any) => [r.theme_id, { impressions: r.impressions || 0, submissions: r.submissions || 0 }])
+                    // Map API results to themes
+                    type ApiMetrics = {
+                        impressions: number
+                        submissions: number
+                        total_likes: number
+                        avg_likes_per_work: number
+                        top_work: { text: string; likes: number; author_name: string } | null
+                        ranking_entries: number
+                    }
+                    const metricsMap = new Map<string, ApiMetrics>(
+                        apiResult.results.map((r: any) => [r.theme_id, r as ApiMetrics])
                     )
 
                     console.log('[Insights] Metrics map:', Object.fromEntries(metricsMap))
@@ -163,8 +178,12 @@ export default function SponsorInsightsPage() {
                             date: theme.date,
                             impressions,
                             submissions,
-                            likes: 0,
-                            engagement_rate: impressions > 0 ? (submissions / impressions) * 100 : 0
+                            likes: metrics?.total_likes || 0,
+                            engagement_rate: impressions > 0 ? (submissions / impressions) * 100 : 0,
+                            total_likes: metrics?.total_likes || 0,
+                            avg_likes_per_work: metrics?.avg_likes_per_work || 0,
+                            top_work: metrics?.top_work || null,
+                            ranking_entries: metrics?.ranking_entries || 0,
                         }
                     })
                     usedMockData = false
@@ -182,7 +201,7 @@ export default function SponsorInsightsPage() {
                 insightsData = formattedThemes.map(theme => {
                     const impressions = Math.floor(Math.random() * 5000) + 500
                     const submissions = Math.floor(impressions * (Math.random() * 0.1 + 0.05))
-                    const likes = Math.floor(submissions * (Math.random() * 0.5 + 0.2))
+                    const totalLikes = Math.floor(submissions * (Math.random() * 0.5 + 0.2))
 
                     return {
                         id: theme.id,
@@ -190,8 +209,16 @@ export default function SponsorInsightsPage() {
                         date: theme.date,
                         impressions,
                         submissions,
-                        likes,
-                        engagement_rate: (submissions / impressions) * 100
+                        likes: totalLikes,
+                        engagement_rate: (submissions / impressions) * 100,
+                        total_likes: totalLikes,
+                        avg_likes_per_work: submissions > 0 ? Number((totalLikes / submissions).toFixed(1)) : 0,
+                        top_work: submissions > 0 ? {
+                            text: '春の風\n桜舞い散る',
+                            likes: Math.floor(totalLikes * 0.3),
+                            author_name: 'サンプルユーザー'
+                        } : null,
+                        ranking_entries: Math.floor(submissions * 0.1),
                     }
                 })
             }
@@ -273,13 +300,16 @@ export default function SponsorInsightsPage() {
                                 <th className="p-4 font-medium">配信日</th>
                                 <th className="p-4 font-medium text-right">表示回数</th>
                                 <th className="p-4 font-medium text-right">投稿数</th>
+                                <th className="p-4 font-medium text-right">合計いいね</th>
+                                <th className="p-4 font-medium text-right">平均いいね</th>
+                                <th className="p-4 font-medium text-right">ランキング入賞</th>
                                 <th className="p-4 font-medium text-right">エンゲージメント</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {themes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="p-8 text-center text-[var(--color-text-muted)]">
+                                    <td colSpan={8} className="p-8 text-center text-[var(--color-text-muted)]">
                                         データがありません。お題が配信されるとここに表示されます。
                                     </td>
                                 </tr>
@@ -297,6 +327,21 @@ export default function SponsorInsightsPage() {
                                         </td>
                                         <td className="p-4 text-right text-[var(--color-text-primary)]">
                                             {theme.submissions.toLocaleString()}
+                                        </td>
+                                        <td className="p-4 text-right text-[var(--color-text-primary)]">
+                                            {theme.total_likes.toLocaleString()}
+                                        </td>
+                                        <td className="p-4 text-right text-[var(--color-text-secondary)]">
+                                            {theme.avg_likes_per_work.toFixed(1)}
+                                        </td>
+                                        <td className="p-4 text-right text-[var(--color-text-primary)]">
+                                            {theme.ranking_entries > 0 ? (
+                                                <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-medium">
+                                                    🏆 {theme.ranking_entries}作品
+                                                </span>
+                                            ) : (
+                                                <span className="text-[var(--color-text-muted)]">-</span>
+                                            )}
                                         </td>
                                         <td className="p-4 text-right">
                                             <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${theme.engagement_rate >= 10
@@ -316,8 +361,42 @@ export default function SponsorInsightsPage() {
                 </div>
             </section>
 
+            {/* Top Works Section */}
+            {themes.some(t => t.top_work) && (
+                <section className="space-y-4">
+                    <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
+                            最も人気の作品
+                        </span>
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {themes.filter(t => t.top_work).map((theme) => (
+                            <div key={theme.id} className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
+                                <div className="mb-2">
+                                    <p className="text-xs text-[var(--color-text-secondary)] mb-1">お題</p>
+                                    <p className="font-serif text-sm text-[var(--color-text-primary)]">{theme.text_575}</p>
+                                </div>
+                                <div className="border-t border-[var(--color-border)] pt-3 mt-2">
+                                    <p className="font-serif text-[var(--color-text-primary)] whitespace-pre-line mb-3">
+                                        {theme.top_work!.text}
+                                    </p>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-[var(--color-text-secondary)]">
+                                            by {theme.top_work!.author_name}
+                                        </span>
+                                        <span className="inline-flex items-center px-2 py-1 rounded bg-pink-100 text-pink-800 text-xs font-medium">
+                                            ❤️ {theme.top_work!.likes}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             <div className="text-center text-xs text-[var(--color-text-muted)]">
-                ※ データはPostHogにより集計されています。
+                ※ データはPostHogとデータベースにより集計されています。
             </div>
         </div>
     )
