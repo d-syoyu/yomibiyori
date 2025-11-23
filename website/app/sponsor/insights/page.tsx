@@ -27,7 +27,7 @@ function InfoTooltip({ text }: { text: string }) {
                 ?
             </button>
             {isVisible && (
-                <div className="absolute z-10 w-64 p-3 text-xs text-[var(--color-text-primary)] bg-white border border-[var(--color-border)] rounded-lg shadow-lg bottom-full left-1/2 transform -translate-x-1/2 mb-2">
+                <div className="absolute z-50 w-64 p-3 text-xs text-[var(--color-text-primary)] bg-white border border-[var(--color-border)] rounded-lg shadow-lg bottom-full left-1/2 transform -translate-x-1/2 mb-2">
                     <div className="absolute w-2 h-2 bg-white border-r border-b border-[var(--color-border)] transform rotate-45 left-1/2 -translate-x-1/2 -bottom-1"></div>
                     {text}
                 </div>
@@ -325,11 +325,11 @@ export default function SponsorInsightsPage() {
             </section>
 
             {/* Theme List Table */}
-            <section className="card overflow-hidden p-0">
+            <section className="card p-0" style={{ overflow: 'visible' }}>
                 <div className="p-6 border-b border-[var(--color-border)]">
                     <h2 className="text-xl font-bold text-[var(--color-text-primary)]">お題別パフォーマンス</h2>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" style={{ overflowY: 'visible' }}>
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-[var(--color-washi)] text-[var(--color-text-secondary)] text-sm">
