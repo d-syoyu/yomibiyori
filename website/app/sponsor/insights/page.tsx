@@ -8,6 +8,34 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+// Tooltip component for metric explanations
+function InfoTooltip({ text }: { text: string }) {
+    const [isVisible, setIsVisible] = useState(false)
+
+    return (
+        <div className="relative inline-block ml-1">
+            <button
+                type="button"
+                className="inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-[var(--color-text-muted)] text-white hover:bg-[var(--color-igusa)] transition-colors"
+                onMouseEnter={() => setIsVisible(true)}
+                onMouseLeave={() => setIsVisible(false)}
+                onClick={(e) => {
+                    e.preventDefault()
+                    setIsVisible(!isVisible)
+                }}
+            >
+                ?
+            </button>
+            {isVisible && (
+                <div className="absolute z-10 w-64 p-3 text-xs text-[var(--color-text-primary)] bg-white border border-[var(--color-border)] rounded-lg shadow-lg bottom-full left-1/2 transform -translate-x-1/2 mb-2">
+                    <div className="absolute w-2 h-2 bg-white border-r border-b border-[var(--color-border)] transform rotate-45 left-1/2 -translate-x-1/2 -bottom-1"></div>
+                    {text}
+                </div>
+            )}
+        </div>
+    )
+}
+
 // Types for Insight Data
 interface ThemeInsight {
     id: string
@@ -265,21 +293,30 @@ export default function SponsorInsightsPage() {
             {/* Summary Cards */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
-                    <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">総表示回数</h3>
+                    <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
+                        総表示回数
+                        <InfoTooltip text="ユーザーがお題を閲覧した回数の合計です。アプリ内でお題画面が表示された回数を示します。" />
+                    </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.total_impressions.toLocaleString()}
                         <span className="text-sm font-normal text-[var(--color-text-muted)] ml-1">回</span>
                     </p>
                 </div>
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
-                    <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">総投稿数</h3>
+                    <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
+                        総投稿数
+                        <InfoTooltip text="ユーザーがお題に対して下の句を投稿した回数の合計です。実際にコンテンツが作成された回数を示します。" />
+                    </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.total_submissions.toLocaleString()}
                         <span className="text-sm font-normal text-[var(--color-text-muted)] ml-1">句</span>
                     </p>
                 </div>
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
-                    <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">平均エンゲージメント率</h3>
+                    <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
+                        平均エンゲージメント率
+                        <InfoTooltip text="表示回数に対する投稿数の割合です。お題を見たユーザーのうち、実際に下の句を投稿した割合を示します。" />
+                    </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.avg_engagement_rate.toFixed(1)}
                         <span className="text-sm font-normal text-[var(--color-text-muted)] ml-1">%</span>
@@ -298,12 +335,42 @@ export default function SponsorInsightsPage() {
                             <tr className="bg-[var(--color-washi)] text-[var(--color-text-secondary)] text-sm">
                                 <th className="p-4 font-medium">お題 (上の句)</th>
                                 <th className="p-4 font-medium">配信日</th>
-                                <th className="p-4 font-medium text-right">表示回数</th>
-                                <th className="p-4 font-medium text-right">投稿数</th>
-                                <th className="p-4 font-medium text-right">合計いいね</th>
-                                <th className="p-4 font-medium text-right">平均いいね</th>
-                                <th className="p-4 font-medium text-right">ランキング入賞</th>
-                                <th className="p-4 font-medium text-right">エンゲージメント</th>
+                                <th className="p-4 font-medium text-right">
+                                    <span className="inline-flex items-center justify-end">
+                                        表示回数
+                                        <InfoTooltip text="このお題が閲覧された回数です。" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-right">
+                                    <span className="inline-flex items-center justify-end">
+                                        投稿数
+                                        <InfoTooltip text="このお題に対して投稿された下の句の数です。" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-right">
+                                    <span className="inline-flex items-center justify-end">
+                                        合計いいね
+                                        <InfoTooltip text="このお題に投稿された全作品が獲得したいいねの合計数です。" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-right">
+                                    <span className="inline-flex items-center justify-end">
+                                        平均いいね
+                                        <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-right">
+                                    <span className="inline-flex items-center justify-end">
+                                        ランキング入賞
+                                        <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-right">
+                                    <span className="inline-flex items-center justify-end">
+                                        エンゲージメント
+                                        <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" />
+                                    </span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
