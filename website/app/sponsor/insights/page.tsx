@@ -14,9 +14,9 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
 
     const tooltipStyle = position === 'top' ? {
         position: 'absolute' as const,
-        bottom: '100%',
-        right: '0',
-        marginBottom: '8px',
+        bottom: 'calc(100% + 8px)',
+        left: 'auto',
+        right: '-8px',
         zIndex: 9999,
         width: '280px',
         padding: '12px',
@@ -31,9 +31,9 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
         whiteSpace: 'normal' as const
     } : {
         position: 'absolute' as const,
-        top: '100%',
-        right: '0',
-        marginTop: '8px',
+        top: 'calc(100% + 8px)',
+        left: 'auto',
+        right: '-8px',
         zIndex: 9999,
         width: '280px',
         padding: '12px',
