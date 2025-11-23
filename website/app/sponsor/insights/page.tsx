@@ -329,43 +329,43 @@ export default function SponsorInsightsPage() {
                 <div className="p-6 border-b border-[var(--color-border)]">
                     <h2 className="text-xl font-bold text-[var(--color-text-primary)]">お題別パフォーマンス</h2>
                 </div>
-                <div className="overflow-x-auto overflow-y-visible">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="relative z-10">
+                <div className="overflow-x-auto" style={{ overflowY: 'visible' }}>
+                    <table className="w-full text-left border-collapse" style={{ position: 'relative' }}>
+                        <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
                             <tr className="bg-[var(--color-washi)] text-[var(--color-text-secondary)] text-sm">
-                                <th className="p-4 font-medium overflow-visible">お題 (上の句)</th>
-                                <th className="p-4 font-medium overflow-visible">配信日</th>
-                                <th className="p-4 font-medium text-right overflow-visible">
+                                <th className="p-4 font-medium" style={{ position: 'relative', overflow: 'visible' }}>お題 (上の句)</th>
+                                <th className="p-4 font-medium" style={{ position: 'relative', overflow: 'visible' }}>配信日</th>
+                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
                                     <span className="inline-flex items-center justify-end">
                                         表示回数
                                         <InfoTooltip text="このお題が閲覧された回数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right overflow-visible">
+                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
                                     <span className="inline-flex items-center justify-end">
                                         投稿数
                                         <InfoTooltip text="このお題に対して投稿された下の句の数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right overflow-visible">
+                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
                                     <span className="inline-flex items-center justify-end">
                                         合計いいね
                                         <InfoTooltip text="このお題に投稿された全作品が獲得したいいねの合計数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right overflow-visible">
+                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
                                     <span className="inline-flex items-center justify-end">
                                         平均いいね
                                         <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right overflow-visible">
+                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
                                     <span className="inline-flex items-center justify-end">
                                         ランキング入賞
                                         <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right overflow-visible">
+                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
                                     <span className="inline-flex items-center justify-end">
                                         エンゲージメント
                                         <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" />
