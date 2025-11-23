@@ -60,7 +60,7 @@ def create_checkout_session(
                         "currency": "jpy",
                         "product_data": {
                             "name": "よみびより スポンサークレジット",
-                            "description": f"{quantity}クレジット - オリジナルお題の投稿に使用できます（1クレジット = お題1件）",
+                            "description": f"{quantity}クレジット - スポンサー機能の告知やお題作成に利用できます（1クレジット=税込1円）",
                         },
                         "unit_amount": unit_price,
                     },

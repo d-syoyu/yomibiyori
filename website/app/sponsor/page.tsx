@@ -22,6 +22,7 @@ interface Announcement {
   content: string
   type: 'info' | 'warning' | 'success' | 'update'
   is_pinned: boolean
+  updated_at: string
   created_at: string
 }
 
@@ -46,9 +47,21 @@ export default function SponsorDashboard() {
   })
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [themeNotifications, setThemeNotifications] = useState<ThemeNotification[]>([])
+  const [readMap, setReadMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
+  const READ_STORAGE_KEY = 'sponsorAnnouncementRead'
+
   useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(READ_STORAGE_KEY) : null
+    if (stored) {
+      try {
+        setReadMap(JSON.parse(stored))
+      } catch {
+        setReadMap({})
+      }
+    }
+
     loadStats()
     loadAnnouncements()
     loadThemeNotifications()
@@ -117,7 +130,7 @@ export default function SponsorDashboard() {
     try {
       const { data, error } = await supabase
         .from('sponsor_announcements')
-        .select('id, title, content, type, is_pinned, created_at')
+        .select('id, title, content, type, is_pinned, created_at, updated_at')
         .eq('is_published', true)
         .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
         .order('is_pinned', { ascending: false })
@@ -402,6 +415,11 @@ export default function SponsorDashboard() {
                       className="block space-y-2 hover:opacity-75 transition-opacity"
                     >
                       <div className="flex items-center gap-2 flex-wrap">
+                        {readMap[announcement.id] !== announcement.updated_at && (
+                          <span className="text-xs font-medium text-white bg-[var(--color-igusa)] px-2 py-0.5 rounded-full">
+                            未読
+                          </span>
+                        )}
                         {announcement.is_pinned && (
                           <span className="text-xs font-medium text-red-600 border border-red-600 px-2 py-0.5 rounded-full bg-red-50 flex items-center gap-1">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">

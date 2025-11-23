@@ -298,7 +298,7 @@ create table if not exists sponsor_announcements (
   priority integer not null default 0,
   is_pinned boolean not null default false,
   is_published boolean not null default true,
-  expires_at timestamptz,
+  expires_at timestamptz default null,
   created_by uuid references users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -407,11 +407,21 @@ create policy if not exists read_sponsor_announcements on sponsor_announcements
 create policy if not exists write_admin_announcements on sponsor_announcements
   for all
   using (
-    exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    exists (
+      select 1
+      from users
+      where id = coalesce(app_public.current_uid(), auth.uid())
+      and role = 'admin'
+    )
     or app_public.is_service_role()
   )
   with check (
-    exists (select 1 from users where id = app_public.current_uid() and role = 'admin')
+    exists (
+      select 1
+      from users
+      where id = coalesce(app_public.current_uid(), auth.uid())
+      and role = 'admin'
+    )
     or app_public.is_service_role()
   );
 
@@ -574,4 +584,3 @@ $$;
 -- Supabase環境では自動的に auth.uid(), auth.role() が利用できるため上記は不要。
 
 -- ========= 完了 =========
-

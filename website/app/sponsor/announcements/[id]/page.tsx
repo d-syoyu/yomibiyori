@@ -14,6 +14,7 @@ interface Announcement {
   content: string
   type: 'info' | 'warning' | 'success' | 'update'
   is_pinned: boolean
+  updated_at: string
   created_at: string
 }
 
@@ -24,16 +25,30 @@ export default function AnnouncementDetailPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
+  const READ_STORAGE_KEY = 'sponsorAnnouncementRead'
 
   useEffect(() => {
     loadAnnouncement()
   }, [id])
 
+  useEffect(() => {
+    if (!announcement) return
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(READ_STORAGE_KEY) : null
+      const map: Record<string, string> = stored ? JSON.parse(stored) : {}
+      if (map[announcement.id] === announcement.updated_at) return
+      const next = { ...map, [announcement.id]: announcement.updated_at }
+      localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(next))
+    } catch {
+      // Ignore storage errors; unread badge will persist until storage is available
+    }
+  }, [announcement])
+
   async function loadAnnouncement() {
     try {
       const { data, error } = await supabase
         .from('sponsor_announcements')
-        .select('id, title, content, type, is_pinned, created_at')
+        .select('id, title, content, type, is_pinned, created_at, updated_at')
         .eq('id', id)
         .eq('is_published', true)
         .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
