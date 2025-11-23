@@ -13,56 +13,11 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
     const [isVisible, setIsVisible] = useState(false)
 
     const tooltipStyle = (() => {
-        if (position === 'bottom') {
-            return {
-                position: 'absolute' as const,
-                top: 'calc(100% + 8px)',
-                left: 'auto',
-                right: '-8px',
-                zIndex: 9999,
-                width: '280px',
-                padding: '12px',
-                fontSize: '12px',
-                lineHeight: '1.5',
-                color: 'var(--color-text-primary)',
-                backgroundColor: 'white',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                pointerEvents: 'none' as const,
-                whiteSpace: 'normal' as const
-            }
-        }
-
-        if (position === 'top-right') {
-            return {
-                position: 'absolute' as const,
-                bottom: 'calc(100% + 8px)',
-                left: 'auto',
-                right: '0',
-                transform: 'none',
-                zIndex: 9999,
-                width: '280px',
-                padding: '12px',
-                fontSize: '12px',
-                lineHeight: '1.5',
-                color: 'var(--color-text-primary)',
-                backgroundColor: 'white',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                pointerEvents: 'none' as const,
-                whiteSpace: 'normal' as const
-            }
-        }
-
-        return {
+        const base = {
             position: 'absolute' as const,
-            bottom: 'calc(100% + 8px)',
-            left: 'auto',
-            right: '-8px',
             zIndex: 9999,
-            width: '280px',
+            width: 'min(280px, calc(100vw - 32px))',
+            maxWidth: 'min(280px, calc(100vw - 32px))',
             padding: '12px',
             fontSize: '12px',
             lineHeight: '1.5',
@@ -72,7 +27,33 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
             borderRadius: '8px',
             boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
             pointerEvents: 'none' as const,
-            whiteSpace: 'normal' as const
+            whiteSpace: 'normal' as const,
+            wordBreak: 'break-word' as const,
+        }
+
+        if (position === 'bottom') {
+            return {
+                ...base,
+                top: 'calc(100% + 8px)',
+                left: 'auto',
+                right: '0',
+            }
+        }
+
+        if (position === 'top-right') {
+            return {
+                ...base,
+                bottom: 'calc(100% + 8px)',
+                left: 'auto',
+                right: '0',
+            }
+        }
+
+        return {
+            ...base,
+            bottom: 'calc(100% + 8px)',
+            left: 'auto',
+            right: '-8px',
         }
     })()
 
