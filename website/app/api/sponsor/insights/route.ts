@@ -116,13 +116,16 @@ export async function GET(request: Request) {
                         action_name: item.action?.name,
                         event: item.event,
                         count: item.count,
-                        label: item.label
+                        label: item.label,
+                        hasData: 'data' in item,
+                        dataLength: Array.isArray(item.data) ? item.data.length : 'N/A',
+                        aggregated_value: item.aggregated_value
                     })
                 }
 
                 const themeId = item.breakdown_value
                 // Filter out invalid theme IDs (both string and actual undefined/null)
-                if (!themeId || themeId === 'undefined' || themeId === 'null' || themeId === '$$_posthog_breakdown_null_$$') {
+                if (!themeId || themeId === 'undefined' || themeId === 'null' || themeId === '$$_posthog_breakdown_null_$$' || themeId === '$$_posthog_breakdown_other_$$') {
                     return
                 }
 
@@ -144,10 +147,20 @@ export async function GET(request: Request) {
                                      label.includes('work_created') ||
                                      label.includes('Submissions')
 
+                // Get actual count from aggregated_value or sum of data array
+                let actualCount = 0
+                if (typeof item.aggregated_value === 'number') {
+                    actualCount = item.aggregated_value
+                } else if (Array.isArray(item.data)) {
+                    actualCount = item.data.reduce((sum: number, val: number) => sum + (val || 0), 0)
+                } else {
+                    actualCount = item.count || 0
+                }
+
                 if (isImpression) {
-                    metricsByTheme[themeId].impressions += (item.count || 0)
+                    metricsByTheme[themeId].impressions += actualCount
                 } else if (isSubmission) {
-                    metricsByTheme[themeId].submissions += (item.count || 0)
+                    metricsByTheme[themeId].submissions += actualCount
                 } else {
                     // Debug: Log unmatched events
                     console.log('[PostHog API] Unmatched event:', { eventId, label, themeId })
