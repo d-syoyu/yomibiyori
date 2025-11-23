@@ -454,13 +454,13 @@ export default function SponsorInsightsPage() {
                                 <th className="p-4 font-medium text-left">
                                     <span className="inline-flex items-center">
                                         平均いいね
-                                        <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" position="bottom-left" />
+                                        <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" position="bottom-right" />
                                     </span>
                                 </th>
                                 <th className="p-4 font-medium text-left">
                                     <span className="inline-flex items-center">
                                         ランキング入賞
-                                        <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" position="bottom-left" />
+                                        <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" position="bottom-right" />
                                     </span>
                                 </th>
                                 <th className="p-4 font-medium text-left">
