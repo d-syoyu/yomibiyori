@@ -16,7 +16,7 @@ function InfoTooltip({ text }: { text: string }) {
         <div className="relative inline-block ml-1">
             <button
                 type="button"
-                className="inline-flex items-center justify-center w-4 h-4 text-xs rounded-full bg-[var(--color-text-muted)] text-white hover:bg-[var(--color-igusa)] transition-colors"
+                className="inline-flex items-center justify-center w-4 h-4 text-xs font-semibold rounded-full bg-white border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-igusa)] hover:text-white hover:border-[var(--color-igusa)] transition-colors shadow-sm"
                 onMouseEnter={() => setIsVisible(true)}
                 onMouseLeave={() => setIsVisible(false)}
                 onClick={(e) => {
