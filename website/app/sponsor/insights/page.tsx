@@ -13,26 +13,56 @@ function InfoTooltip({ text }: { text: string }) {
     const [isVisible, setIsVisible] = useState(false)
 
     return (
-        <div className="relative inline-block ml-1">
+        <span
+            className="inline-block ml-1"
+            style={{ position: 'relative' }}
+            onMouseEnter={() => setIsVisible(true)}
+            onMouseLeave={() => setIsVisible(false)}
+            onClick={() => setIsVisible(!isVisible)}
+        >
             <button
                 type="button"
-                className="inline-flex items-center justify-center w-4 h-4 text-xs font-semibold rounded-full bg-white border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-igusa)] hover:text-white hover:border-[var(--color-igusa)] transition-colors shadow-sm"
-                onMouseEnter={() => setIsVisible(true)}
-                onMouseLeave={() => setIsVisible(false)}
-                onClick={(e) => {
-                    e.preventDefault()
-                    setIsVisible(!isVisible)
-                }}
+                className="inline-flex items-center justify-center w-4 h-4 text-xs font-semibold rounded-full bg-white border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-igusa)] hover:text-white hover:border-[var(--color-igusa)] transition-colors shadow-sm cursor-help"
             >
                 ?
             </button>
             {isVisible && (
-                <div className="absolute z-50 w-64 p-3 text-xs text-[var(--color-text-primary)] bg-white border border-[var(--color-border)] rounded-lg shadow-lg bottom-full left-1/2 transform -translate-x-1/2 mb-2">
-                    <div className="absolute w-2 h-2 bg-white border-r border-b border-[var(--color-border)] transform rotate-45 left-1/2 -translate-x-1/2 -bottom-1"></div>
+                <span
+                    style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        marginBottom: '8px',
+                        zIndex: 9999,
+                        width: '256px',
+                        padding: '12px',
+                        fontSize: '12px',
+                        color: 'var(--color-text-primary)',
+                        backgroundColor: 'white',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                        pointerEvents: 'none'
+                    }}
+                >
                     {text}
-                </div>
+                    <span
+                        style={{
+                            position: 'absolute',
+                            bottom: '-5px',
+                            left: '50%',
+                            transform: 'translateX(-50%) rotate(45deg)',
+                            width: '8px',
+                            height: '8px',
+                            backgroundColor: 'white',
+                            borderRight: '1px solid var(--color-border)',
+                            borderBottom: '1px solid var(--color-border)'
+                        }}
+                    />
+                </span>
             )}
-        </div>
+        </span>
     )
 }
 
@@ -325,47 +355,47 @@ export default function SponsorInsightsPage() {
             </section>
 
             {/* Theme List Table */}
-            <section className="card p-0 overflow-visible">
+            <section className="card p-0">
                 <div className="p-6 border-b border-[var(--color-border)]">
                     <h2 className="text-xl font-bold text-[var(--color-text-primary)]">お題別パフォーマンス</h2>
                 </div>
-                <div className="overflow-x-auto" style={{ overflowY: 'visible' }}>
-                    <table className="w-full text-left border-collapse" style={{ position: 'relative' }}>
-                        <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
                             <tr className="bg-[var(--color-washi)] text-[var(--color-text-secondary)] text-sm">
-                                <th className="p-4 font-medium" style={{ position: 'relative', overflow: 'visible' }}>お題 (上の句)</th>
-                                <th className="p-4 font-medium" style={{ position: 'relative', overflow: 'visible' }}>配信日</th>
-                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
+                                <th className="p-4 font-medium">お題 (上の句)</th>
+                                <th className="p-4 font-medium">配信日</th>
+                                <th className="p-4 font-medium text-right">
                                     <span className="inline-flex items-center justify-end">
                                         表示回数
                                         <InfoTooltip text="このお題が閲覧された回数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
+                                <th className="p-4 font-medium text-right">
                                     <span className="inline-flex items-center justify-end">
                                         投稿数
                                         <InfoTooltip text="このお題に対して投稿された下の句の数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
+                                <th className="p-4 font-medium text-right">
                                     <span className="inline-flex items-center justify-end">
                                         合計いいね
                                         <InfoTooltip text="このお題に投稿された全作品が獲得したいいねの合計数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
+                                <th className="p-4 font-medium text-right">
                                     <span className="inline-flex items-center justify-end">
                                         平均いいね
                                         <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
+                                <th className="p-4 font-medium text-right">
                                     <span className="inline-flex items-center justify-end">
                                         ランキング入賞
                                         <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right" style={{ position: 'relative', overflow: 'visible' }}>
+                                <th className="p-4 font-medium text-right">
                                     <span className="inline-flex items-center justify-end">
                                         エンゲージメント
                                         <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" />
