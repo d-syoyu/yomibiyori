@@ -35,8 +35,8 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
             return {
                 ...base,
                 top: 'calc(100% + 8px)',
-                left: 'auto',
-                right: '0',
+                left: '12px',
+                right: 'auto',
             }
         }
 
@@ -44,16 +44,16 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
             return {
                 ...base,
                 bottom: 'calc(100% + 8px)',
-                left: 'auto',
-                right: '0',
+                left: '12px',
+                right: 'auto',
             }
         }
 
         return {
             ...base,
             bottom: 'calc(100% + 8px)',
-            left: 'auto',
-            right: '-8px',
+            left: '12px',
+            right: 'auto',
         }
     })()
 
@@ -62,7 +62,7 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
             return {
                 position: 'absolute' as const,
                 top: '-5px',
-                right: '12px',
+                left: '16px',
                 transform: 'rotate(45deg)',
                 width: '8px',
                 height: '8px',
@@ -76,7 +76,7 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
             return {
                 position: 'absolute' as const,
                 bottom: '-5px',
-                right: '12px',
+                left: '16px',
                 transform: 'rotate(45deg)',
                 width: '8px',
                 height: '8px',
@@ -89,7 +89,7 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
         return {
             position: 'absolute' as const,
             bottom: '-5px',
-            right: '12px',
+            left: '16px',
             transform: 'rotate(45deg)',
             width: '8px',
             height: '8px',
