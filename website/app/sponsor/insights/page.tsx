@@ -9,8 +9,66 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 // Tooltip component for metric explanations
-function InfoTooltip({ text }: { text: string }) {
+function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top' | 'bottom' }) {
     const [isVisible, setIsVisible] = useState(false)
+
+    const tooltipStyle = position === 'top' ? {
+        position: 'absolute' as const,
+        bottom: '100%',
+        right: '0',
+        marginBottom: '8px',
+        zIndex: 9999,
+        width: '280px',
+        padding: '12px',
+        fontSize: '12px',
+        lineHeight: '1.5',
+        color: 'var(--color-text-primary)',
+        backgroundColor: 'white',
+        border: '1px solid var(--color-border)',
+        borderRadius: '8px',
+        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        pointerEvents: 'none' as const,
+        whiteSpace: 'normal' as const
+    } : {
+        position: 'absolute' as const,
+        top: '100%',
+        right: '0',
+        marginTop: '8px',
+        zIndex: 9999,
+        width: '280px',
+        padding: '12px',
+        fontSize: '12px',
+        lineHeight: '1.5',
+        color: 'var(--color-text-primary)',
+        backgroundColor: 'white',
+        border: '1px solid var(--color-border)',
+        borderRadius: '8px',
+        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        pointerEvents: 'none' as const,
+        whiteSpace: 'normal' as const
+    }
+
+    const arrowStyle = position === 'top' ? {
+        position: 'absolute' as const,
+        bottom: '-5px',
+        right: '12px',
+        transform: 'rotate(45deg)',
+        width: '8px',
+        height: '8px',
+        backgroundColor: 'white',
+        borderRight: '1px solid var(--color-border)',
+        borderBottom: '1px solid var(--color-border)'
+    } : {
+        position: 'absolute' as const,
+        top: '-5px',
+        right: '12px',
+        transform: 'rotate(45deg)',
+        width: '8px',
+        height: '8px',
+        backgroundColor: 'white',
+        borderLeft: '1px solid var(--color-border)',
+        borderTop: '1px solid var(--color-border)'
+    }
 
     return (
         <span
@@ -27,39 +85,9 @@ function InfoTooltip({ text }: { text: string }) {
                 ?
             </button>
             {isVisible && (
-                <span
-                    style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginBottom: '8px',
-                        zIndex: 9999,
-                        width: '256px',
-                        padding: '12px',
-                        fontSize: '12px',
-                        color: 'var(--color-text-primary)',
-                        backgroundColor: 'white',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '8px',
-                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                        pointerEvents: 'none'
-                    }}
-                >
+                <span style={tooltipStyle}>
                     {text}
-                    <span
-                        style={{
-                            position: 'absolute',
-                            bottom: '-5px',
-                            left: '50%',
-                            transform: 'translateX(-50%) rotate(45deg)',
-                            width: '8px',
-                            height: '8px',
-                            backgroundColor: 'white',
-                            borderRight: '1px solid var(--color-border)',
-                            borderBottom: '1px solid var(--color-border)'
-                        }}
-                    />
+                    <span style={arrowStyle} />
                 </span>
             )}
         </span>
@@ -363,42 +391,42 @@ export default function SponsorInsightsPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-[var(--color-washi)] text-[var(--color-text-secondary)] text-sm">
-                                <th className="p-4 font-medium">お題 (上の句)</th>
-                                <th className="p-4 font-medium">配信日</th>
-                                <th className="p-4 font-medium text-right">
-                                    <span className="inline-flex items-center justify-end">
+                                <th className="p-4 font-medium text-left">お題 (上の句)</th>
+                                <th className="p-4 font-medium text-left">配信日</th>
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
                                         表示回数
-                                        <InfoTooltip text="このお題が閲覧された回数です。" />
+                                        <InfoTooltip text="このお題が閲覧された回数です。" position="bottom" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right">
-                                    <span className="inline-flex items-center justify-end">
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
                                         投稿数
-                                        <InfoTooltip text="このお題に対して投稿された下の句の数です。" />
+                                        <InfoTooltip text="このお題に対して投稿された下の句の数です。" position="bottom" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right">
-                                    <span className="inline-flex items-center justify-end">
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
                                         合計いいね
-                                        <InfoTooltip text="このお題に投稿された全作品が獲得したいいねの合計数です。" />
+                                        <InfoTooltip text="このお題に投稿された全作品が獲得したいいねの合計数です。" position="bottom" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right">
-                                    <span className="inline-flex items-center justify-end">
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
                                         平均いいね
-                                        <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" />
+                                        <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" position="bottom" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right">
-                                    <span className="inline-flex items-center justify-end">
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
                                         ランキング入賞
-                                        <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" />
+                                        <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" position="bottom" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-right">
-                                    <span className="inline-flex items-center justify-end">
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
                                         エンゲージメント
-                                        <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" />
+                                        <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" position="bottom" />
                                     </span>
                                 </th>
                             </tr>
@@ -413,25 +441,25 @@ export default function SponsorInsightsPage() {
                             ) : (
                                 themes.map((theme) => (
                                     <tr key={theme.id} className="hover:bg-[var(--color-washi)]/50 transition-colors">
-                                        <td className="p-4 font-medium text-[var(--color-text-primary)] font-serif">
+                                        <td className="p-4 font-medium text-left text-[var(--color-text-primary)] font-serif">
                                             {theme.text_575}
                                         </td>
-                                        <td className="p-4 text-sm text-[var(--color-text-secondary)]">
+                                        <td className="p-4 text-left text-sm text-[var(--color-text-secondary)]">
                                             {new Date(theme.date).toLocaleDateString('ja-JP')}
                                         </td>
-                                        <td className="p-4 text-right text-[var(--color-text-primary)]">
+                                        <td className="p-4 text-left text-[var(--color-text-primary)]">
                                             {theme.impressions.toLocaleString()}
                                         </td>
-                                        <td className="p-4 text-right text-[var(--color-text-primary)]">
+                                        <td className="p-4 text-left text-[var(--color-text-primary)]">
                                             {theme.submissions.toLocaleString()}
                                         </td>
-                                        <td className="p-4 text-right text-[var(--color-text-primary)]">
+                                        <td className="p-4 text-left text-[var(--color-text-primary)]">
                                             {theme.total_likes.toLocaleString()}
                                         </td>
-                                        <td className="p-4 text-right text-[var(--color-text-secondary)]">
+                                        <td className="p-4 text-left text-[var(--color-text-secondary)]">
                                             {theme.avg_likes_per_work.toFixed(1)}
                                         </td>
-                                        <td className="p-4 text-right text-[var(--color-text-primary)]">
+                                        <td className="p-4 text-left text-[var(--color-text-primary)]">
                                             {theme.ranking_entries > 0 ? (
                                                 <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-medium">
                                                     🏆 {theme.ranking_entries}作品
@@ -440,7 +468,7 @@ export default function SponsorInsightsPage() {
                                                 <span className="text-[var(--color-text-muted)]">-</span>
                                             )}
                                         </td>
-                                        <td className="p-4 text-right">
+                                        <td className="p-4 text-left">
                                             <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${theme.engagement_rate >= 10
                                                     ? 'bg-emerald-100 text-emerald-800'
                                                     : theme.engagement_rate >= 5
