@@ -73,6 +73,9 @@ export async function GET(request: Request) {
             breakdown_type: 'event',
             date_from: 'all', // Get all time data
             display: 'ActionsTable', // Get tabular data
+            properties: JSON.stringify([
+                { key: 'is_sample_account', value: ['false'], operator: 'exact', type: 'event' }
+            ]),
         })
 
         const response = await fetch(

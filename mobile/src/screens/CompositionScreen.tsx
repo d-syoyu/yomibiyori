@@ -92,12 +92,8 @@ export default function CompositionScreen({ route }: Props) {
 
       console.log('[CompositionScreen] Work created successfully', { work_id: work.id });
 
-      // Track work creation event
-      trackEvent(EventNames.WORK_CREATED, {
-        theme_id: theme.id,
-        category: theme.category,
-        work_id: work.id,
-      });
+      // Note: work_created event is tracked by backend API to avoid duplicate events
+      // The backend ensures the event is only sent after successful DB insertion
 
       // 投稿成功
       showSuccess(SUCCESS_MESSAGES.workCreated);
