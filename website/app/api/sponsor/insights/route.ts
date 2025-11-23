@@ -57,6 +57,15 @@ export async function GET(request: Request) {
 
         const data = await response.json()
 
+        // Debug: Log raw PostHog API response
+        console.log('[PostHog API] Raw response structure:', {
+            hasResult: 'result' in data,
+            hasResults: 'results' in data,
+            resultType: typeof data.result,
+            isArray: Array.isArray(data.result),
+            resultLength: Array.isArray(data.result) ? data.result.length : 'N/A'
+        })
+
         // 4. Transform Data
         // PostHog 'trend' API with breakdown returns a flat array of series.
         // Each item represents a specific event filtered by a specific breakdown value (theme_id).
@@ -65,37 +74,58 @@ export async function GET(request: Request) {
         const metricsByTheme: Record<string, { impressions: number; submissions: number }> = {}
 
         if (Array.isArray(data.result)) {
-            data.result.forEach((item: any) => {
-                // item structure example:
-                // {
-                //   label: "Impressions - theme_123",
-                //   count: 150,
-                //   data: [...],
-                //   breakdown_value: "theme_123",
-                //   action: { id: "theme_viewed", ... }
-                // }
+            console.log('[PostHog API] Processing', data.result.length, 'result items')
+
+            data.result.forEach((item: any, index: number) => {
+                // Debug: Log first few items to understand structure
+                if (index < 3) {
+                    console.log(`[PostHog API] Item ${index} structure:`, {
+                        breakdown_value: item.breakdown_value,
+                        action_id: item.action?.id,
+                        action_name: item.action?.name,
+                        event: item.event,
+                        count: item.count,
+                        label: item.label
+                    })
+                }
 
                 const themeId = item.breakdown_value
-                if (!themeId || themeId === 'undefined' || themeId === 'null') return
+                // Filter out invalid theme IDs (both string and actual undefined/null)
+                if (!themeId || themeId === 'undefined' || themeId === 'null' || themeId === '$$_posthog_breakdown_null_$$') {
+                    return
+                }
 
                 if (!metricsByTheme[themeId]) {
                     metricsByTheme[themeId] = { impressions: 0, submissions: 0 }
                 }
 
-                // Identify event type based on action.id or label
-                // We requested: 
-                // 0: theme_viewed (Impressions)
-                // 1: work_created (Submissions)
+                // Identify event type based on multiple possible fields
+                // PostHog API may return event name in different formats
+                const eventId = item.action?.id || item.event || item.action?.name
+                const label = item.label || ''
 
-                // Check action id if available, otherwise infer from order or label
-                const eventId = item.action?.id
+                // Check multiple conditions for robustness
+                const isImpression = eventId === 'theme_viewed' ||
+                                     label.includes('theme_viewed') ||
+                                     label.includes('Impressions')
 
-                if (eventId === 'theme_viewed') {
-                    metricsByTheme[themeId].impressions += item.count
-                } else if (eventId === 'work_created') {
-                    metricsByTheme[themeId].submissions += item.count
+                const isSubmission = eventId === 'work_created' ||
+                                     label.includes('work_created') ||
+                                     label.includes('Submissions')
+
+                if (isImpression) {
+                    metricsByTheme[themeId].impressions += (item.count || 0)
+                } else if (isSubmission) {
+                    metricsByTheme[themeId].submissions += (item.count || 0)
+                } else {
+                    // Debug: Log unmatched events
+                    console.log('[PostHog API] Unmatched event:', { eventId, label, themeId })
                 }
             })
+
+            console.log('[PostHog API] Aggregated metrics by theme:', metricsByTheme)
+        } else {
+            console.warn('[PostHog API] data.result is not an array, type:', typeof data.result)
         }
 
         // Convert map to array format expected by frontend

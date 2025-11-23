@@ -119,18 +119,35 @@ export default function SponsorInsightsPage() {
             let usedMockData = false
 
             try {
+                console.log('[Insights] Fetching data from API...')
                 const res = await fetch('/api/sponsor/insights')
-                const apiResult = await res.json()
+                console.log('[Insights] API response status:', res.status, res.statusText)
 
-                if (apiResult.warning) {
-                    console.warn('Insight API Warning:', apiResult.warning)
+                const apiResult = await res.json()
+                console.log('[Insights] API result structure:', {
+                    hasWarning: 'warning' in apiResult,
+                    hasResults: 'results' in apiResult,
+                    hasError: 'error' in apiResult,
+                    resultsCount: apiResult.results?.length ?? 'N/A'
+                })
+
+                if (apiResult.error) {
+                    console.error('[Insights] API returned error, using mock data:', apiResult.error)
                     usedMockData = true
-                } else if (apiResult.results) {
+                } else if (apiResult.warning) {
+                    console.warn('[Insights] API returned warning, using mock data:', apiResult.warning)
+                    usedMockData = true
+                } else if (apiResult.results && Array.isArray(apiResult.results)) {
+                    console.log('[Insights] Using real data from PostHog')
+                    console.log('[Insights] API results:', apiResult.results)
+
                     // Map PostHog results to themes
                     type MetricsData = { impressions: number; submissions: number }
                     const metricsMap = new Map<string, MetricsData>(
                         apiResult.results.map((r: any) => [r.theme_id, { impressions: r.impressions || 0, submissions: r.submissions || 0 }])
                     )
+
+                    console.log('[Insights] Metrics map:', Object.fromEntries(metricsMap))
 
                     insightsData = distributedThemes.map(theme => {
                         const metrics = metricsMap.get(theme.id)
@@ -149,10 +166,11 @@ export default function SponsorInsightsPage() {
                     })
                     usedMockData = false
                 } else {
+                    console.warn('[Insights] API returned unexpected format, using mock data')
                     usedMockData = true
                 }
             } catch (e) {
-                console.warn('Failed to fetch from API, using mock data', e)
+                console.error('[Insights] Failed to fetch from API, using mock data:', e)
                 usedMockData = true
             }
 

@@ -49,7 +49,15 @@ export default function CompositionScreen({ route }: Props) {
         screen_name: 'Composition',
         category: theme?.category,
       });
-    }, [theme?.category])
+
+      // お題が表示された時点でtheme_viewedイベントを送信
+      if (theme?.id) {
+        trackEvent(EventNames.THEME_VIEWED, {
+          theme_id: theme.id,
+          category: theme.category,
+        });
+      }
+    }, [theme?.category, theme?.id])
   );
 
   const handleSubmit = async () => {
