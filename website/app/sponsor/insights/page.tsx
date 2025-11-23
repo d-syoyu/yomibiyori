@@ -9,66 +9,114 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 // Tooltip component for metric explanations
-function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top' | 'bottom' }) {
+function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top' | 'bottom' | 'top-right' }) {
     const [isVisible, setIsVisible] = useState(false)
 
-    const tooltipStyle = position === 'top' ? {
-        position: 'absolute' as const,
-        bottom: 'calc(100% + 8px)',
-        left: 'auto',
-        right: '-8px',
-        zIndex: 9999,
-        width: '280px',
-        padding: '12px',
-        fontSize: '12px',
-        lineHeight: '1.5',
-        color: 'var(--color-text-primary)',
-        backgroundColor: 'white',
-        border: '1px solid var(--color-border)',
-        borderRadius: '8px',
-        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-        pointerEvents: 'none' as const,
-        whiteSpace: 'normal' as const
-    } : {
-        position: 'absolute' as const,
-        top: 'calc(100% + 8px)',
-        left: 'auto',
-        right: '-8px',
-        zIndex: 9999,
-        width: '280px',
-        padding: '12px',
-        fontSize: '12px',
-        lineHeight: '1.5',
-        color: 'var(--color-text-primary)',
-        backgroundColor: 'white',
-        border: '1px solid var(--color-border)',
-        borderRadius: '8px',
-        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-        pointerEvents: 'none' as const,
-        whiteSpace: 'normal' as const
-    }
+    const tooltipStyle = (() => {
+        if (position === 'bottom') {
+            return {
+                position: 'absolute' as const,
+                top: 'calc(100% + 8px)',
+                left: 'auto',
+                right: '-8px',
+                zIndex: 9999,
+                width: '280px',
+                padding: '12px',
+                fontSize: '12px',
+                lineHeight: '1.5',
+                color: 'var(--color-text-primary)',
+                backgroundColor: 'white',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                pointerEvents: 'none' as const,
+                whiteSpace: 'normal' as const
+            }
+        }
 
-    const arrowStyle = position === 'top' ? {
-        position: 'absolute' as const,
-        bottom: '-5px',
-        right: '12px',
-        transform: 'rotate(45deg)',
-        width: '8px',
-        height: '8px',
-        backgroundColor: 'white',
-        borderRight: '1px solid var(--color-border)',
-        borderBottom: '1px solid var(--color-border)'
-    } : {
-        position: 'absolute' as const,
-        top: '-5px',
-        right: '12px',
-        transform: 'rotate(45deg)',
-        width: '8px',
-        height: '8px',
-        backgroundColor: 'white',
-        borderLeft: '1px solid var(--color-border)',
-        borderTop: '1px solid var(--color-border)'
-    }
+        if (position === 'top-right') {
+            return {
+                position: 'absolute' as const,
+                bottom: 'calc(100% + 8px)',
+                left: '100%',
+                transform: 'translateY(0)',
+                marginLeft: '8px',
+                zIndex: 9999,
+                width: '280px',
+                padding: '12px',
+                fontSize: '12px',
+                lineHeight: '1.5',
+                color: 'var(--color-text-primary)',
+                backgroundColor: 'white',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                pointerEvents: 'none' as const,
+                whiteSpace: 'normal' as const
+            }
+        }
+
+        return {
+            position: 'absolute' as const,
+            bottom: 'calc(100% + 8px)',
+            left: 'auto',
+            right: '-8px',
+            zIndex: 9999,
+            width: '280px',
+            padding: '12px',
+            fontSize: '12px',
+            lineHeight: '1.5',
+            color: 'var(--color-text-primary)',
+            backgroundColor: 'white',
+            border: '1px solid var(--color-border)',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+            pointerEvents: 'none' as const,
+            whiteSpace: 'normal' as const
+        }
+    })()
+
+    const arrowStyle = (() => {
+        if (position === 'bottom') {
+            return {
+                position: 'absolute' as const,
+                top: '-5px',
+                right: '12px',
+                transform: 'rotate(45deg)',
+                width: '8px',
+                height: '8px',
+                backgroundColor: 'white',
+                borderLeft: '1px solid var(--color-border)',
+                borderTop: '1px solid var(--color-border)'
+            }
+        }
+
+        if (position === 'top-right') {
+            return {
+                position: 'absolute' as const,
+                bottom: '-5px',
+                left: '12px',
+                transform: 'rotate(45deg)',
+                width: '8px',
+                height: '8px',
+                backgroundColor: 'white',
+                borderRight: '1px solid var(--color-border)',
+                borderBottom: '1px solid var(--color-border)'
+            }
+        }
+
+        return {
+            position: 'absolute' as const,
+            bottom: '-5px',
+            right: '12px',
+            transform: 'rotate(45deg)',
+            width: '8px',
+            height: '8px',
+            backgroundColor: 'white',
+            borderRight: '1px solid var(--color-border)',
+            borderBottom: '1px solid var(--color-border)'
+        }
+    })()
 
     return (
         <span
@@ -353,7 +401,7 @@ export default function SponsorInsightsPage() {
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
                     <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
                         総表示回数
-                        <InfoTooltip text="ユーザーがお題を閲覧した回数の合計です。アプリ内でお題画面が表示された回数を示します。" position="bottom" />
+                        <InfoTooltip text="ユーザーがお題を閲覧した回数の合計です。アプリ内でお題画面が表示された回数を示します。" position="top-right" />
                     </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.total_impressions.toLocaleString()}
@@ -363,7 +411,7 @@ export default function SponsorInsightsPage() {
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
                     <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
                         総投稿数
-                        <InfoTooltip text="ユーザーがお題に対して下の句を投稿した回数の合計です。実際にコンテンツが作成された回数を示します。" position="bottom" />
+                        <InfoTooltip text="ユーザーがお題に対して下の句を投稿した回数の合計です。実際にコンテンツが作成された回数を示します。" position="top-right" />
                     </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.total_submissions.toLocaleString()}
@@ -373,7 +421,7 @@ export default function SponsorInsightsPage() {
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)]">
                     <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center">
                         平均エンゲージメント率
-                        <InfoTooltip text="表示回数に対する投稿数の割合です。お題を見たユーザーのうち、実際に下の句を投稿した割合を示します。" position="bottom" />
+                        <InfoTooltip text="表示回数に対する投稿数の割合です。お題を見たユーザーのうち、実際に下の句を投稿した割合を示します。" position="top-right" />
                     </h3>
                     <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
                         {summary.avg_engagement_rate.toFixed(1)}
