@@ -38,9 +38,9 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
             return {
                 position: 'absolute' as const,
                 bottom: 'calc(100% + 8px)',
-                left: '100%',
-                transform: 'translateY(0)',
-                marginLeft: '8px',
+                left: 'auto',
+                right: '0',
+                transform: 'none',
                 zIndex: 9999,
                 width: '280px',
                 padding: '12px',
@@ -95,7 +95,7 @@ function InfoTooltip({ text, position = 'top' }: { text: string; position?: 'top
             return {
                 position: 'absolute' as const,
                 bottom: '-5px',
-                left: '12px',
+                right: '12px',
                 transform: 'rotate(45deg)',
                 width: '8px',
                 height: '8px',
