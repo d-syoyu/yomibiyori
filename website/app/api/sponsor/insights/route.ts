@@ -73,6 +73,7 @@ export async function GET(request: Request) {
             breakdown_type: 'event',
             date_from: 'all', // Get all time data
             display: 'ActionsTable', // Get tabular data
+            sampling_factor: '1', // Disable sampling to align with PostHog Events tab counts
             // Note: is_sample_account filter removed because it excludes events without the property
             // (i.e., all events before the property was added). We'll filter in post-processing instead.
         })
