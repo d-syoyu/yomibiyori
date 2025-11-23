@@ -5,9 +5,33 @@ export async function GET(request: Request) {
     try {
         // 1. Auth Check
         const supabase = await createClient()
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-        console.log('[Insights API] Auth check:', {
+        // Authorizationヘッダーからトークンを取得
+        const authHeader = request.headers.get('Authorization')
+        const token = authHeader?.replace('Bearer ', '')
+
+        console.log('[Insights API] Auth header check:', {
+            hasAuthHeader: !!authHeader,
+            hasToken: !!token
+        })
+
+        let session = null
+        let sessionError = null
+
+        // トークンがある場合はそれを使用、なければクッキーから取得
+        if (token) {
+            const { data, error } = await supabase.auth.getUser(token)
+            if (data?.user) {
+                session = { user: data.user }
+            }
+            sessionError = error
+        } else {
+            const result = await supabase.auth.getSession()
+            session = result.data.session
+            sessionError = result.error
+        }
+
+        console.log('[Insights API] Auth check result:', {
             hasSession: !!session,
             sessionError: sessionError?.message,
             userId: session?.user?.id

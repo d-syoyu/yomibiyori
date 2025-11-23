@@ -120,9 +120,19 @@ export default function SponsorInsightsPage() {
 
             try {
                 console.log('[Insights] Fetching data from API...')
+
+                // セッションからアクセストークンを取得
+                const { data: { session: currentSession } } = await supabase.auth.getSession()
+                const accessToken = currentSession?.access_token
+
+                console.log('[Insights] Access token available:', !!accessToken)
+
                 const res = await fetch('/api/sponsor/insights', {
-                    credentials: 'include', // クッキーを含める
-                    cache: 'no-store' // キャッシュを無効化
+                    credentials: 'include',
+                    cache: 'no-store',
+                    headers: accessToken ? {
+                        'Authorization': `Bearer ${accessToken}`
+                    } : {}
                 })
                 console.log('[Insights] API response status:', res.status, res.statusText)
 
