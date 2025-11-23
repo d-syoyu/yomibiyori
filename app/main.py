@@ -19,7 +19,7 @@ app = FastAPI(title="Yomibiyori API", version="1.0.0")
 
 # CORS configuration for local development and production
 # Allow both http and https for yomibiyori.com to support redirects
-# Updated: 2025-11-22 to fix sponsor theme submission CORS issues
+# Updated: 2025-11-22 14:45 JST - fix sponsor theme submission
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
