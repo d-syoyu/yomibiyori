@@ -128,6 +128,9 @@ class SponsorThemeCreate(SponsorThemeBase):
     """Create a new sponsor theme."""
 
     campaign_id: Optional[str] = None  # Optional - will use/create default campaign if not provided
+    sponsor_official_url: Optional[str] = Field(
+        None, description="Official URL for the sponsor (updates sponsor profile)"
+    )
 
 
 class SponsorThemeUpdate(BaseModel):

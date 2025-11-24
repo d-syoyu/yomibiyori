@@ -74,6 +74,7 @@ def generate_share_card(
         caption=None,  # 必要に応じて追加
         likes_label=f"♥ {likes_count}" if likes_count > 0 else None,
         score_label=None,  # スコアは現在未実装
+        sponsor_name=theme.sponsor_company_name,
     )
 
     return Response(

@@ -121,6 +121,7 @@ const ShareSheet: React.FC<ShareSheetProps> = ({ visible, payload, onClose }) =>
                       lowerText={payload.card.lowerText}
                       category={payload.card.category}
                       displayName={payload.card.displayName}
+                      sponsorName={payload.card.sponsorName}
                       customActions={
                         <Text style={styles.appNameText}>よみびより</Text>
                       }

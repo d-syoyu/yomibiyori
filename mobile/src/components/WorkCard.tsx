@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   type GestureResponderEvent,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import VerticalPoem from './VerticalPoem';
@@ -16,6 +17,9 @@ interface WorkCardProps {
   lowerText: string;
   category: ThemeCategory;
   displayName: string;
+  sponsorName?: string;
+  sponsorUrl?: string;
+  onSponsorPress?: () => void;
   likesCount?: number;
   onLike?: (event: GestureResponderEvent) => void;
   onShare?: (event: GestureResponderEvent) => void;
@@ -31,6 +35,9 @@ const WorkCard: React.FC<WorkCardProps> = ({
   lowerText,
   category,
   displayName,
+  sponsorName,
+  sponsorUrl,
+  onSponsorPress,
   likesCount,
   onLike,
   onShare,
@@ -39,6 +46,24 @@ const WorkCard: React.FC<WorkCardProps> = ({
   badgeLabel,
 }) => {
   const themeColors = colors.category[category] ?? colors.category[DEFAULT_CATEGORY];
+
+  const handleSponsorPress = async () => {
+    if (onSponsorPress) {
+      onSponsorPress();
+      return;
+    }
+    if (!sponsorUrl) {
+      return;
+    }
+    try {
+      const canOpen = await Linking.canOpenURL(sponsorUrl);
+      if (canOpen) {
+        await Linking.openURL(sponsorUrl);
+      }
+    } catch (error) {
+      console.warn('[WorkCard] Failed to open sponsor URL', error);
+    }
+  };
 
   return (
     <View style={[styles.outerContainer, { backgroundColor: themeColors.primary }]}>
@@ -62,7 +87,39 @@ const WorkCard: React.FC<WorkCardProps> = ({
         <View style={styles.divider} />
 
         <View style={styles.footer}>
-          <View style={styles.footerLeft}>{extraFooterContent}</View>
+          <View style={styles.footerLeft}>
+            {sponsorName && (
+              <TouchableOpacity
+                onPress={handleSponsorPress}
+                disabled={!sponsorUrl && !onSponsorPress}
+                activeOpacity={0.7}
+                accessibilityRole="link"
+                accessibilityLabel={`スポンサー: ${sponsorName}`}
+                style={[
+                  styles.sponsorChip,
+                  (!sponsorUrl && !onSponsorPress) && styles.sponsorChipDisabled,
+                ]}
+              >
+                <Ionicons
+                  name="ribbon-outline"
+                  size={14}
+                  color={(sponsorUrl || onSponsorPress) ? colors.text.primary : colors.text.tertiary}
+                />
+                <Text
+                  style={[
+                    styles.sponsorText,
+                    (!sponsorUrl && !onSponsorPress) && styles.sponsorTextDisabled,
+                  ]}
+                >
+                  {sponsorName}
+                </Text>
+                {(sponsorUrl || onSponsorPress) && (
+                  <Ionicons name="open-outline" size={14} color={colors.text.primary} />
+                )}
+              </TouchableOpacity>
+            )}
+            {extraFooterContent}
+          </View>
           {customActions ?? (
             <View style={styles.actions}>
               {onShare && (
@@ -131,6 +188,31 @@ const styles = StyleSheet.create({
   },
   footerLeft: {
     flex: 1,
+    gap: spacing.xs,
+  },
+  sponsorText: {
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    letterSpacing: 0.3,
+  },
+  sponsorTextDisabled: {
+    color: colors.text.tertiary,
+  },
+  sponsorChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(26, 54, 93, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(26, 54, 93, 0.1)',
+    alignSelf: 'flex-start',
+  },
+  sponsorChipDisabled: {
+    opacity: 0.6,
   },
   actions: {
     flexDirection: 'row',

@@ -7,6 +7,7 @@ export interface ShareCardContent {
   upperText?: string;
   lowerText: string;
   displayName: string;
+  sponsorName?: string;
   dateLabel: string;
   categoryLabel: string;
   likesLabel?: string;

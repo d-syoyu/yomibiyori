@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -234,6 +235,20 @@ export default function RankingScreen() {
                   lowerText={entry.text}
                   category={theme?.category ?? '恋愛'}
                   displayName={entry.display_name}
+                  sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}
+                  sponsorUrl={theme?.sponsor_official_url}
+                  onSponsorPress={() => {
+                    if (!theme?.sponsor_company_name || !theme?.sponsor_official_url) {
+                      return;
+                    }
+                    trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
+                      theme_id: theme.id,
+                      sponsor_name: theme.sponsor_company_name,
+                      url: theme.sponsor_official_url,
+                      context: 'ranking',
+                    });
+                    Linking.openURL(theme.sponsor_official_url);
+                  }}
                   badgeLabel={`${entry.rank}位`}
                   customActions={
                     <View style={styles.rankActions}>

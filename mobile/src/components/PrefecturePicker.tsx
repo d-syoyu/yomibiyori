@@ -1,12 +1,13 @@
 /**
  * Prefecture Picker Component
- * 都道府県選択コンポーネント
+ * 都道府県を選択するピッカー
  */
 
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { PREFECTURES } from '../constants/prefectures';
+import { colors, fontFamily, fontSize } from '../theme';
 
 interface PrefecturePickerProps {
   value?: string;
@@ -23,7 +24,9 @@ export function PrefecturePicker({ value, onChange, pickerStyle }: PrefecturePic
           // Empty string means "not selected"
           onChange(itemValue === '' ? undefined : itemValue);
         }}
-        style={{ height: 56 }}
+        style={[styles.picker, styles.pickerText]}
+        itemStyle={styles.pickerItem}
+        dropdownIconColor={colors.text.secondary}
       >
         <Picker.Item label="選択してください" value="" />
         {PREFECTURES.map((prefecture) => (
@@ -33,3 +36,18 @@ export function PrefecturePicker({ value, onChange, pickerStyle }: PrefecturePic
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  picker: {
+    height: 56,
+  },
+  pickerText: {
+    color: colors.text.primary,
+    backgroundColor: 'transparent',
+  },
+  pickerItem: {
+    color: colors.text.primary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.body,
+  },
+});

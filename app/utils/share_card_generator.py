@@ -267,6 +267,7 @@ class ShareCardGenerator:
         caption: Optional[str] = None,
         likes_label: Optional[str] = None,
         score_label: Optional[str] = None,
+        sponsor_name: Optional[str] = None,
     ) -> BytesIO:
         """
         共有カード画像を生成（モバイルプレビューと同じレイアウト）
@@ -375,13 +376,20 @@ class ShareCardGenerator:
             width=2  # 太くする
         )
 
-        # よみびより（右下）
+        # スポンサー表記とフッター
         footer_y = divider_y + spacing_md
-        app_name = "よみびより"
+        if sponsor_name:
+            draw.text(
+                (content_x, footer_y),
+                sponsor_name,
+                font=font_meta,
+                fill=self.TEXT_PRIMARY
+            )
+        app_name = "��݂т��"
         bbox = draw.textbbox((0, 0), app_name, font=font_meta)
         app_name_width = bbox[2] - bbox[0]
         draw.text(
-            (inner_x2 - self.INNER_PADDING - app_name_width, footer_y),
+            (inner_x2 - self.INNER_PADDING - app_name_width, footer_y - 40),
             app_name,
             font=font_meta,
             fill=self.TEXT_SECONDARY

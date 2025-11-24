@@ -1,4 +1,3 @@
-```typescript
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -68,7 +67,8 @@ export async function GET(request: Request) {
         const params = new URLSearchParams({
             events: JSON.stringify([
                 { id: 'theme_viewed', math: 'total', name: 'Impressions' },
-                { id: 'work_created', math: 'total', name: 'Submissions' }
+                { id: 'work_created', math: 'total', name: 'Submissions' },
+                { id: 'sponsor_link_clicked', math: 'total', name: 'Sponsor Link Clicks' }
             ]),
             breakdown: 'theme_id',
             breakdown_type: 'event',
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
         // Each item represents a specific event filtered by a specific breakdown value (theme_id).
         // We need to aggregate these by theme_id.
 
-        const metricsByTheme: Record<string, { impressions: number; submissions: number }> = {}
+        const metricsByTheme: Record<string, { impressions: number; submissions: number; sponsor_link_clicks: number }> = {}
 
         if (Array.isArray(data.result)) {
             console.log('[PostHog API] Processing', data.result.length, 'result items')
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
                 }
 
                 if (!metricsByTheme[themeId]) {
-                    metricsByTheme[themeId] = { impressions: 0, submissions: 0 }
+                    metricsByTheme[themeId] = { impressions: 0, submissions: 0, sponsor_link_clicks: 0 }
                 }
 
                 // Identify event type based on multiple possible fields
@@ -151,6 +151,10 @@ export async function GET(request: Request) {
                                      label.includes('work_created') ||
                                      label.includes('Submissions')
 
+                const isSponsorClick = eventId === 'sponsor_link_clicked' ||
+                                       label.includes('sponsor_link_clicked') ||
+                                       label.includes('Sponsor Link Clicks')
+
                 // Get actual count from aggregated_value or sum of data array
                 let actualCount = 0
                 if (typeof item.aggregated_value === 'number') {
@@ -165,6 +169,8 @@ export async function GET(request: Request) {
                     metricsByTheme[themeId].impressions += actualCount
                 } else if (isSubmission) {
                     metricsByTheme[themeId].submissions += actualCount
+                } else if (isSponsorClick) {
+                    metricsByTheme[themeId].sponsor_link_clicks += actualCount
                 } else {
                     // Debug: Log unmatched events
                     console.log('[PostHog API] Unmatched event:', { eventId, label, themeId })
@@ -288,12 +294,13 @@ export async function GET(request: Request) {
                 total_likes: totalLikes,
                 avg_likes_per_work: Number(avgLikes.toFixed(1)),
                 top_work: topWorkData,
-                ranking_entries: rankingEntries,
-                demographics: {
-                    age_groups: ageGroups,
-                    regions: regions
+                    ranking_entries: rankingEntries,
+                    sponsor_link_clicks: metrics.sponsor_link_clicks,
+                    demographics: {
+                        age_groups: ageGroups,
+                        regions: regions
+                    }
                 }
-            }
         }))
 
         return NextResponse.json({ results: enrichedResults })
@@ -306,4 +313,3 @@ export async function GET(request: Request) {
         )
     }
 }
-```

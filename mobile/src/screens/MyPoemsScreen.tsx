@@ -14,6 +14,7 @@ import {
   RefreshControl,
   AppState,
   AppStateStatus,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -383,6 +384,20 @@ export default function MyPoemsScreen() {
                                 lowerText={work.text}
                                 category={theme?.category ?? '恋愛'}
                                 displayName={work.display_name}
+                                sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}
+                                sponsorUrl={theme?.sponsor_official_url}
+                                onSponsorPress={() => {
+                                  if (!theme?.sponsor_company_name || !theme?.sponsor_official_url) {
+                                    return;
+                                  }
+                                  trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
+                                    theme_id: theme.id,
+                                    sponsor_name: theme.sponsor_company_name,
+                                    url: theme.sponsor_official_url,
+                                    context: 'my_poems',
+                                  });
+                                  Linking.openURL(theme.sponsor_official_url);
+                                }}
                                 likesCount={work.likes_count}
                                 onShare={() => openShareSheet(work, theme)}
                               />

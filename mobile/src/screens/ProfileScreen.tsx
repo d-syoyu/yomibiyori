@@ -254,7 +254,9 @@ export default function ProfileScreen() {
               <Picker
                 selectedValue={birthYear}
                 onValueChange={(itemValue) => setBirthYear(itemValue === 0 ? undefined : itemValue)}
-                style={styles.picker}
+                style={[styles.picker, styles.pickerText]}
+                itemStyle={styles.pickerItem}
+                dropdownIconColor={colors.text.secondary}
               >
                 <Picker.Item label="選択してください" value={0} />
                 {Array.from({ length: 126 }, (_, i) => {
@@ -464,6 +466,15 @@ const styles = StyleSheet.create({
   picker: {
     height: Platform.select({ ios: 180, android: 56 }),
     zIndex: 1,
+  },
+  pickerText: {
+    color: colors.text.primary,
+    backgroundColor: 'transparent',
+  },
+  pickerItem: {
+    color: colors.text.primary,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.body,
   },
   saveButton: {
     flexDirection: 'row',

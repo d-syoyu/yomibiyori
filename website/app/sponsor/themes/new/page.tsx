@@ -22,6 +22,7 @@ export default function NewThemePage() {
     line1: '', // 5文字
     line2: '', // 7文字
     line3: '', // 5文字
+    sponsor_official_url: '',
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -166,6 +167,7 @@ export default function NewThemePage() {
           date: formData.date,
           category: formData.category,
           text_575: text_575,
+          sponsor_official_url: formData.sponsor_official_url?.trim() || null,
         }),
       })
 
@@ -294,6 +296,27 @@ export default function NewThemePage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Sponsor Link */}
+          <div>
+            <label
+              htmlFor="sponsor_official_url"
+              className="block text-sm font-medium text-[var(--color-text-primary)] mb-2"
+            >
+              スポンサー公式URL
+            </label>
+            <input
+              id="sponsor_official_url"
+              type="url"
+              value={formData.sponsor_official_url}
+              onChange={(e) => setFormData({ ...formData, sponsor_official_url: e.target.value })}
+              placeholder="https://example.com"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
+            />
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+              スポンサー名と共に表示され、タップで開くリンクです。イベントやキャンペーンURLも入力いただけます。
+            </p>
           </div>
 
           {/* 5-7-5 Input */}

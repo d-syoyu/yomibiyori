@@ -177,20 +177,33 @@ const ShareCardSVG: React.FC<ShareCardSVGProps> = ({
 
         {/* フッター */}
         <G>
+          {content.sponsorName && (
+            <SVGText
+              x={padding + innerPadding + 24 * scale}
+              y={height - padding - innerPadding - 30 * scale}
+              fontSize={18 * scale}
+              fill={colors.text.primary}
+              fontWeight="600"
+              fontFamily="Noto Serif JP"
+            >
+              {content.sponsorName}
+            </SVGText>
+          )}
           <SVGText
-            x={padding + innerPadding + 24 * scale}
-            y={height - padding - innerPadding - 60 * scale}
-            fontSize={22 * scale}
+            x={width - padding - innerPadding - 24 * scale}
+            y={height - padding - innerPadding - 54 * scale}
+            fontSize={18 * scale}
             fill={colors.text.primary}
             fontWeight="600"
+            textAnchor="end"
             fontFamily="Noto Serif JP"
           >
             {APP_NAME}
           </SVGText>
           <SVGText
             x={width - padding - innerPadding - 24 * scale}
-            y={height - padding - innerPadding - 60 * scale}
-            fontSize={16 * scale}
+            y={height - padding - innerPadding - 30 * scale}
+            fontSize={14 * scale}
             fill={colors.text.primary}
             fontWeight="600"
             textAnchor="end"

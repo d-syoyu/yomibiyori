@@ -141,6 +141,7 @@ interface ThemeInsight {
     date: string
     impressions: number
     submissions: number
+    sponsor_link_clicks: number
     likes: number
     engagement_rate: number
     total_likes: number
@@ -287,6 +288,7 @@ export default function SponsorInsightsPage() {
                     type ApiMetrics = {
                         impressions: number
                         submissions: number
+                        sponsor_link_clicks: number
                         total_likes: number
                         avg_likes_per_work: number
                         top_work: { text: string; likes: number; author_name: string } | null
@@ -306,6 +308,7 @@ export default function SponsorInsightsPage() {
                         const metrics = metricsMap.get(theme.id)
                         const impressions = metrics?.impressions || 0
                         const submissions = metrics?.submissions || 0
+                        const sponsor_link_clicks = metrics?.sponsor_link_clicks || 0
 
                         return {
                             id: theme.id,
@@ -313,13 +316,17 @@ export default function SponsorInsightsPage() {
                             date: theme.date,
                             impressions,
                             submissions,
+                            sponsor_link_clicks,
                             likes: metrics?.total_likes || 0,
                             engagement_rate: impressions > 0 ? (submissions / impressions) * 100 : 0,
                             total_likes: metrics?.total_likes || 0,
                             avg_likes_per_work: metrics?.avg_likes_per_work || 0,
                             top_work: metrics?.top_work || null,
                             ranking_entries: metrics?.ranking_entries || 0,
-                            demographics: metrics?.demographics
+                            demographics: metrics?.demographics ?? {
+                                age_groups: {},
+                                regions: {}
+                            }
                         }
                     })
                     usedMockData = false
@@ -345,6 +352,7 @@ export default function SponsorInsightsPage() {
                         date: theme.date,
                         impressions,
                         submissions,
+                        sponsor_link_clicks: Math.floor(impressions * (Math.random() * 0.02 + 0.01)),
                         likes: totalLikes,
                         engagement_rate: (submissions / impressions) * 100,
                         total_likes: totalLikes,
@@ -374,11 +382,6 @@ export default function SponsorInsightsPage() {
             }
 
             setThemes(insightsData)
-
-            // Select the most recent theme by default if available
-            if (insightsData.length > 0) {
-                setSelectedTheme(insightsData[0])
-            }
 
             // Calculate summary
             const totalImp = insightsData.reduce((sum, t) => sum + t.impressions, 0)
@@ -476,6 +479,12 @@ export default function SponsorInsightsPage() {
                                 </th>
                                 <th className="p-4 font-medium text-left">
                                     <span className="inline-flex items-center">
+                                        リンククリック
+                                        <InfoTooltip text="スポンサー公式URLがクリックされた回数です。" position="bottom-left" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
                                         合計いいね
                                         <InfoTooltip text="このお題に投稿された全作品が獲得したいいねの合計数です。" position="bottom-left" />
                                     </span>
@@ -498,13 +507,13 @@ export default function SponsorInsightsPage() {
                                         <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" position="bottom-right" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-left">詳細</th>
+                                <th className="p-4 font-medium text-left">分析</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {themes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="p-8 text-center text-[var(--color-text-muted)]">
+                                    <td colSpan={10} className="p-8 text-center text-[var(--color-text-muted)]">
                                         データがありません。お題が配信されるとここに表示されます。
                                     </td>
                                 </tr>
@@ -512,8 +521,7 @@ export default function SponsorInsightsPage() {
                                 themes.map((theme) => (
                                     <tr
                                         key={theme.id}
-                                        className={`hover:bg-[var(--color-washi)]/50 transition-colors cursor-pointer ${selectedTheme?.id === theme.id ? 'bg-[var(--color-washi)]' : ''}`}
-                                        onClick={() => setSelectedTheme(theme)}
+                                        className={`hover:bg-[var(--color-washi)]/50 transition-colors cursor-default ${selectedTheme?.id === theme.id ? 'bg-[var(--color-washi)]' : ''}`}
                                     >
                                         <td className="p-4 font-medium text-left text-[var(--color-text-primary)] font-serif">
                                             {theme.text_575}
@@ -525,11 +533,14 @@ export default function SponsorInsightsPage() {
                                             {theme.impressions.toLocaleString()}
                                         </td>
                                         <td className="p-4 text-left text-[var(--color-text-primary)]">
-                                            {theme.submissions.toLocaleString()}
-                                        </td>
-                                        <td className="p-4 text-left text-[var(--color-text-primary)]">
-                                            {theme.total_likes.toLocaleString()}
-                                        </td>
+                                        {theme.submissions.toLocaleString()}
+                                    </td>
+                                    <td className="p-4 text-left text-[var(--color-text-primary)]">
+                                        {theme.sponsor_link_clicks?.toLocaleString() ?? '-'}
+                                    </td>
+                                    <td className="p-4 text-left text-[var(--color-text-primary)]">
+                                        {theme.total_likes.toLocaleString()}
+                                    </td>
                                         <td className="p-4 text-left text-[var(--color-text-secondary)]">
                                             {theme.avg_likes_per_work.toFixed(1)}
                                         </td>
@@ -560,7 +571,7 @@ export default function SponsorInsightsPage() {
                                                     setSelectedTheme(theme);
                                                 }}
                                             >
-                                                分析
+                                                詳細
                                             </button>
                                         </td>
                                     </tr>
@@ -686,4 +697,3 @@ export default function SponsorInsightsPage() {
         </div>
     )
 }
-
