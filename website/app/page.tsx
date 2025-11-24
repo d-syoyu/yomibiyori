@@ -12,17 +12,17 @@ export default function Home() {
           <div className="page-container grid lg:grid-cols-2 gap-12 items-center relative z-10">
             <div className="space-y-8 text-center lg:text-left animate-fade-in">
               <div className="inline-block px-4 py-1.5 rounded-full bg-[#F5F3ED] text-[#6B7B4F] text-sm font-medium tracking-wider mb-4 border border-[#EBE8DD]">
-                和の心を紡ぐ、短歌SNS
+                日々を詠む、詩的SNS
               </div>
               <h1 className="section-heading leading-tight">
-                毎日一句、<br />
+                よみびより、<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
-                  おだやかな日々を。
+                  今日のひらめきを一首に。
                 </span>
               </h1>
               <p className="section-subheading lg:mx-0 text-lg">
-                毎朝届く上の句に、あなたの言葉を添えて。<br className="hidden sm:block" />
-                短歌のリズムが、忙しい毎日に心地よい余白を作ります。
+                上の句を受け取り、下の句で返す。<br className="hidden sm:block" />
+                朝の気配や夜の余音を、五七五七七にそっと閉じ込めます。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
@@ -38,7 +38,7 @@ export default function Home() {
                   </div>
                 </Link>
                 <Link href="#features" className="btn-secondary w-full sm:w-auto text-center">
-                  詳しく見る
+                  使い方を見る
                 </Link>
               </div>
             </div>
@@ -69,7 +69,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[#6B7B4F]/10 rounded-full blur-3xl opacity-60 transform scale-90"></div>
                 <Image
                   src="/images/hero.png"
-                  alt="日替わりのお題"
+                  alt="上の句選択画面"
                   width={500}
                   height={1000}
                   className="relative rounded-2xl shadow-xl border border-white/50 mx-auto max-w-[280px]"
@@ -81,11 +81,11 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                   </svg>
                 </div>
-                <h2 className="text-3xl font-bold text-[var(--color-igusa)]">毎朝届く、季節のお題</h2>
+                <h2 className="text-3xl font-bold text-[var(--color-igusa)]">上の句を選び、下の句で響く</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  恋愛、季節、日常、ユーモア。<br />
-                  毎朝6時、新しい上の句があなたの元へ。<br />
-                  ふとした瞬間に浮かぶ言葉を、短歌という器に。
+                  朝･昼･夜･週末の4テーマから上の句を選択。<br />
+                  毎日6:00〜22:00に投稿でき、<br />
+                  ことばが集まる場にゆるやかに溶け込みます。
                 </p>
               </div>
             </div>
@@ -98,18 +98,18 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
                   </svg>
                 </div>
-                <h2 className="text-3xl font-bold text-[var(--color-igusa)]">縦書きで綴る、日本語の美</h2>
+                <h2 className="text-3xl font-bold text-[var(--color-igusa)]">下の句をつむぎ、流れを共有</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  古来より続く「縦書き」の心地よさを、<br />
-                  現代のスマートフォンで再現しました。<br />
-                  文字が流れるように配置される美しさを体験してください。
+                  シンプルな作詩UIで五七五七七をすばやく投稿。<br />
+                  スマートフォンに最適化された体験で、<br />
+                  自然とことばが立ち上がるようにデザインしています。
                 </p>
               </div>
               <div className="relative">
                 <div className="absolute inset-0 bg-[#FFB7C5]/20 rounded-full blur-3xl opacity-60 transform scale-90"></div>
                 <Image
                   src="/images/feature-compose.png"
-                  alt="縦書きのUI"
+                  alt="下の句入力UI"
                   width={500}
                   height={1000}
                   className="relative rounded-2xl shadow-xl border border-white/50 mx-auto max-w-[280px]"
@@ -123,7 +123,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[#88B04B]/10 rounded-full blur-3xl opacity-60 transform scale-90"></div>
                 <Image
                   src="/images/feature-view.png"
-                  alt="感性の共有"
+                  alt="作品一覧画面"
                   width={500}
                   height={1000}
                   className="relative rounded-2xl shadow-xl border border-white/50 mx-auto max-w-[280px]"
@@ -135,11 +135,11 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                   </svg>
                 </div>
-                <h2 className="text-3xl font-bold text-[var(--color-igusa)]">感性を共有する</h2>
+                <h2 className="text-3xl font-bold text-[var(--color-igusa)]">響き合いを眺める</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  他のユーザーが詠んだ歌に触れる。<br />
-                  「いいね」やランキングで、<br />
-                  言葉の響き合いを楽しめます。
+                  あなたの一首に応えたユーザーを表示。<br />
+                  「お気に入り」で保存し、<br />
+                  あとでゆっくり振り返れます。
                 </p>
               </div>
             </div>
@@ -151,17 +151,17 @@ export default function Home() {
         <section className="py-24 relative overflow-hidden">
           <div className="page-container relative z-10">
             <div className="card max-w-4xl mx-auto text-center space-y-8 bg-white/60 backdrop-blur-xl">
-              <h2 className="text-2xl font-bold text-[var(--color-igusa)]">企業・団体の方へ</h2>
+              <h2 className="text-2xl font-bold text-[var(--color-igusa)]">応援・スポンサー募集</h2>
               <p className="text-[var(--color-text-secondary)] max-w-2xl mx-auto">
-                和の世界観を大切にしたまま、ブランドメッセージを短歌の形で届けられます。<br />
-                スポンサーには、お題投稿・配信管理ダッシュボードを提供しています。
+                よみびよりを一緒に育ててくださる個人・企業の方を募集しています。<br />
+                スポンサーには特典や管理ダッシュボードをご用意しています。
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <Link href="/sponsors" className="btn-primary">
                   スポンサー登録
                 </Link>
                 <Link href="/support" className="btn-secondary">
-                  導入相談
+                  ご支援はこちら
                 </Link>
                 <Link href="/sponsor-login" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-ai)] underline underline-offset-4">
                   ログインはこちら
@@ -179,7 +179,7 @@ export default function Home() {
               <Link href="/terms" className="hover:text-[var(--color-ai)] transition-colors">利用規約</Link>
               <Link href="/support" className="hover:text-[var(--color-ai)] transition-colors">サポート</Link>
             </nav>
-            <p className="text-xs text-[var(--color-text-muted)]">© 2024 Yomibiyori. All rights reserved.</p>
+            <p className="text-xs text-[var(--color-text-muted)]">c 2024 Yomibiyori. All rights reserved.</p>
           </div>
         </footer>
       </main>
