@@ -58,7 +58,7 @@ function InfoTooltip({ text, position = 'top-left' }: { text: string; position?:
                 return {
                     ...base,
                     bottom: 'calc(100% + 8px)',
-                    left: '0',
+                    left: '16px',
                     right: 'auto',
                 }
         }
@@ -151,6 +151,10 @@ interface ThemeInsight {
         author_name: string
     } | null
     ranking_entries: number
+    demographics?: {
+        age_groups: Record<string, number>
+        regions: Record<string, number>
+    }
 }
 
 interface SummaryStats {
@@ -162,6 +166,7 @@ interface SummaryStats {
 export default function SponsorInsightsPage() {
     const [loading, setLoading] = useState(true)
     const [themes, setThemes] = useState<ThemeInsight[]>([])
+    const [selectedTheme, setSelectedTheme] = useState<ThemeInsight | null>(null)
     const [summary, setSummary] = useState<SummaryStats>({
         total_impressions: 0,
         total_submissions: 0,
@@ -286,6 +291,10 @@ export default function SponsorInsightsPage() {
                         avg_likes_per_work: number
                         top_work: { text: string; likes: number; author_name: string } | null
                         ranking_entries: number
+                        demographics: {
+                            age_groups: Record<string, number>
+                            regions: Record<string, number>
+                        }
                     }
                     const metricsMap = new Map<string, ApiMetrics>(
                         apiResult.results.map((r: any) => [r.theme_id, r as ApiMetrics])
@@ -310,6 +319,7 @@ export default function SponsorInsightsPage() {
                             avg_likes_per_work: metrics?.avg_likes_per_work || 0,
                             top_work: metrics?.top_work || null,
                             ranking_entries: metrics?.ranking_entries || 0,
+                            demographics: metrics?.demographics
                         }
                     })
                     usedMockData = false
@@ -345,11 +355,30 @@ export default function SponsorInsightsPage() {
                             author_name: 'サンプルユーザー'
                         } : null,
                         ranking_entries: Math.floor(submissions * 0.1),
+                        demographics: {
+                            age_groups: {
+                                '10代': Math.floor(submissions * 0.1),
+                                '20代': Math.floor(submissions * 0.3),
+                                '30代': Math.floor(submissions * 0.4),
+                                '40代': Math.floor(submissions * 0.1),
+                                '50代以上': Math.floor(submissions * 0.1),
+                            },
+                            regions: {
+                                '東京都': Math.floor(submissions * 0.4),
+                                '大阪府': Math.floor(submissions * 0.2),
+                                'その他': Math.floor(submissions * 0.4),
+                            }
+                        }
                     }
                 })
             }
 
             setThemes(insightsData)
+
+            // Select the most recent theme by default if available
+            if (insightsData.length > 0) {
+                setSelectedTheme(insightsData[0])
+            }
 
             // Calculate summary
             const totalImp = insightsData.reduce((sum, t) => sum + t.impressions, 0)
@@ -469,18 +498,23 @@ export default function SponsorInsightsPage() {
                                         <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" position="bottom-right" />
                                     </span>
                                 </th>
+                                <th className="p-4 font-medium text-left">詳細</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {themes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="p-8 text-center text-[var(--color-text-muted)]">
+                                    <td colSpan={9} className="p-8 text-center text-[var(--color-text-muted)]">
                                         データがありません。お題が配信されるとここに表示されます。
                                     </td>
                                 </tr>
                             ) : (
                                 themes.map((theme) => (
-                                    <tr key={theme.id} className="hover:bg-[var(--color-washi)]/50 transition-colors">
+                                    <tr
+                                        key={theme.id}
+                                        className={`hover:bg-[var(--color-washi)]/50 transition-colors cursor-pointer ${selectedTheme?.id === theme.id ? 'bg-[var(--color-washi)]' : ''}`}
+                                        onClick={() => setSelectedTheme(theme)}
+                                    >
                                         <td className="p-4 font-medium text-left text-[var(--color-text-primary)] font-serif">
                                             {theme.text_575}
                                         </td>
@@ -518,6 +552,17 @@ export default function SponsorInsightsPage() {
                                                 {theme.engagement_rate.toFixed(1)}%
                                             </span>
                                         </td>
+                                        <td className="p-4 text-left">
+                                            <button
+                                                className="text-[var(--color-igusa)] hover:underline text-sm font-medium"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedTheme(theme);
+                                                }}
+                                            >
+                                                分析
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -525,6 +570,81 @@ export default function SponsorInsightsPage() {
                     </table>
                 </div>
             </section>
+
+            {/* Demographics Analysis Section */}
+            {selectedTheme && selectedTheme.demographics && (
+                <section className="card p-0 relative hover:z-20 animate-fade-in">
+                    <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+                            ユーザー属性分析: <span className="font-serif ml-2">{selectedTheme.text_575}</span>
+                        </h2>
+                    </div>
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Age Groups */}
+                        <div>
+                            <h3 className="text-lg font-medium text-[var(--color-text-secondary)] mb-4">年代別投稿数</h3>
+                            <div className="space-y-3">
+                                {Object.entries(selectedTheme.demographics.age_groups).length === 0 ? (
+                                    <p className="text-[var(--color-text-muted)] text-sm">データがありません</p>
+                                ) : (
+                                    Object.entries(selectedTheme.demographics.age_groups)
+                                        .sort((a, b) => b[1] - a[1])
+                                        .map(([age, count]) => {
+                                            const total = Object.values(selectedTheme.demographics!.age_groups).reduce((a, b) => a + b, 0);
+                                            const percentage = (count / total) * 100;
+                                            return (
+                                                <div key={age} className="flex items-center gap-3">
+                                                    <div className="w-20 text-sm text-[var(--color-text-secondary)]">{age}</div>
+                                                    <div className="flex-1 h-4 bg-[var(--color-washi)] rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-[var(--color-igusa)] opacity-80"
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-16 text-right text-sm font-medium text-[var(--color-text-primary)]">
+                                                        {count}件
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Regions */}
+                        <div>
+                            <h3 className="text-lg font-medium text-[var(--color-text-secondary)] mb-4">地域別投稿数 (Top 5)</h3>
+                            <div className="space-y-3">
+                                {Object.entries(selectedTheme.demographics.regions).length === 0 ? (
+                                    <p className="text-[var(--color-text-muted)] text-sm">データがありません</p>
+                                ) : (
+                                    Object.entries(selectedTheme.demographics.regions)
+                                        .sort((a, b) => b[1] - a[1])
+                                        .slice(0, 5)
+                                        .map(([region, count]) => {
+                                            const total = Object.values(selectedTheme.demographics!.regions).reduce((a, b) => a + b, 0);
+                                            const percentage = (count / total) * 100;
+                                            return (
+                                                <div key={region} className="flex items-center gap-3">
+                                                    <div className="w-20 text-sm text-[var(--color-text-secondary)]">{region}</div>
+                                                    <div className="flex-1 h-4 bg-[var(--color-washi)] rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-[var(--color-sakura)] opacity-80"
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-16 text-right text-sm font-medium text-[var(--color-text-primary)]">
+                                                        {count}件
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Top Works Section */}
             {themes.some(t => t.top_work) && (

@@ -33,3 +33,5 @@ class Theme(Base):
         back_populates="theme",
         cascade="all, delete-orphan",
     )
+
+    sponsor_theme: Mapped["SponsorTheme"] = relationship("SponsorTheme")

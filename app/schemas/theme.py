@@ -18,6 +18,7 @@ class ThemeResponse(BaseModel):
     date: date
     sponsored: bool
     sponsor_company_name: str | None = Field(None, description="Sponsor company name for display (e.g., '提供：企業名')")
+    sponsor_official_url: str | None = Field(None, description="Official URL of the sponsor")
     created_at: datetime
     is_finalized: bool = Field(description="Whether ranking for this theme is finalized (after 22:00 JST)")
 

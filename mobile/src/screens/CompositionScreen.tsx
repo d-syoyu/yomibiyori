@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -87,7 +88,7 @@ export default function CompositionScreen({ route }: Props) {
       // APIに作品を投稿（改行で結合）
       const work = await api.createWork({
         theme_id: theme.id,
-        text: `${line1.trim()}\n${line2.trim()}`,
+        text: `${line1.trim()} \n${line2.trim()} `,
       });
 
       console.log('[CompositionScreen] Work created successfully', { work_id: work.id });
@@ -149,11 +150,25 @@ export default function CompositionScreen({ route }: Props) {
               >
                 <View style={styles.glassOverlay}>
                   {theme.sponsored && theme.sponsor_company_name && (
-                    <View style={styles.sponsorBadge}>
+                    <TouchableOpacity
+                      style={styles.sponsorBadge}
+                      onPress={() => {
+                        if (theme.sponsor_official_url) {
+                          trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
+                            theme_id: theme.id,
+                            sponsor_name: theme.sponsor_company_name,
+                            url: theme.sponsor_official_url,
+                          });
+                          Linking.openURL(theme.sponsor_official_url);
+                        }
+                      }}
+                      disabled={!theme.sponsor_official_url}
+                    >
                       <Text style={styles.sponsorBadgeText}>
                         スポンサー提供
+                        {theme.sponsor_official_url && ' ↗'}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   )}
                   <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
                   <View style={styles.verticalTextContainer}>
@@ -165,9 +180,23 @@ export default function CompositionScreen({ route }: Props) {
                   </View>
                   <Text style={styles.themeCategory}>{theme.category}</Text>
                   {theme.sponsored && theme.sponsor_company_name && (
-                    <Text style={styles.sponsorInfo}>
-                      {theme.sponsor_company_name}
-                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (theme.sponsor_official_url) {
+                          trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
+                            theme_id: theme.id,
+                            sponsor_name: theme.sponsor_company_name,
+                            url: theme.sponsor_official_url,
+                          });
+                          Linking.openURL(theme.sponsor_official_url);
+                        }
+                      }}
+                      disabled={!theme.sponsor_official_url}
+                    >
+                      <Text style={styles.sponsorInfo}>
+                        {theme.sponsor_company_name}
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </LinearGradient>
@@ -237,7 +266,7 @@ export default function CompositionScreen({ route }: Props) {
                       <Text style={styles.previewWorkLabel}>下の句</Text>
                       <View style={styles.verticalTextContainer}>
                         <VerticalText
-                          text={`${line1}\n${line2}`}
+                          text={`${line1} \n${line2} `}
                           textStyle={styles.previewWorkText}
                           direction="rtl"
                         />

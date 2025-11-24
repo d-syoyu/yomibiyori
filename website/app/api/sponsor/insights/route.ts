@@ -1,3 +1,4 @@
+```typescript
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -175,21 +176,27 @@ export async function GET(request: Request) {
             console.warn('[PostHog API] data.result is not an array, type:', typeof data.result)
         }
 
-        // 5. Fetch additional metrics from database (likes, top works, ranking entries)
+        // 5. Fetch additional metrics from database (likes, top works, ranking entries, demographics)
         const themeIds = Object.keys(metricsByTheme)
 
         // Get works data for each theme from Supabase
         const enrichedResults = await Promise.all(themeIds.map(async (themeId) => {
             const metrics = metricsByTheme[themeId]
 
-            // Fetch works for this theme with likes count
+            // Fetch works for this theme with likes count and user info
             const { data: works, error: worksError } = await supabase
                 .from('works')
                 .select(`
                     id,
                     text,
                     user_id,
-                    likes:likes(count)
+                    likes:likes(count),
+                    user:users(
+                        name,
+                        email,
+                        birth_year,
+                        prefecture
+                    )
                 `)
                 .eq('theme_id', themeId)
                 .order('created_at', { ascending: false })
@@ -204,10 +211,14 @@ export async function GET(request: Request) {
                     avg_likes_per_work: 0,
                     top_work: null,
                     ranking_entries: 0,
+                    demographics: {
+                        age_groups: {},
+                        regions: {}
+                    }
                 }
             }
 
-            // Calculate likes metrics
+            // Calculate likes metrics and demographics
             const worksWithLikes = (works || []).map(work => ({
                 ...work,
                 likes_count: Array.isArray(work.likes) ? work.likes[0]?.count || 0 : 0
@@ -215,6 +226,33 @@ export async function GET(request: Request) {
 
             const totalLikes = worksWithLikes.reduce((sum, work) => sum + work.likes_count, 0)
             const avgLikes = worksWithLikes.length > 0 ? totalLikes / worksWithLikes.length : 0
+
+            // Demographics Aggregation
+            const ageGroups: Record<string, number> = {}
+            const regions: Record<string, number> = {}
+            const currentYear = new Date().getFullYear()
+
+            worksWithLikes.forEach(work => {
+                const user = work.user as any
+                if (!user) return
+
+                // Age Group
+                if (user.birth_year) {
+                    const age = currentYear - user.birth_year
+                    const group = Math.floor(age / 10) * 10
+                    const groupLabel = `${group}代`
+                    ageGroups[groupLabel] = (ageGroups[groupLabel] || 0) + 1
+                } else {
+                    ageGroups['未設定'] = (ageGroups['未設定'] || 0) + 1
+                }
+
+                // Region
+                if (user.prefecture) {
+                    regions[user.prefecture] = (regions[user.prefecture] || 0) + 1
+                } else {
+                    regions['未設定'] = (regions['未設定'] || 0) + 1
+                }
+            })
 
             // Get top work by likes
             const topWork = worksWithLikes.length > 0
@@ -226,22 +264,17 @@ export async function GET(request: Request) {
             // Get user display name for top work
             let topWorkData = null
             if (topWork && topWork.likes_count > 0) {
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('name, email')
-                    .eq('id', topWork.user_id)
-                    .single()
-
+                const user = topWork.user as any
                 topWorkData = {
                     text: topWork.text,
                     likes: topWork.likes_count,
-                    author_name: userData?.name || userData?.email?.split('@')[0] || '匿名'
+                    author_name: user?.name || user?.email?.split('@')[0] || '匿名'
                 }
             }
 
             // Get ranking entries (works that have ranking > 0)
             const { data: rankingWorks, error: rankingError } = await supabase
-                .from('daily_rankings')
+                .from('rankings') // Changed from daily_rankings to rankings (based on SCHEMA.sql)
                 .select('work_id, rank')
                 .in('work_id', worksWithLikes.map(w => w.id))
                 .order('rank', { ascending: true })
@@ -256,6 +289,10 @@ export async function GET(request: Request) {
                 avg_likes_per_work: Number(avgLikes.toFixed(1)),
                 top_work: topWorkData,
                 ranking_entries: rankingEntries,
+                demographics: {
+                    age_groups: ageGroups,
+                    regions: regions
+                }
             }
         }))
 
@@ -269,3 +306,4 @@ export async function GET(request: Request) {
         )
     }
 }
+```

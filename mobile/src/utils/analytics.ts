@@ -138,6 +138,7 @@ export const EventNames = {
 
   // Engagement
   WORK_LIKED: 'work_liked',
+  SPONSOR_LINK_CLICKED: 'sponsor_link_clicked',
 
   // Content creation
   WORK_CREATED: 'work_created',

@@ -6,10 +6,10 @@ from datetime import date, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import get_settings
-from app.models import Theme
+from app.models import Theme, SponsorTheme, SponsorCampaign, Sponsor
 from app.schemas.theme import ThemeListResponse, ThemeResponse
 
 
@@ -38,6 +38,22 @@ def _is_theme_finalized(theme_date: date) -> bool:
     return now_jst.hour >= 22
 
 
+def _get_sponsor_url(theme: Theme) -> str | None:
+    """Get the official URL of the sponsor if available."""
+    if not theme.sponsored or not theme.sponsor_theme:
+        return None
+    
+    # Access via relationships: Theme -> SponsorTheme -> SponsorCampaign -> Sponsor
+    try:
+        if theme.sponsor_theme.campaign and theme.sponsor_theme.campaign.sponsor:
+            return theme.sponsor_theme.campaign.sponsor.official_url
+    except Exception:
+        # Handle cases where relationships might be missing or broken
+        return None
+        
+    return None
+
+
 def list_themes(
     session: Session,
     category: str | None = None,
@@ -55,7 +71,11 @@ def list_themes(
     Returns:
         ThemeListResponse with themes ordered by date descending
     """
-    stmt = select(Theme).order_by(
+    stmt = select(Theme).options(
+        joinedload(Theme.sponsor_theme)
+        .joinedload(SponsorTheme.campaign)
+        .joinedload(SponsorCampaign.sponsor)
+    ).order_by(
         Theme.date.desc(),
         Theme.sponsored.desc(),  # Prioritize sponsored themes
         Theme.created_at.desc()
@@ -76,6 +96,7 @@ def list_themes(
             date=theme.date,
             sponsored=theme.sponsored,
             sponsor_company_name=theme.sponsor_company_name,
+            sponsor_official_url=_get_sponsor_url(theme),
             created_at=theme.created_at,
             is_finalized=_is_theme_finalized(theme.date),
         )
@@ -118,7 +139,11 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
     else:
         today_date = now_jst.date()
 
-    stmt = select(Theme).where(Theme.date == today_date)
+    stmt = select(Theme).options(
+        joinedload(Theme.sponsor_theme)
+        .joinedload(SponsorTheme.campaign)
+        .joinedload(SponsorCampaign.sponsor)
+    ).where(Theme.date == today_date)
 
     if category:
         stmt = stmt.where(Theme.category == category)
@@ -142,6 +167,7 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
         date=theme.date,
         sponsored=theme.sponsored,
         sponsor_company_name=theme.sponsor_company_name,
+        sponsor_official_url=_get_sponsor_url(theme),
         created_at=theme.created_at,
         is_finalized=_is_theme_finalized(theme.date),
     )
@@ -160,7 +186,15 @@ def get_theme_by_id(session: Session, theme_id: str) -> ThemeResponse:
     Raises:
         HTTPException: 404 if theme not found
     """
-    theme = session.get(Theme, theme_id)
+    # Use execute/scalars/first instead of get to support options
+    stmt = select(Theme).options(
+        joinedload(Theme.sponsor_theme)
+        .joinedload(SponsorTheme.campaign)
+        .joinedload(SponsorCampaign.sponsor)
+    ).where(Theme.id == theme_id)
+    
+    theme = session.execute(stmt).scalars().first()
+    
     if not theme:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -174,6 +208,7 @@ def get_theme_by_id(session: Session, theme_id: str) -> ThemeResponse:
         date=theme.date,
         sponsored=theme.sponsored,
         sponsor_company_name=theme.sponsor_company_name,
+        sponsor_official_url=_get_sponsor_url(theme),
         created_at=theme.created_at,
         is_finalized=_is_theme_finalized(theme.date),
     )

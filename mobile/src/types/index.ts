@@ -115,6 +115,7 @@ export interface Theme {
   date: string; // ISO 8601 date (YYYY-MM-DD)
   sponsored: boolean;
   sponsor_company_name?: string; // Sponsor company name (e.g., '提供：企業名')
+  sponsor_official_url?: string;
   created_at: string; // ISO 8601 datetime
   is_finalized: boolean; // Whether ranking is finalized (after 22:00 JST)
 }
