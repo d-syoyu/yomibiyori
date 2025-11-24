@@ -83,9 +83,9 @@ export default function Home() {
                 </div>
                 <h2 className="text-3xl font-bold text-[var(--color-igusa)]">上の句を選び、下の句で響く</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  朝･昼･夜･週末の4テーマから上の句を選択。<br />
-                  毎日6:00〜22:00に投稿でき、<br />
-                  ことばが集まる場にゆるやかに溶け込みます。
+                  恋愛・季節・日常・ユーモアの4カテゴリから上の句を選べます。<br />
+                  毎朝6:00にお題が届き、22:00に締め切り。<br />
+                  みんなの下の句が集まり、一首が生まれます。
                 </p>
               </div>
             </div>
