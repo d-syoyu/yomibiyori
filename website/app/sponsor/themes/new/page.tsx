@@ -1,60 +1,15 @@
 /**
- * スポンサーお題投稿ページ（背景アップロード・クロップ対応）
+ * New Sponsor Theme Submission Page
  */
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import Cropper from 'react-easy-crop'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ThemeCalendar from '@/components/ThemeCalendar'
-import 'react-easy-crop/react-easy-crop.css'
-
-type CropArea = { x: number; y: number; width: number; height: number }
 
 const CATEGORIES = ['恋愛', '季節', '日常', 'ユーモア']
-const ASPECTS = [
-  { label: '9:16（アプリ/共有カード統一）', value: 9 / 16 },
-]
-
-async function getCroppedBlob(imageSrc: string, cropPixels: CropArea): Promise<Blob> {
-  const img = new Image()
-  img.crossOrigin = 'anonymous'
-  img.src = imageSrc
-  await new Promise(resolve => {
-    if (img.complete) return resolve(null)
-    img.onload = resolve
-    img.onerror = resolve
-  })
-
-  const canvas = document.createElement('canvas')
-  canvas.width = cropPixels.width
-  canvas.height = cropPixels.height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) {
-    throw new Error('Canvas not supported')
-  }
-
-  ctx.drawImage(
-    img,
-    cropPixels.x,
-    cropPixels.y,
-    cropPixels.width,
-    cropPixels.height,
-    0,
-    0,
-    cropPixels.width,
-    cropPixels.height
-  )
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(blob => {
-      if (!blob) return reject(new Error('Blob creation failed'))
-      resolve(blob)
-    }, 'image/jpeg', 0.9)
-  })
-}
 
 export default function NewThemePage() {
   const router = useRouter()
@@ -64,20 +19,11 @@ export default function NewThemePage() {
   const [formData, setFormData] = useState({
     date: '',
     category: '恋愛',
-    line1: '',
-    line2: '',
-    line3: '',
+    line1: '', // 5文字
+    line2: '', // 7文字
+    line3: '', // 5文字
   })
   const [error, setError] = useState<string | null>(null)
-
-  // 背景画像
-  const [imageSrc, setImageSrc] = useState<string | null>(null)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropArea | null>(null)
-  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null)
-  const [uploadingBg, setUploadingBg] = useState(false)
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [aspect, setAspect] = useState(4 / 5)
 
   useEffect(() => {
     ensureCampaign()
@@ -88,46 +34,50 @@ export default function NewThemePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
+      // Check if sponsor record exists and get credits
       let { data: sponsor } = await supabase
         .from('sponsors')
         .select('id, credits')
         .eq('id', session.user.id)
         .single()
 
+      // Set credits if sponsor exists
       if (sponsor) {
         setCredits(sponsor.credits || 0)
       }
 
+      // Create sponsor record if not exists
       if (!sponsor) {
         const { data: newSponsor, error: sponsorError } = await supabase
           .from('sponsors')
           .insert({
             id: session.user.id,
-            company_name: session.user.email || 'スポンサー',
+            company_name: session.user.email || 'スポンサー企業',
             contact_email: session.user.email,
-            text: 'デフォルトテキスト',
-            category: '一般',
-            target_regions: [],
-            plan_tier: 'basic',
-            verified: false,
+            text: 'デフォルトテキスト', // 旧フィールド（後方互換性のため）3文字以上必要
+            category: '一般', // デフォルトカテゴリ
+            target_regions: [], // 空配列（デフォルト値）
+            plan_tier: 'basic', // 料金プラン（basic/standard/premium）
+            verified: false, // KYC未承認
           })
           .select()
           .single()
 
         if (sponsorError || !newSponsor) {
           console.error('Failed to create sponsor:', sponsorError)
-          setError('スポンサーの作成に失敗しました')
+          setError('スポンサー情報の作成に失敗しました')
           return
         }
         sponsor = newSponsor
-        setCredits(sponsor.credits || 0)
       }
 
+      // At this point, sponsor cannot be null
       if (!sponsor) {
-        setError('スポンサー情報を取得できませんでした')
+        setError('スポンサー情報が取得できませんでした')
         return
       }
 
+      // Get or create default campaign
       let { data: campaigns } = await supabase
         .from('sponsor_campaigns')
         .select('id')
@@ -138,6 +88,7 @@ export default function NewThemePage() {
       if (campaigns && campaigns.length > 0) {
         setCampaignId(campaigns[0].id)
       } else {
+        // Create default campaign
         const { data: newCampaign, error: campaignError } = await supabase
           .from('sponsor_campaigns')
           .insert({
@@ -158,63 +109,7 @@ export default function NewThemePage() {
       }
     } catch (error) {
       console.error('Failed to ensure campaign:', error)
-      setError('通信エラーが発生しました')
-    }
-  }
-
-  const onCropComplete = useCallback((_c: CropArea, pixels: CropArea) => {
-    setCroppedAreaPixels(pixels)
-  }, [])
-
-  async function handleBackgroundUpload() {
-    if (!imageSrc || !croppedAreaPixels) {
-      setError('背景画像を選択・クロップしてください')
-      return
-    }
-    try {
-      setUploadingBg(true)
-      setError(null)
-      const blob = await getCroppedBlob(imageSrc, croppedAreaPixels)
-      const filename = `sponsor-bg-${Date.now()}.jpg`
-      const contentType = blob.type || 'image/jpeg'
-
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        throw new Error('ログインしてください')
-      }
-
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL
-      const presignRes = await fetch(`${apiBase}/sponsor/backgrounds/upload-url`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          filename,
-          content_type: contentType,
-        }),
-      })
-      if (!presignRes.ok) {
-        const err = await presignRes.json().catch(() => ({}))
-        throw new Error(err.detail || 'アップロードURLの取得に失敗しました')
-      }
-      const { upload_url, public_url } = await presignRes.json()
-
-      const putRes = await fetch(upload_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: blob,
-      })
-      if (!putRes.ok) {
-        throw new Error('アップロードに失敗しました')
-      }
-
-      setBackgroundUrl(public_url)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '背景画像のアップロードに失敗しました')
-    } finally {
-      setUploadingBg(false)
+      setError('初期化に失敗しました')
     }
   }
 
@@ -223,27 +118,31 @@ export default function NewThemePage() {
     setError(null)
 
     if (!campaignId) {
-      setError('キャンペーンが取得できていません')
+      setError('キャンペーンが見つかりません')
       return
     }
 
+    // Validate each line
     if (!formData.line1.trim() || !formData.line2.trim() || !formData.line3.trim()) {
-      setError('すべての行を入力してください')
+      setError('すべての句を入力してください')
       return
     }
 
+    // Combine lines with newlines for proper display
     const text_575 = `${formData.line1}\n${formData.line2}\n${formData.line3}`
 
+    // Validate combined length
     if (text_575.length > 140) {
-      setError('文字数が多すぎます。140文字以内にしてください。')
+      setError('お題が長すぎます。140文字以内にしてください。')
       return
     }
 
+    // Validate date is in the future
     const selectedDate = new Date(formData.date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     if (selectedDate < today) {
-      setError('投稿は明日以降の日付を選択してください')
+      setError('配信日は今日以降の日付を選択してください')
       return
     }
 
@@ -255,6 +154,7 @@ export default function NewThemePage() {
         throw new Error('ログインしてください')
       }
 
+      // Use backend API to submit theme (handles credit deduction)
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/themes`, {
         method: 'POST',
         headers: {
@@ -266,12 +166,11 @@ export default function NewThemePage() {
           date: formData.date,
           category: formData.category,
           text_575: text_575,
-          background_image_url: backgroundUrl ?? undefined,
         }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
+        const errorData = await response.json()
         throw new Error(errorData.detail || 'お題の投稿に失敗しました')
       }
 
@@ -283,6 +182,7 @@ export default function NewThemePage() {
     }
   }
 
+  // Get min date (tomorrow)
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
   const year = tomorrow.getFullYear()
@@ -295,7 +195,7 @@ export default function NewThemePage() {
       <div>
         <h1 className="section-heading text-3xl mb-2">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
-            新規お題
+            新規お題投稿
           </span>
         </h1>
         <p className="section-subheading">
@@ -303,6 +203,7 @@ export default function NewThemePage() {
         </p>
       </div>
 
+      {/* Credit Balance Warning */}
       {credits < 1 && (
         <div className="card bg-amber-50 border-amber-200">
           <div className="flex items-start gap-3">
@@ -325,10 +226,11 @@ export default function NewThemePage() {
         </div>
       )}
 
+      {/* Credit Balance Display */}
       <div className="card bg-gradient-to-r from-[var(--color-igusa)]/10 to-[var(--color-igusa-light)]/10 border-[var(--color-igusa)]/20">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-1">残りクレジット</p>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-1">利用可能クレジット</p>
             <p className="text-3xl font-bold font-serif text-[var(--color-igusa)]">{credits}</p>
           </div>
           <div className="text-right">
@@ -338,6 +240,7 @@ export default function NewThemePage() {
         </div>
       </div>
 
+      {/* Theme Calendar */}
       <div className="card">
         <ThemeCalendar
           selectedDate={formData.date}
@@ -346,99 +249,15 @@ export default function NewThemePage() {
         />
       </div>
 
-      {/* 背景アップロード */}
-      <div className="card space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="font-bold text-[var(--color-text-primary)]">背景画像（任意）</h3>
-            <p className="text-sm text-[var(--color-text-muted)]">9:16 で統一します（アプリ内表示と共有カードを合わせるため）。</p>
-          </div>
-          <div className="flex gap-2">
-            {ASPECTS.map(opt => (
-              <button
-                key={opt.label}
-                type="button"
-                onClick={() => setAspect(opt.value)}
-                className={`px-3 py-2 rounded-lg border ${aspect === opt.value ? 'border-[var(--color-igusa)] text-[var(--color-igusa)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (!file) return
-            const reader = new FileReader()
-            reader.onload = () => {
-              setImageSrc(reader.result as string)
-              setBackgroundUrl(null)
-            }
-            reader.readAsDataURL(file)
-          }}
-        />
-
-        {imageSrc && (
-          <div className="relative w-full h-[420px] bg-gray-100 rounded-xl overflow-hidden">
-            <Cropper
-              image={imageSrc}
-              crop={crop}
-              zoom={zoom}
-              aspect={aspect}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
-              objectFit="horizontal-cover"
-            />
-          </div>
-        )}
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            disabled={uploadingBg || !imageSrc}
-            onClick={handleBackgroundUpload}
-            className="btn-primary disabled:opacity-50"
-          >
-            {uploadingBg ? 'アップロード中...' : '背景をアップロード'}
-          </button>
-          {backgroundUrl && (
-            <span className="text-sm text-emerald-700">アップロード済み</span>
-          )}
-        </div>
-
-        {(backgroundUrl || imageSrc) && (
-          <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-washi)]">
-            <p className="text-xs text-[var(--color-text-muted)] mb-2">プレビュー</p>
-            <div
-              className="h-64 rounded-lg bg-center bg-cover flex items-center justify-center text-white font-bold text-xl"
-              style={{ backgroundImage: `url(${backgroundUrl || imageSrc})` }}
-            >
-              {formData.line1 || formData.line2 || formData.line3 ? (
-                <div className="bg-black/40 p-3 rounded-lg space-y-1 text-center">
-                  <div>{formData.line1 || 'ーーー'}</div>
-                  <div>{formData.line2 || 'ーーーーー'}</div>
-                  <div>{formData.line3 || 'ーーー'}</div>
-                </div>
-              ) : (
-                <span className="bg-black/40 px-3 py-2 rounded-lg">お題プレビュー</span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
       <div className="card">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Date */}
           <div>
             <label
               htmlFor="date"
               className="block text-sm font-medium text-[var(--color-text-primary)] mb-2"
             >
-              配信日 <span className="text-red-500">*</span>
+              配信予定日 <span className="text-red-500">*</span>
             </label>
             <input
               id="date"
@@ -450,16 +269,17 @@ export default function NewThemePage() {
               className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
             />
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              明日以降の日付を選択してください
+              お題が配信される日付を選択してください
             </p>
           </div>
 
+          {/* Category */}
           <div>
             <label
               htmlFor="category"
               className="block text-sm font-medium text-[var(--color-text-primary)] mb-2"
             >
-              カテゴリー <span className="text-red-500">*</span>
+              カテゴリ <span className="text-red-500">*</span>
             </label>
             <select
               id="category"
@@ -476,14 +296,16 @@ export default function NewThemePage() {
             </select>
           </div>
 
+          {/* 5-7-5 Input */}
           <div>
             <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               上の句（5-7-5） <span className="text-red-500">*</span>
             </label>
             <div className="space-y-3">
+              {/* 第一句（5文字） */}
               <div>
                 <label htmlFor="line1" className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  一行目（5文字）
+                  第一句（5音）
                 </label>
                 <input
                   id="line1"
@@ -491,7 +313,7 @@ export default function NewThemePage() {
                   value={formData.line1}
                   onChange={(e) => setFormData({ ...formData, line1: e.target.value })}
                   required
-                  placeholder="例: 春待つ夜"
+                  placeholder="例：春の風"
                   className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
@@ -499,9 +321,10 @@ export default function NewThemePage() {
                 </p>
               </div>
 
+              {/* 第二句（7文字） */}
               <div>
                 <label htmlFor="line2" className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  二行目（7文字）
+                  第二句（7音）
                 </label>
                 <input
                   id="line2"
@@ -509,7 +332,7 @@ export default function NewThemePage() {
                   value={formData.line2}
                   onChange={(e) => setFormData({ ...formData, line2: e.target.value })}
                   required
-                  placeholder="例: 風をほどく"
+                  placeholder="例：桜舞い散る"
                   className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
@@ -517,9 +340,10 @@ export default function NewThemePage() {
                 </p>
               </div>
 
+              {/* 第三句（5文字） */}
               <div>
                 <label htmlFor="line3" className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  三行目（5文字）
+                  第三句（5音）
                 </label>
                 <input
                   id="line3"
@@ -527,7 +351,7 @@ export default function NewThemePage() {
                   value={formData.line3}
                   onChange={(e) => setFormData({ ...formData, line3: e.target.value })}
                   required
-                  placeholder="例: 朝の光"
+                  placeholder="例：花の道"
                   className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
@@ -536,24 +360,27 @@ export default function NewThemePage() {
               </div>
             </div>
 
+            {/* Preview */}
             {(formData.line1 || formData.line2 || formData.line3) && (
               <div className="mt-4 p-6 bg-[var(--color-washi)] rounded-xl border border-[var(--color-border)]">
                 <p className="text-xs text-[var(--color-text-muted)] mb-3">プレビュー:</p>
                 <div className="text-xl font-serif font-bold text-[var(--color-text-primary)] text-center space-y-1">
-                  <p>{formData.line1 || 'ーーー'}</p>
-                  <p>{formData.line2 || 'ーーーーー'}</p>
-                  <p>{formData.line3 || 'ーーー'}</p>
+                  <p>{formData.line1 || '＿＿＿'}</p>
+                  <p>{formData.line2 || '＿＿＿＿＿'}</p>
+                  <p>{formData.line3 || '＿＿＿'}</p>
                 </div>
               </div>
             )}
           </div>
 
+          {/* Error */}
           {error && (
             <div className="p-4 rounded-xl bg-red-50 border border-red-200">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
+          {/* Buttons */}
           <div className="flex gap-4">
             <button
               type="button"
@@ -567,10 +394,24 @@ export default function NewThemePage() {
               disabled={loading || !campaignId || credits < 1}
               className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '送信中...' : '投稿する'}
+              {loading ? '投稿中...' : '投稿する'}
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="card bg-[var(--color-washi)]/50">
+        <h3 className="font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-[var(--color-igusa)]">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+          </svg> 投稿のヒント
+        </h3>
+        <ul className="text-sm text-[var(--color-text-secondary)] space-y-2">
+          <li>• 上の句は3〜140文字以内で入力してください</li>
+          <li>• 配信日は翌日以降の日付を選択してください</li>
+          <li>• 投稿後、管理者が審査を行います</li>
+          <li>• 承認されると指定日に配信されます</li>
+        </ul>
       </div>
     </div>
   )

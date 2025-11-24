@@ -13,12 +13,11 @@ class ThemeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    text: str = Field(description="Upper verse (5-7-5) in 5-7-5 syllable format")
+    text: str = Field(description="Upper verse (上の句) in 5-7-5 syllable format")
     category: str
     date: date
     sponsored: bool
-    sponsor_company_name: str | None = Field(None, description="Sponsor company name for display (e.g., '提供:企業名')")
-    background_image_url: str | None = Field(None, description="Optional background image for the theme")
+    sponsor_company_name: str | None = Field(None, description="Sponsor company name for display (e.g., '提供：企業名')")
     created_at: datetime
     is_finalized: bool = Field(description="Whether ranking for this theme is finalized (after 22:00 JST)")
 

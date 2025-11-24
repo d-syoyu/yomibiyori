@@ -14,7 +14,6 @@ export interface ShareCardContent {
   badgeLabel?: string;
   caption?: string;
   footerUrl?: string;
-  backgroundImageUrl?: string;
 }
 
 export interface SharePayload {

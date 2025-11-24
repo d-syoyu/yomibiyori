@@ -66,7 +66,6 @@ def sync_approved_themes(session: Session) -> int:
             existing_theme.sponsored = True
             existing_theme.sponsor_theme_id = sponsor_theme.id
             existing_theme.sponsor_company_name = sponsor.company_name
-            existing_theme.background_image_url = sponsor_theme.background_image_url
             synced_count += 1
         else:
             # Create new theme
@@ -82,7 +81,6 @@ def sync_approved_themes(session: Session) -> int:
                 sponsored=True,
                 sponsor_theme_id=sponsor_theme.id,
                 sponsor_company_name=sponsor.company_name,
-                background_image_url=sponsor_theme.background_image_url,
                 created_at=now,
             )
             session.add(new_theme)

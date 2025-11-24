@@ -157,7 +157,6 @@ create table if not exists themes (
   sponsored boolean not null default false,
   sponsor_theme_id uuid references sponsor_themes(id) on delete set null,
   sponsor_company_name text,
-  background_image_url text,
   created_at timestamptz not null default now()
 );
 create unique index if not exists uq_themes_category_date on themes(category, date);
@@ -166,7 +165,6 @@ create index if not exists idx_themes_sponsor_theme_id on themes(sponsor_theme_i
 comment on table themes is '日替わりお題（上の句 5-7-5）';
 comment on column themes.sponsor_theme_id is '承認されたスポンサーお題へのリンク';
 comment on column themes.sponsor_company_name is 'スポンサー企業名（表示用：「提供：企業名」）';
-comment on column themes.background_image_url is 'お題の背景画像URL（スポンサー指定があればコピーされる）';
 
 -- ========= 作品（下の句） =========
 create table if not exists works (
@@ -267,7 +265,6 @@ create table if not exists sponsor_themes (
   date date not null,
   category text not null check (length(category) between 1 and 50),
   text_575 text not null check (length(text_575) between 3 and 140),
-  background_image_url text,
   priority integer not null default 0,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'published')),
   rejection_reason text,
@@ -289,7 +286,6 @@ create unique index if not exists uq_sponsor_themes_date_category_campaign on sp
 
 comment on table sponsor_themes is 'スポンサー入稿お題（審査待ち）';
 comment on column sponsor_themes.text_575 is '上の句（5-7-5）';
-comment on column sponsor_themes.background_image_url is 'お題背景画像の公開URL（任意）';
 comment on column sponsor_themes.priority is 'スロット優先度（高いほど優先）';
 comment on column sponsor_themes.status is 'ステータス: pending（審査待ち） / approved（承認済み） / rejected（却下） / published（配信済み）';
 

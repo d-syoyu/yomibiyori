@@ -76,7 +76,6 @@ def list_themes(
             date=theme.date,
             sponsored=theme.sponsored,
             sponsor_company_name=theme.sponsor_company_name,
-            background_image_url=getattr(theme, "background_image_url", None),
             created_at=theme.created_at,
             is_finalized=_is_theme_finalized(theme.date),
         )
@@ -143,7 +142,6 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
         date=theme.date,
         sponsored=theme.sponsored,
         sponsor_company_name=theme.sponsor_company_name,
-        background_image_url=getattr(theme, "background_image_url", None),
         created_at=theme.created_at,
         is_finalized=_is_theme_finalized(theme.date),
     )

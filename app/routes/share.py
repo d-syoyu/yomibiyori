@@ -70,7 +70,6 @@ def generate_share_card(
         category=theme.category,
         category_label=category_label,
         date_label=date_label,
-        background_image_url=getattr(theme, "background_image_url", None),
         badge_label=None,  # 必要に応じて追加
         caption=None,  # 必要に応じて追加
         likes_label=f"♥ {likes_count}" if likes_count > 0 else None,
