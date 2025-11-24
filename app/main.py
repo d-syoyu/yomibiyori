@@ -25,7 +25,6 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:8081",  # Expo web dev server
         "http://localhost:19006",  # Alternative Expo port
-        "http://localhost:3000",  # Next.js web app (local dev)
         "https://yomibiyori-production.up.railway.app",  # Production domain
         "https://www.yomibiyori.com",  # Marketing/admin site (https)
         "http://www.yomibiyori.com",  # Marketing/admin site (http)
