@@ -12,12 +12,6 @@ import {
   updateSponsorProfile,
 } from '@/lib/sponsorApi'
 
-const PLAN_TIERS = [
-  { value: 'basic', label: 'Basic (お試し)' },
-  { value: 'standard', label: 'Standard' },
-  { value: 'premium', label: 'Premium' },
-]
-
 export default function SponsorProfilePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -28,9 +22,6 @@ export default function SponsorProfilePage() {
 
   const [companyName, setCompanyName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
-  const [officialUrl, setOfficialUrl] = useState('')
-  const [logoUrl, setLogoUrl] = useState('')
-  const [planTier, setPlanTier] = useState('basic')
 
   useEffect(() => {
     loadProfile()
@@ -44,9 +35,6 @@ export default function SponsorProfilePage() {
       setProfile(data)
       setCompanyName(data.company_name)
       setContactEmail(data.contact_email ?? '')
-      setOfficialUrl(data.official_url ?? '')
-      setLogoUrl(data.logo_url ?? '')
-      setPlanTier(data.plan_tier)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'プロフィール取得に失敗しました')
     } finally {
@@ -64,9 +52,6 @@ export default function SponsorProfilePage() {
       const payload = {
         company_name: companyName.trim(),
         contact_email: contactEmail.trim() || null,
-        official_url: officialUrl.trim() || null,
-        logo_url: logoUrl.trim() || null,
-        plan_tier: planTier,
       }
       const updated = await updateSponsorProfile(payload)
       setProfile(updated)
@@ -159,63 +144,6 @@ export default function SponsorProfilePage() {
               className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
               placeholder="sponsor@example.com"
             />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                公式サイトURL
-              </label>
-              <input
-                type="url"
-                value={officialUrl}
-                onChange={(e) => setOfficialUrl(e.target.value)}
-                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
-                placeholder="https://example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                ロゴ画像URL
-              </label>
-              <input
-                type="url"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
-                placeholder="https://.../logo.png"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              プラン
-            </label>
-            <div className="grid gap-3 md:grid-cols-3">
-              {PLAN_TIERS.map((plan) => (
-                <label
-                  key={plan.value}
-                  className={`rounded-xl border px-4 py-3 flex items-center gap-2 cursor-pointer transition-colors ${
-                    planTier === plan.value
-                      ? 'border-[var(--color-ai)] bg-indigo-50'
-                      : 'border-[var(--color-border)] bg-white hover:bg-[var(--color-washi)]'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="plan-tier"
-                    value={plan.value}
-                    checked={planTier === plan.value}
-                    onChange={(e) => setPlanTier(e.target.value)}
-                    className="text-[var(--color-ai)] focus:ring-[var(--color-ai)]"
-                  />
-                  <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                    {plan.label}
-                  </span>
-                </label>
-              ))}
-            </div>
           </div>
 
           <div className="pt-4 border-t border-[var(--color-border)]">
