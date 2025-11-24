@@ -5,6 +5,8 @@ ShareCardGeneratorを拡張し、お題のみの画像を生成
 
 from io import BytesIO
 from typing import Optional
+import logging
+import requests
 from PIL import Image, ImageDraw, ImageFont
 from app.utils.share_card_generator import ShareCardGenerator
 
@@ -18,6 +20,7 @@ class ThemeCardGenerator(ShareCardGenerator):
         category: str,
         category_label: str,
         date_label: str,
+        background_image_url: Optional[str] = None,
     ) -> BytesIO:
         """
         お題専用の共有カード画像を生成（上の句のみ）
@@ -36,7 +39,18 @@ class ThemeCardGenerator(ShareCardGenerator):
             "gradient", self.DEFAULT_GRADIENT
         )
         bg_color = self._hex_to_rgb(gradient_colors[0])
-        img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
+
+        if background_image_url:
+            try:
+                resp = requests.get(background_image_url, timeout=5)
+                resp.raise_for_status()
+                bg_img = Image.open(BytesIO(resp.content)).convert("RGB")
+                img = self._resize_cover(bg_img, self.WIDTH, self.HEIGHT)
+            except Exception as exc:  # pragma: no cover - storage/network
+                logging.warning("[ThemeCardGenerator] Background load failed: %s", exc)
+                img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
+        else:
+            img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
         draw = ImageDraw.Draw(img)
 
         # 白い内側カード

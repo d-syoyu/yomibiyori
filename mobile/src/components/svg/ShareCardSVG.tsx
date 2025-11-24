@@ -5,6 +5,7 @@
 
 import React from 'react';
 import Svg, { Defs, LinearGradient as SVGLinearGradient, Rect, Stop, Text as SVGText, G } from 'react-native-svg';
+import { Image as SVGImage } from 'react-native-svg';
 import VerticalPoemSVG from './VerticalPoemSVG';
 import type { ShareCardContent } from '../../types/share';
 import { colors } from '../../theme';
@@ -41,6 +42,15 @@ const ShareCardSVG: React.FC<ShareCardSVGProps> = ({
           <Stop offset="100%" stopColor={gradientColors[1]} stopOpacity="1" />
         </SVGLinearGradient>
       </Defs>
+      {content.backgroundImageUrl ? (
+        <SVGImage
+          href={{ uri: content.backgroundImageUrl }}
+          width={width}
+          height={height}
+          preserveAspectRatio="xMidYMid slice"
+        />
+      ) : null}
+
 
       {/* グラデーション背景 */}
       <Rect

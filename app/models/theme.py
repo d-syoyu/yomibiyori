@@ -26,6 +26,7 @@ class Theme(Base):
         ForeignKey("sponsor_themes.id", ondelete="SET NULL"),
     )
     sponsor_company_name: Mapped[str | None] = mapped_column(String(200))
+    background_image_url: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     works: Mapped[list["Work"]] = relationship(

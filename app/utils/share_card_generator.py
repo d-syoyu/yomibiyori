@@ -1,88 +1,75 @@
 """
-共有カード画像生成ユーティリティ
-Pillowを使用してSNS共有用の画像を生成
+Share card image generator using Pillow.
+
+Generates PNG share images for works and themes. Supports optional background
+images (e.g., sponsor-provided artwork) that are resized with a cover fit.
 """
 
+from __future__ import annotations
+
+import glob
+import logging
+import os
 from io import BytesIO
 from typing import Optional
+
+import requests
 from PIL import Image, ImageDraw, ImageFont
-import os
+
+logger = logging.getLogger(__name__)
 
 
 class ShareCardGenerator:
-    """共有カード画像生成クラス"""
+    """Image generator for share cards."""
 
-    # 画像サイズ（Instagram 4:5比率）
     WIDTH = 1080
-    HEIGHT = 1350
+    HEIGHT = 1920  # 9:16（アプリ共有カードと統一）
 
-    # カラー定義（モバイルのtheme/colors.tsと完全一致）
     COLORS = {
-        "恋愛": {"gradient": ["#FFB7C5", "#FFE4E8"]},
-        "季節": {"gradient": ["#88B04B", "#A8C98B"]},
-        "日常": {"gradient": ["#A7D8DE", "#D4ECF0"]},
-        "ユーモア": {"gradient": ["#F0E68C", "#FFF9C4"]},
+        "����": {"gradient": ["#FFB7C5", "#FFE4E8"]},
+        "�G��": {"gradient": ["#88B04B", "#A8C98B"]},
+        "����": {"gradient": ["#A7D8DE", "#D4ECF0"]},
+        "���[���A": {"gradient": ["#F0E68C", "#FFF9C4"]},
     }
-
-    # デフォルトカラー（恋愛）
     DEFAULT_GRADIENT = ["#FFB7C5", "#FFE4E8"]
 
-    # レイアウト定数
     OUTER_PADDING = 40
     INNER_PADDING = 32
     CONTENT_GAP = 24
 
-    # テキストカラー（モバイルのtheme/colors.tsと完全一致）
-    TEXT_PRIMARY = (107, 123, 79)  # #6B7B4F (igusa) - text.primary
-    TEXT_SECONDARY = (123, 138, 88)  # #7B8A58 (igusaMedium) - text.secondary
-    TEXT_TERTIARY = (147, 163, 108)  # #93A36C (igusaLight) - text.tertiary
-    TEXT_ACCENT = (26, 54, 93)  # #1A365D (ai) - text.accent
-    BADGE_BG = (26, 54, 93, 20)  # rgba(26, 54, 93, 0.08)
-    OVERLAY_BG = (255, 255, 255, 235)  # rgba(255, 255, 255, 0.92)
+    TEXT_PRIMARY = (107, 123, 79)
+    TEXT_SECONDARY = (123, 138, 88)
+    TEXT_TERTIARY = (147, 163, 108)
+    TEXT_ACCENT = (26, 54, 93)
+    BADGE_BG = (26, 54, 93, 20)
+    OVERLAY_BG = (255, 255, 255, 235)
 
-    def __init__(self):
-        """フォントパスを初期化"""
+    def __init__(self) -> None:
         self.font_path = self._find_font()
 
+    # ------------------------------------------------------------------ #
+    # Font helpers
+    # ------------------------------------------------------------------ #
     def _find_font(self) -> Optional[str]:
-        """システムから日本語フォントを探す"""
-        import subprocess
-        import glob
-
-        # Noto Serif JP を優先（モバイルと統一）
-        # プロジェクト内のフォントを最優先
+        """Find a Japanese-capable font."""
         possible_paths = [
-            # Project fonts (最優先 - Railwayで確実に動作)
             "/app/fonts/NotoSerifCJKjp-Regular.otf",
             "./fonts/NotoSerifCJKjp-Regular.otf",
             "fonts/NotoSerifCJKjp-Regular.otf",
-            # Noto Serif CJK fonts - Railway/Linux (システムインストール)
             "/usr/share/fonts/opentype/noto-cjk/NotoSerifCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto-cjk/NotoSerifCJK-Regular.ttc",
-            "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
-            # Noto Sans CJK fonts (フォールバック)
-            "/usr/share/fonts/opentype/noto-cjk/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto-cjk/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            # Windows paths (Serif優先)
             "C:\\Windows\\Fonts\\msmincho.ttc",
             "C:\\Windows\\Fonts\\msgothic.ttc",
             "C:\\Windows\\Fonts\\yugothic.ttf",
             "C:\\Windows\\Fonts\\meiryo.ttc",
-            # macOS paths (明朝体優先)
-            "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
+            "/System/Library/Fonts/�q���M�m���� ProN.ttc",
             "/System/Library/Fonts/Hiragino Sans GB.ttc",
-            "/Library/Fonts/Osaka.ttf",
         ]
 
-        # 直接パスをチェック
         for path in possible_paths:
             if os.path.exists(path):
                 return path
 
-        # Nix storeをglobで検索（Serif優先でモバイルと統一）
         nix_patterns = [
             "/nix/store/*/share/fonts/opentype/noto-cjk/NotoSerifCJK-Regular.ttc",
             "/nix/store/*/share/fonts/truetype/noto-cjk/NotoSerifCJK-Regular.ttc",
@@ -94,57 +81,24 @@ class ShareCardGenerator:
             if matches:
                 return matches[0]
 
-        # フォントが見つからない場合、fcコマンドで検索を試みる
-        try:
-            result = subprocess.run(
-                ["fc-list", ":lang=ja", "file"],
-                capture_output=True,
-                text=True,
-                timeout=2
-            )
-            if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
-                if lines:
-                    # 最初の日本語フォントを使用
-                    font_path = lines[0].split(':')[0].strip()
-                    if os.path.exists(font_path):
-                        return font_path
-        except Exception:
-            pass
-
         return None
 
     def _get_font(self, size: int) -> ImageFont.FreeTypeFont:
-        """指定サイズのフォントを取得"""
         if not self.font_path:
-            # フォントが見つからない場合はエラーをログ
-            import logging
-            logging.warning("No Japanese font found. Text may not render correctly.")
-            # 最後の手段: PIL の load_default() は使わず、エラーにする
-            raise RuntimeError("Japanese font is required but not found on system")
+            raise RuntimeError("Japanese font is required but not found")
+        return ImageFont.truetype(self.font_path, size)
 
-        try:
-            font = ImageFont.truetype(self.font_path, size)
-            return font
-        except Exception as e:
-            import logging
-            logging.error(f"Failed to load font {self.font_path}: {e}")
-            raise
-
-    def _hex_to_rgb(self, hex_color: str) -> tuple:
-        """HEXカラーをRGBに変換"""
+    # ------------------------------------------------------------------ #
+    # Drawing helpers
+    # ------------------------------------------------------------------ #
+    def _hex_to_rgb(self, hex_color: str) -> tuple[int, int, int]:
         hex_color = hex_color.lstrip("#")
         return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
     def _needs_rotation(self, char: str) -> bool:
-        """縦書き時に90度回転が必要な文字を判定（モバイルのVerticalText.tsxと同じ）"""
-        # 伸ばし棒・ダッシュ類
-        dash_chars = ['ー', '−', '－', '–', '—', 'ｰ']
-        # 波ダッシュ
-        wave_chars = ['〜', '～', '〰']
-        # 三点リーダー
-        ellipsis_chars = ['…', '‥', '⋯']
-        # 全ての回転対象文字
+        dash_chars = ['�[', '?', '�|', '?', '?', '�']
+        wave_chars = ['?', '�`', '?']
+        ellipsis_chars = ['�c', '�d', '?']
         rotation_chars = dash_chars + wave_chars + ellipsis_chars
         return char in rotation_chars
 
@@ -155,106 +109,67 @@ class ShareCardGenerator:
         x: int,
         y: int,
         font: ImageFont.FreeTypeFont,
-        fill: tuple,
-    ):
-        """90度回転した文字を描画"""
-        # 文字のバウンディングボックスを取得
-        temp_draw = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
+        fill: tuple[int, int, int],
+    ) -> None:
+        temp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
         bbox = temp_draw.textbbox((0, 0), char, font=font)
         char_width = bbox[2] - bbox[0]
         char_height = bbox[3] - bbox[1]
-
-        # サイズが0の場合はスキップ
         if char_width <= 0 or char_height <= 0:
             return
 
-        # 余白を追加してテキスト用の一時画像を作成
         padding = 20
-        temp_width = char_width + padding * 2
-        temp_height = char_height + padding * 2
-
-        # RGBA画像を作成（透明背景）
-        temp_img = Image.new('RGBA', (temp_width, temp_height), (0, 0, 0, 0))
+        temp_img = Image.new("RGBA", (char_width + padding * 2, char_height + padding * 2), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
-
-        # fillがRGB tupleの場合、RGBA に変換
-        if len(fill) == 3:
-            fill_rgba = fill + (255,)
-        else:
-            fill_rgba = fill
-
-        # 一時画像に文字を描画（パディングを考慮）
+        fill_rgba = fill + (255,)
         temp_draw.text((padding - bbox[0], padding - bbox[1]), char, font=font, fill=fill_rgba)
 
-        # 90度回転（時計回り）
         rotated = temp_img.rotate(90, expand=True, resample=Image.BICUBIC)
-
-        # 回転後のサイズ
-        rotated_width, rotated_height = rotated.size
-
-        # 中央揃えで貼り付け位置を計算
-        paste_x = x - (rotated_width // 2)
+        paste_x = x - (rotated.width // 2)
         paste_y = y
-
-        # 元の画像に合成（アルファチャンネルをマスクとして使用）
         img.paste(rotated, (paste_x, paste_y), rotated)
 
-    def _create_gradient_background(
-        self, img: Image.Image, colors: list[str]
-    ) -> Image.Image:
-        """対角グラデーション背景を作成（左上から右下）"""
-        draw = ImageDraw.Draw(img)
-
-        start_color = self._hex_to_rgb(colors[0])
-        end_color = self._hex_to_rgb(colors[1])
-
-        # 対角グラデーション
-        for y in range(self.HEIGHT):
-            for x in range(self.WIDTH):
-                # 左上(0,0)から右下(WIDTH,HEIGHT)への距離比率
-                ratio = ((x / self.WIDTH) + (y / self.HEIGHT)) / 2
-                r = int(start_color[0] + (end_color[0] - start_color[0]) * ratio)
-                g = int(start_color[1] + (end_color[1] - start_color[1]) * ratio)
-                b = int(start_color[2] + (end_color[2] - start_color[2]) * ratio)
-                draw.point((x, y), fill=(r, g, b))
-
-        return img
-
-    def _draw_vertical_text_multiline(
+    def _draw_vertical_text(
         self,
         img: Image.Image,
-        draw: ImageDraw.ImageDraw,
         text: str,
         start_x: int,
         start_y: int,
         font: ImageFont.FreeTypeFont,
-        fill: tuple,
-        char_height: int = 38,
-        column_spacing: int = 50,
-    ):
-        """改行を考慮した縦書きテキストを描画（右から左に列を追加）"""
+        fill: tuple[int, int, int],
+        char_height: int,
+        column_spacing: int,
+    ) -> None:
+        temp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
         lines = text.split("\n")
         current_x = start_x
 
         for line in lines:
             current_y = start_y
-            for char in line.strip():
-                # 回転が必要な文字かチェック
+            for char in line:
+                bbox = temp_draw.textbbox((0, 0), char, font=font)
                 if self._needs_rotation(char):
-                    # 回転させて描画
                     self._draw_rotated_char(img, char, current_x, current_y, font, fill)
                 else:
-                    # 通常描画
-                    bbox = draw.textbbox((0, 0), char, font=font)
                     char_width = bbox[2] - bbox[0]
-                    # 中央揃え
                     char_x = current_x - (char_width // 2)
-                    draw.text((char_x, current_y), char, font=font, fill=fill)
+                    ImageDraw.Draw(img).text((char_x, current_y), char, font=font, fill=fill)
                 current_y += char_height
-
-            # 次の列は左へ
             current_x -= column_spacing
 
+    def _resize_cover(self, image: Image.Image, width: int, height: int) -> Image.Image:
+        src_w, src_h = image.size
+        if src_w == 0 or src_h == 0:
+            return image.resize((width, height))
+        scale = max(width / src_w, height / src_h)
+        resized = image.resize((int(src_w * scale), int(src_h * scale)), Image.LANCZOS)
+        left = (resized.width - width) // 2
+        top = (resized.height - height) // 2
+        return resized.crop((left, top, left + width, top + height))
+
+    # ------------------------------------------------------------------ #
+    # Main generator
+    # ------------------------------------------------------------------ #
     def generate(
         self,
         upper_text: Optional[str],
@@ -263,133 +178,157 @@ class ShareCardGenerator:
         category: str,
         category_label: str,
         date_label: str,
+        background_image_url: Optional[str] = None,
         badge_label: Optional[str] = None,
         caption: Optional[str] = None,
         likes_label: Optional[str] = None,
         score_label: Optional[str] = None,
     ) -> BytesIO:
-        """
-        共有カード画像を生成（モバイルプレビューと同じレイアウト）
-
-        Returns:
-            BytesIO: PNG画像のバイトストリーム
-        """
-        # WorkCardと同じ構成: カテゴリカラーの単色背景
-        gradient_colors = self.COLORS.get(category_label, {}).get(
-            "gradient", self.DEFAULT_GRADIENT
-        )
-        # グラデーションの1色目を背景色として使用（WorkCardのouterContainerと同じ）
+        gradient_colors = self.COLORS.get(category_label, {}).get("gradient", self.DEFAULT_GRADIENT)
         bg_color = self._hex_to_rgb(gradient_colors[0])
-        img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
+
+        if background_image_url:
+            try:
+                resp = requests.get(background_image_url, timeout=5)
+                resp.raise_for_status()
+                bg_img = Image.open(BytesIO(resp.content)).convert("RGB")
+                img = self._resize_cover(bg_img, self.WIDTH, self.HEIGHT)
+            except Exception as exc:  # pragma: no cover - network failures
+                logger.warning("[ShareCardGenerator] Background load failed: %s", exc)
+                img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
+        else:
+            img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=bg_color)
+
         draw = ImageDraw.Draw(img)
 
-        # 白い内側カード（WorkCardのinnerCardと同じ）
-        # OUTER_PADDINGは外側全体のパディング、spacing.xsに相当
+        # Inner card
         inner_x1 = self.OUTER_PADDING
         inner_y1 = self.OUTER_PADDING
         inner_x2 = self.WIDTH - self.OUTER_PADDING
         inner_y2 = self.HEIGHT - self.OUTER_PADDING
-
-        # 白い内側カードを描画
         draw.rounded_rectangle(
             [inner_x1, inner_y1, inner_x2, inner_y2],
             radius=24,
-            fill=(255, 255, 255)  # 完全な白
+            fill=(255, 255, 255),
         )
 
-        # フォント準備（モバイルのスケール比 1080/375 ≈ 2.88倍）
-        # fontSize.poem = 20 → 58px, fontSize.bodySmall = 12 → 35px
-        font_poem = self._get_font(58)  # 詩用フォント
-        font_author = self._get_font(35)  # 作者名用（@吉川颯我）
-        font_meta = self._get_font(35)  # メタ情報用（よみびより）
+        font_poem = self._get_font(58)
+        font_meta = self._get_font(35)
+        font_category = self._get_font(40)
+        font_badge = self._get_font(32)
 
-        # コンテンツ領域の開始位置
         content_x = inner_x1 + self.INNER_PADDING
         content_y = inner_y1 + self.INNER_PADDING
-        content_width = inner_x2 - inner_x1 - (self.INNER_PADDING * 2)
 
-        # 詩の配置計算: 中央に配置
-        # lineHeight = 38 → 109px (2.88倍)
-        char_height = 109  # lineHeight相当
-        column_spacing = 90  # 列間隔を狭く
+        # Category badge
+        category_text = f"�y{category_label}�z"
+        draw.text((content_x, content_y), category_text, font=font_category, fill=self.TEXT_ACCENT)
 
-        # 縦書き詩の高さを計算
-        upper_lines = upper_text.split('\n') if upper_text else []
-        lower_lines = lower_text.split('\n')
-        max_upper_chars = max((len(line.strip()) for line in upper_lines), default=0)
-        max_lower_chars = max((len(line.strip()) for line in lower_lines), default=0)
-        max_chars = max(max_upper_chars, max_lower_chars)
+        # Vertical poem placement
+        theme_lines = lower_text.split("\n")
+        max_chars = max((len(line.strip()) for line in theme_lines), default=0)
+        char_height = 109
+        column_spacing = 90
         poem_height = max_chars * char_height
-
-        # フッター領域のサイズ（spacing.mdスケール: 16 * 2.88 ≈ 46）
         spacing_md = 46
-        footer_total_height = 35 + spacing_md + 1 + spacing_md + 35 + spacing_md  # 作者名 + margin + 線 + margin + よみびより + margin
-
-        # 詩を中央に配置
-        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - footer_total_height
-        poem_start_y = content_y + (available_height - poem_height) // 2
-
-        # 白い内側カードの中心を使用（画像全体の中心ではなく）
+        footer_total_height = 35 + spacing_md + 1 + spacing_md + 35 + spacing_md
+        available_height = inner_y2 - inner_y1 - (self.INNER_PADDING * 2) - footer_total_height - 100
+        poem_start_y = content_y + 100 + (available_height - poem_height) // 2
         card_center_x = (inner_x1 + inner_x2) // 2
+        theme_columns = len(theme_lines)
+        theme_width = (theme_columns - 1) * column_spacing if theme_columns > 0 else 0
+        theme_start_x = card_center_x + (theme_width // 2)
 
-        # 上の句と下の句の間隔（上の句と下の句の中心間の距離の半分）
-        upper_lower_gap = 150  # 上の句と下の句の間隔
-
-        # 各詩の列数を計算（改行で分割した数）
-        upper_columns = len(upper_lines)
-        lower_columns = len(lower_lines)
-
-        # 各詩の実際の幅を計算（列数 - 1）× column_spacing
-        # start_xは最初の列（右端）の位置なので、幅は左方向に広がる
-        upper_width = (upper_columns - 1) * column_spacing if upper_columns > 0 else 0
-        lower_width = (lower_columns - 1) * column_spacing if lower_columns > 0 else 0
-
-        # 上の句（右側）- 視覚的な中心がcard_center_x + upper_lower_gapになるように配置
-        # start_xは右端なので、中心位置 + (幅の半分)の位置に配置
-        if upper_text:
-            upper_center_target = card_center_x + upper_lower_gap
-            upper_start_x = upper_center_target + (upper_width // 2)
-            self._draw_vertical_text_multiline(
-                img, draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
-            )
-
-        # 下の句（左側）- 視覚的な中心がcard_center_x - upper_lower_gapになるように配置
-        lower_center_target = card_center_x - upper_lower_gap
-        lower_start_x = lower_center_target + (lower_width // 2)
-        self._draw_vertical_text_multiline(
-            img, draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
+        # Upper + lower text combined
+        combined_poem = lower_text if not upper_text else f"{upper_text}\n{lower_text}"
+        self._draw_vertical_text(
+            img,
+            combined_poem,
+            theme_start_x,
+            poem_start_y,
+            font_poem,
+            self.TEXT_PRIMARY,
+            char_height,
+            column_spacing,
         )
 
-        # フッター: 下部から逆算
-        author_y = inner_y2 - self.INNER_PADDING - footer_total_height + spacing_md
-
-        # 作者名（@付き）
-        author_text = f"@{author_name}"
-        draw.text((content_x, author_y), author_text, font=font_author, fill=self.TEXT_SECONDARY)
-
-        # 区切り線（より濃い色に変更）
-        divider_y = author_y + 35 + spacing_md
+        footer_base_y = inner_y2 - self.INNER_PADDING - footer_total_height + spacing_md
+        draw.text((content_x, footer_base_y), date_label, font=font_meta, fill=self.TEXT_SECONDARY)
+        divider_y = footer_base_y + 35 + spacing_md
         draw.line(
             [(content_x, divider_y), (inner_x2 - self.INNER_PADDING, divider_y)],
-            fill=(220, 220, 220),  # より濃いグレー
-            width=2  # 太くする
+            fill=(220, 220, 220),
+            width=2,
         )
 
-        # よみびより（右下）
         footer_y = divider_y + spacing_md
-        app_name = "よみびより"
+        app_name = "��݂т��"
         bbox = draw.textbbox((0, 0), app_name, font=font_meta)
         app_name_width = bbox[2] - bbox[0]
         draw.text(
             (inner_x2 - self.INNER_PADDING - app_name_width, footer_y),
             app_name,
             font=font_meta,
-            fill=self.TEXT_SECONDARY
+            fill=self.TEXT_SECONDARY,
         )
 
-        # BytesIOに保存（PNG最適化）
+        # Badge
+        if badge_label:
+            badge_x = inner_x1 + self.INNER_PADDING + 24
+            badge_y = inner_y1 + self.INNER_PADDING + 24
+            badge_padding_x = 18
+            badge_padding_y = 10
+            badge_bbox = draw.textbbox((0, 0), badge_label, font=font_badge)
+            badge_w = badge_bbox[2] - badge_bbox[0] + badge_padding_x * 2
+            badge_h = badge_bbox[3] - badge_bbox[1] + badge_padding_y * 2
+            draw.rounded_rectangle(
+                [badge_x, badge_y, badge_x + badge_w, badge_y + badge_h],
+                radius=12,
+                fill=(self.TEXT_ACCENT[0], self.TEXT_ACCENT[1], self.TEXT_ACCENT[2], 32),
+            )
+            draw.text(
+                (badge_x + badge_padding_x, badge_y + badge_padding_y),
+                badge_label,
+                font=font_badge,
+                fill=self.TEXT_ACCENT,
+            )
+
+        # Caption
+        if caption:
+            draw.text(
+                (content_x, content_y + 100),
+                caption,
+                font=font_meta,
+                fill=self.TEXT_SECONDARY,
+            )
+
+        # Meta bottom-right
+        author_y = inner_y2 - self.INNER_PADDING - footer_total_height - 80
+        draw.text(
+            (inner_x2 - self.INNER_PADDING - 12 - draw.textbbox((0, 0), author_name, font=font_meta)[2],
+             author_y),
+            author_name,
+            font=font_meta,
+            fill=self.TEXT_PRIMARY,
+        )
+        if likes_label:
+            draw.text(
+                (inner_x2 - self.INNER_PADDING - 12 - draw.textbbox((0, 0), likes_label, font=font_meta)[2],
+                 author_y + 46),
+                likes_label,
+                font=font_meta,
+                fill=self.TEXT_ACCENT,
+            )
+        if score_label:
+            draw.text(
+                (inner_x2 - self.INNER_PADDING - 12 - draw.textbbox((0, 0), score_label, font=font_meta)[2],
+                 author_y + 92),
+                score_label,
+                font=font_meta,
+                fill=self.TEXT_TERTIARY,
+            )
+
         output = BytesIO()
         img.save(output, format="PNG", quality=85, optimize=True)
         output.seek(0)
-
         return output

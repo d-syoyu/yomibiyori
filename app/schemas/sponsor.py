@@ -121,6 +121,11 @@ class SponsorThemeBase(BaseModel):
     date: date
     category: str = Field(..., min_length=1, max_length=50)
     text_575: str = Field(..., min_length=3, max_length=140, description="Upper verse (5-7-5)")
+    background_image_url: Optional[str] = Field(
+        None,
+        description="Public URL for the theme background image",
+        max_length=500,
+    )
     priority: int = Field(default=0, description="Slot priority (higher = preferred)")
 
 
@@ -136,6 +141,11 @@ class SponsorThemeUpdate(BaseModel):
     date: Optional[date] = None
     category: Optional[str] = Field(None, min_length=1, max_length=50)
     text_575: Optional[str] = Field(None, min_length=3, max_length=140)
+    background_image_url: Optional[str] = Field(
+        None,
+        description="Public URL for the theme background image",
+        max_length=500,
+    )
     priority: Optional[int] = None
 
 

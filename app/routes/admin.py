@@ -244,27 +244,29 @@ def approve_theme(
             existing_theme.sponsored = True
             existing_theme.sponsor_theme_id = sponsor_theme.id
             existing_theme.sponsor_company_name = sponsor.company_name
-    else:
-        # Create new theme entry
-        logger.info(
-            f"[Admin] Creating new theme from sponsor theme {sponsor_theme.id} "
-            f"for {sponsor_theme.date} {sponsor_theme.category}"
+            existing_theme.background_image_url = sponsor_theme.background_image_url
+        else:
+            # Create new theme entry
+            logger.info(
+                f"[Admin] Creating new theme from sponsor theme {sponsor_theme.id} "
+                f"for {sponsor_theme.date} {sponsor_theme.category}"
         )
         logger.info(
             f"[Admin] New theme - Text: '{formatted_text}', "
             f"Company: '{sponsor.company_name}'"
         )
-        new_theme = Theme(
-            id=str(uuid4()),
-            text=formatted_text,
-            category=sponsor_theme.category,
-            date=sponsor_theme.date,
-            sponsored=True,
-            sponsor_theme_id=sponsor_theme.id,
-            sponsor_company_name=sponsor.company_name,
-            created_at=now,
-        )
-        session.add(new_theme)
+            new_theme = Theme(
+                id=str(uuid4()),
+                text=formatted_text,
+                category=sponsor_theme.category,
+                date=sponsor_theme.date,
+                sponsored=True,
+                sponsor_theme_id=sponsor_theme.id,
+                sponsor_company_name=sponsor.company_name,
+                background_image_url=sponsor_theme.background_image_url,
+                created_at=now,
+            )
+            session.add(new_theme)
 
     logger.info(f"[Admin] Committing theme approval transaction for sponsor theme {sponsor_theme.id}")
     session.commit()

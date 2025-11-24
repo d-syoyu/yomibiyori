@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+from fastapi import Body
+
 from app.core.auth_helpers import get_current_sponsor, get_current_user
 from app.db.session import get_authenticated_db_session
 from app.models import Sponsor, SponsorCampaign, SponsorTheme, User
@@ -31,6 +33,8 @@ from app.schemas.sponsor import (
     ThemeCalendarDay,
     ThemeCalendarResponse,
 )
+from app.services.r2_client import get_r2_client, build_r2_key
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/sponsor", tags=["sponsor"])
 
@@ -415,6 +419,7 @@ def create_sponsor_theme(
         date=payload.date,
         category=payload.category,
         text_575=payload.text_575,
+        background_image_url=payload.background_image_url,
         priority=payload.priority,
         created_at=now,
         updated_at=now,
@@ -599,6 +604,8 @@ def update_sponsor_theme(
         theme.category = payload.category
     if payload.text_575 is not None:
         theme.text_575 = payload.text_575
+    if payload.background_image_url is not None:
+        theme.background_image_url = payload.background_image_url
     if payload.priority is not None:
         theme.priority = payload.priority
 
@@ -608,6 +615,46 @@ def update_sponsor_theme(
     session.refresh(theme)
 
     return SponsorThemeResponse.model_validate(theme)
+
+
+@router.post("/backgrounds/upload-url")
+def generate_background_upload_url(
+    *,
+    current_user: Annotated[User, Depends(get_current_sponsor)],
+    filename: str = Body(..., embed=True),
+    content_type: str = Body(..., embed=True),
+):
+    """Generate a presigned upload URL for sponsor background images (Cloudflare R2)."""
+    settings = get_settings()
+    if not (settings.r2_bucket_name and settings.r2_public_base_url):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="R2 storage is not configured",
+        )
+
+    extension = filename.split(".")[-1].lower() if "." in filename else "png"
+    key = build_r2_key(prefix=f"sponsor-backgrounds/{current_user.id}", extension=extension)
+
+    try:
+        client = get_r2_client()
+        upload_url = client.generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": settings.r2_bucket_name,
+                "Key": key,
+                "ContentType": content_type,
+            },
+            ExpiresIn=600,
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.exception("Failed to generate R2 presigned URL: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to generate upload URL",
+        ) from exc
+
+    public_url = f"{settings.r2_public_base_url.rstrip('/')}/{key}"
+    return {"upload_url": upload_url, "public_url": public_url, "key": key}
 
 
 @router.delete("/themes/{theme_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
