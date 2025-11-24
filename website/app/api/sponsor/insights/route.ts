@@ -55,7 +55,60 @@ export async function GET(request: Request) {
             })
         }
 
-        // 3. Fetch Data from PostHog
+        // 3. Resolve sponsorが持つテーマIDを取得し、PostHogを絞り込む
+        const { data: campaigns, error: campaignsError } = await supabase
+            .from('sponsor_campaigns')
+            .select('id')
+            .eq('sponsor_id', session.user.id)
+
+        if (campaignsError) {
+            console.error('[Insights API] Failed to fetch sponsor campaigns:', campaignsError)
+            return NextResponse.json({ error: 'Failed to fetch campaigns' }, { status: 500 })
+        }
+
+        if (!campaigns || campaigns.length === 0) {
+            console.warn('[Insights API] No campaigns for sponsor, returning empty results')
+            return NextResponse.json({ results: [] })
+        }
+
+        const campaignIds = campaigns.map(c => c.id)
+
+        const { data: sponsorThemes, error: sponsorThemesError } = await supabase
+            .from('sponsor_themes')
+            .select('id')
+            .in('campaign_id', campaignIds)
+            .in('status', ['approved', 'published'])
+
+        if (sponsorThemesError) {
+            console.error('[Insights API] Failed to fetch sponsor themes:', sponsorThemesError)
+            return NextResponse.json({ error: 'Failed to fetch sponsor themes' }, { status: 500 })
+        }
+
+        if (!sponsorThemes || sponsorThemes.length === 0) {
+            console.warn('[Insights API] No sponsor themes found, returning empty results')
+            return NextResponse.json({ results: [] })
+        }
+
+        const sponsorThemeIds = sponsorThemes.map(st => st.id)
+
+        const { data: distributedThemes, error: distributedThemesError } = await supabase
+            .from('themes')
+            .select('id')
+            .in('sponsor_theme_id', sponsorThemeIds)
+
+        if (distributedThemesError) {
+            console.error('[Insights API] Failed to fetch distributed themes:', distributedThemesError)
+            return NextResponse.json({ error: 'Failed to fetch themes' }, { status: 500 })
+        }
+
+        const targetThemeIds = (distributedThemes ?? []).map(t => t.id).filter(Boolean)
+
+        if (targetThemeIds.length === 0) {
+            console.warn('[Insights API] No distributed themes found for sponsor, returning empty results')
+            return NextResponse.json({ results: [] })
+        }
+
+        // 4. Fetch Data from PostHog
         // We want to get event counts broken down by theme_id
         // API: /api/projects/:id/insights/trend/
 
@@ -64,30 +117,48 @@ export async function GET(request: Request) {
             'Content-Type': 'application/json',
         }
 
-        const params = new URLSearchParams({
-            events: JSON.stringify([
+        // Use POST to avoid URL length issues and ensure properties filter is respected
+        const payload = {
+            events: [
                 { id: 'theme_viewed', math: 'total', name: 'Impressions' },
                 { id: 'work_created', math: 'total', name: 'Submissions' },
                 { id: 'sponsor_link_clicked', math: 'total', name: 'Sponsor Link Clicks' }
-            ]),
+            ],
             breakdown: 'theme_id',
             breakdown_type: 'event',
             date_from: 'all', // Get all time data
             display: 'ActionsTable', // Get tabular data
-            sampling_factor: '1', // Disable sampling to align with PostHog Events tab counts
+            sampling_factor: 1, // Disable sampling to align with PostHog Events tab counts
+            // sponsor配信テーマのみ取得するためにtheme_idのinフィルタを設定
+            properties: [
+                {
+                    key: 'theme_id',
+                    value: targetThemeIds,
+                    operator: 'exact',
+                    type: 'event'
+                }
+            ]
             // Note: is_sample_account filter removed because it excludes events without the property
             // (i.e., all events before the property was added). We'll filter in post-processing instead.
-        })
+        }
 
         const response = await fetch(
-            `https://app.posthog.com/api/projects/${projectId}/insights/trend/?${params.toString()}`,
-            { headers }
+            `https://app.posthog.com/api/projects/${projectId}/insights/trend/`,
+            {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            }
         )
 
         if (!response.ok) {
             const errorText = await response.text()
             console.error('PostHog API Error:', response.status, errorText)
-            throw new Error(`PostHog API Error: ${response.status}`)
+            // Degrade gracefully to avoid 500 on our API; front側でwarningを見てモック表示
+            return NextResponse.json({
+                results: [],
+                warning: `PostHog API error: ${response.status}`
+            })
         }
 
         const data = await response.json()

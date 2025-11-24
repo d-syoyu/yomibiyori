@@ -8,6 +8,30 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+function formatDateForCsv(value: string) {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    return date.toLocaleDateString('ja-JP')
+}
+
+function escapeCsvValue(value: string | number | null | undefined) {
+    if (value === null || value === undefined) return '""'
+    const stringValue = typeof value === 'number' ? value.toString() : value.replace(/\r?\n/g, ' ')
+    const escaped = stringValue.replace(/"/g, '""')
+    return `"${escaped}"`
+}
+
+function formatDemographicsValue(map?: Record<string, number>) {
+    if (!map) return ''
+    const entries = Object.entries(map).filter(([_, count]) => typeof count === 'number')
+    if (entries.length === 0) return ''
+    return entries
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([key, count]) => `${key}:${count}`)
+        .join(' | ')
+}
+
 // Tooltip component for metric explanations
 function InfoTooltip({ text, position = 'top-left' }: { text: string; position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' }) {
     const [isVisible, setIsVisible] = useState(false)
@@ -151,7 +175,6 @@ interface ThemeInsight {
         likes: number
         author_name: string
     } | null
-    ranking_entries: number
     demographics?: {
         age_groups: Record<string, number>
         regions: Record<string, number>
@@ -292,7 +315,6 @@ export default function SponsorInsightsPage() {
                         total_likes: number
                         avg_likes_per_work: number
                         top_work: { text: string; likes: number; author_name: string } | null
-                        ranking_entries: number
                         demographics: {
                             age_groups: Record<string, number>
                             regions: Record<string, number>
@@ -317,17 +339,16 @@ export default function SponsorInsightsPage() {
                             impressions,
                             submissions,
                             sponsor_link_clicks,
-                            likes: metrics?.total_likes || 0,
-                            engagement_rate: impressions > 0 ? (submissions / impressions) * 100 : 0,
-                            total_likes: metrics?.total_likes || 0,
-                            avg_likes_per_work: metrics?.avg_likes_per_work || 0,
-                            top_work: metrics?.top_work || null,
-                            ranking_entries: metrics?.ranking_entries || 0,
-                            demographics: metrics?.demographics ?? {
-                                age_groups: {},
-                                regions: {}
-                            }
+                        likes: metrics?.total_likes || 0,
+                        engagement_rate: impressions > 0 ? (submissions / impressions) * 100 : 0,
+                        total_likes: metrics?.total_likes || 0,
+                        avg_likes_per_work: metrics?.avg_likes_per_work || 0,
+                        top_work: metrics?.top_work || null,
+                        demographics: metrics?.demographics ?? {
+                            age_groups: {},
+                            regions: {}
                         }
+                    }
                     })
                     usedMockData = false
                 } else {
@@ -362,7 +383,6 @@ export default function SponsorInsightsPage() {
                             likes: Math.floor(totalLikes * 0.3),
                             author_name: 'サンプルユーザー'
                         } : null,
-                        ranking_entries: Math.floor(submissions * 0.1),
                         demographics: {
                             age_groups: {
                                 '10代': Math.floor(submissions * 0.1),
@@ -398,9 +418,83 @@ export default function SponsorInsightsPage() {
 
         } catch (error) {
             console.error('Failed to fetch insights:', error)
-        } finally {
-            setLoading(false)
+    } finally {
+        setLoading(false)
+    }
+}
+
+    function handleExportCsv() {
+        if (themes.length === 0) {
+            alert('エクスポートするデータがありません')
+            return
         }
+
+        const ageBuckets = ['10代', '20代', '30代', '40代', '50代', '60代', '70代', '80代', '未設定']
+        const prefectures = [
+            '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+            '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+            '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県',
+            '岐阜県', '静岡県', '愛知県', '三重県',
+            '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
+            '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+            '徳島県', '香川県', '愛媛県', '高知県',
+            '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
+            '未設定'
+        ]
+
+        const headers = [
+            'お題 (上の句)',
+            '配信日',
+            '表示数',
+            '投稿数',
+            'エンゲージメント率(%)',
+            '合計いいね',
+            '平均いいね',
+            'リンククリック',
+            'トップ句',
+            'トップ句のいいね',
+            'トップ作者',
+            ...ageBuckets.map(a => `年代:${a}`),
+            ...prefectures.map(p => `地域:${p}`)
+        ]
+
+        const rows = themes.map(theme => {
+            const ageGroups = theme.demographics?.age_groups ?? {}
+            const regions = theme.demographics?.regions ?? {}
+            const getCount = (m: Record<string, number>, k: string) => m[k] ?? 0
+
+            return [
+                theme.text_575,
+                formatDateForCsv(theme.date),
+                theme.impressions,
+                theme.submissions,
+                theme.engagement_rate.toFixed(1),
+                theme.total_likes,
+                theme.avg_likes_per_work.toFixed(1),
+                theme.sponsor_link_clicks ?? 0,
+                theme.top_work?.text ?? '',
+                theme.top_work?.likes ?? '',
+                theme.top_work?.author_name ?? '',
+                ...ageBuckets.map(a => getCount(ageGroups, a)),  // 未設定は0
+                ...prefectures.map(p => getCount(regions, p))     // 未設定は0
+            ]
+        })
+
+        const csv = [
+            headers.map(escapeCsvValue).join(','),
+            ...rows.map(r => r.map(escapeCsvValue).join(','))
+        ].join('\n')
+
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `yomibiyori_insights_${new Date().toISOString().slice(0, 10)}.csv`
+        link.style.display = 'none'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
     }
 
     if (loading) {
@@ -456,8 +550,19 @@ export default function SponsorInsightsPage() {
 
             {/* Theme List Table */}
             <section className="card p-0 relative hover:z-20">
-                <div className="p-6 border-b border-[var(--color-border)]">
+                <div className="p-6 border-b border-[var(--color-border)] flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <h2 className="text-xl font-bold text-[var(--color-text-primary)]">お題別パフォーマンス</h2>
+                </div>
+                <div className="px-6 pb-4 flex justify-end">
+                    <button
+                        onClick={handleExportCsv}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--color-igusa)] text-[var(--color-igusa)] hover:bg-[var(--color-igusa)] hover:text-white transition-colors text-sm font-medium shadow-sm bg-white cursor-pointer"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        CSVエクスポート
+                    </button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -467,14 +572,32 @@ export default function SponsorInsightsPage() {
                                 <th className="p-4 font-medium text-left">配信日</th>
                                 <th className="p-4 font-medium text-left">
                                     <span className="inline-flex items-center">
-                                        表示回数
-                                        <InfoTooltip text="このお題が閲覧された回数です。" position="bottom-left" />
+                                        表示数
+                                        <InfoTooltip text="お題が表示された回数です。" position="bottom-left" />
                                     </span>
                                 </th>
                                 <th className="p-4 font-medium text-left">
                                     <span className="inline-flex items-center">
                                         投稿数
-                                        <InfoTooltip text="このお題に対して投稿された下の句の数です。" position="bottom-left" />
+                                        <InfoTooltip text="お題に対して投稿された俳句の数です。" position="bottom-left" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
+                                        エンゲージメント
+                                        <InfoTooltip text="表示数に対する提出率（投稿数 ÷ 表示数 × 100）です。" position="bottom-right" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
+                                        合計いいね
+                                        <InfoTooltip text="投稿に付いたいいねの合計です。" position="bottom-left" />
+                                    </span>
+                                </th>
+                                <th className="p-4 font-medium text-left">
+                                    <span className="inline-flex items-center">
+                                        平均いいね
+                                        <InfoTooltip text="1作品あたりの平均いいね数です。" position="bottom-right" />
                                     </span>
                                 </th>
                                 <th className="p-4 font-medium text-left">
@@ -483,38 +606,14 @@ export default function SponsorInsightsPage() {
                                         <InfoTooltip text="スポンサー公式URLがクリックされた回数です。" position="bottom-left" />
                                     </span>
                                 </th>
-                                <th className="p-4 font-medium text-left">
-                                    <span className="inline-flex items-center">
-                                        合計いいね
-                                        <InfoTooltip text="このお題に投稿された全作品が獲得したいいねの合計数です。" position="bottom-left" />
-                                    </span>
-                                </th>
-                                <th className="p-4 font-medium text-left">
-                                    <span className="inline-flex items-center">
-                                        平均いいね
-                                        <InfoTooltip text="作品1件あたりの平均いいね数です。作品の品質を示す指標となります。" position="bottom-right" />
-                                    </span>
-                                </th>
-                                <th className="p-4 font-medium text-left">
-                                    <span className="inline-flex items-center">
-                                        ランキング入賞
-                                        <InfoTooltip text="デイリーランキング（トップ10）に入賞した作品の数です。" position="bottom-right" />
-                                    </span>
-                                </th>
-                                <th className="p-4 font-medium text-left">
-                                    <span className="inline-flex items-center">
-                                        エンゲージメント
-                                        <InfoTooltip text="表示回数に対する投稿数の割合（投稿数 ÷ 表示回数 × 100）です。" position="bottom-right" />
-                                    </span>
-                                </th>
                                 <th className="p-4 font-medium text-left">分析</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {themes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="p-8 text-center text-[var(--color-text-muted)]">
-                                        データがありません。お題が配信されるとここに表示されます。
+                                    <td colSpan={9} className="p-8 text-center text-[var(--color-text-muted)]">
+                                        データがありません。投稿が反映され次第表示されます。
                                     </td>
                                 </tr>
                             ) : (
@@ -533,39 +632,31 @@ export default function SponsorInsightsPage() {
                                             {theme.impressions.toLocaleString()}
                                         </td>
                                         <td className="p-4 text-left text-[var(--color-text-primary)]">
-                                        {theme.submissions.toLocaleString()}
-                                    </td>
-                                    <td className="p-4 text-left text-[var(--color-text-primary)]">
-                                        {theme.sponsor_link_clicks?.toLocaleString() ?? '-'}
-                                    </td>
-                                    <td className="p-4 text-left text-[var(--color-text-primary)]">
-                                        {theme.total_likes.toLocaleString()}
-                                    </td>
+                                            {theme.submissions.toLocaleString()}
+                                        </td>
+                                        <td className="p-4 text-left">
+                                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                                theme.engagement_rate >= 10
+                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    : theme.engagement_rate >= 5
+                                                        ? 'bg-blue-100 text-blue-800'
+                                                        : 'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {theme.engagement_rate.toFixed(1)}%
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-left text-[var(--color-text-primary)]">
+                                            {theme.total_likes.toLocaleString()}
+                                        </td>
                                         <td className="p-4 text-left text-[var(--color-text-secondary)]">
                                             {theme.avg_likes_per_work.toFixed(1)}
                                         </td>
                                         <td className="p-4 text-left text-[var(--color-text-primary)]">
-                                            {theme.ranking_entries > 0 ? (
-                                                <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-medium">
-                                                    🏆 {theme.ranking_entries}作品
-                                                </span>
-                                            ) : (
-                                                <span className="text-[var(--color-text-muted)]">-</span>
-                                            )}
-                                        </td>
-                                        <td className="p-4 text-left">
-                                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${theme.engagement_rate >= 10
-                                                ? 'bg-emerald-100 text-emerald-800'
-                                                : theme.engagement_rate >= 5
-                                                    ? 'bg-blue-100 text-blue-800'
-                                                    : 'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                {theme.engagement_rate.toFixed(1)}%
-                                            </span>
+                                            {theme.sponsor_link_clicks?.toLocaleString() ?? '-'}
                                         </td>
                                         <td className="p-4 text-left">
                                             <button
-                                                className="text-[var(--color-igusa)] hover:underline text-sm font-medium"
+                                                className="text-[var(--color-igusa)] hover:underline text-sm font-medium cursor-pointer"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setSelectedTheme(theme);
