@@ -137,9 +137,9 @@ export default function Home() {
                 </div>
                 <h2 className="text-3xl font-bold text-[var(--color-igusa)]">響き合いを眺める</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  あなたの一首に応えたユーザーを表示。<br />
-                  「お気に入り」で保存し、<br />
-                  あとでゆっくり振り返れます。
+                  いいねで共感を送り合い、その場で響き合いを楽しめます。<br />
+                  投稿はその日のうちに流れていき、あとから振り返ることはできません。<br />
+                  今この瞬間のことばを味わう、一期一会の出会いです。
                 </p>
               </div>
             </div>
