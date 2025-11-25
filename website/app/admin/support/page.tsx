@@ -182,7 +182,7 @@ export default function AdminSupportPage() {
   }
 
   return (
-    <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
+    <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
       <header className="flex justify-between items-center shrink-0">
         <div className="space-y-2">
           <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
@@ -318,7 +318,7 @@ export default function AdminSupportPage() {
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="返信を入力..."
-                    rows={2}
+                    rows={3}
                     className="flex-1 px-4 py-2 border border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)] resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {

@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -41,7 +41,7 @@ const STATUS_CONFIG: Record<ThemeStatus, { label: string; className: string }> =
   },
 }
 
-export default function ThemesPage() {
+function ThemesContent() {
   const searchParams = useSearchParams()
   const status = searchParams.get('status')
 
@@ -298,5 +298,13 @@ export default function ThemesPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ThemesPage() {
+  return (
+    <Suspense fallback={<div className="text-[var(--color-text-secondary)]">読み込み中...</div>}>
+      <ThemesContent />
+    </Suspense>
   )
 }
