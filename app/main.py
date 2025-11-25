@@ -23,6 +23,7 @@ app = FastAPI(title="Yomibiyori API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3000",  # Next.js dev server
         "http://localhost:8081",  # Expo web dev server
         "http://localhost:19006",  # Alternative Expo port
         "https://yomibiyori-production.up.railway.app",  # Production domain
