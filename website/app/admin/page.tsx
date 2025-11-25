@@ -12,6 +12,7 @@ interface Stats {
   totalThemes: number
   pendingThemes: number
   approvedThemes: number
+  publishedThemes: number
   rejectedThemes: number
 }
 
@@ -71,6 +72,7 @@ export default function AdminDashboard() {
     totalThemes: 0,
     pendingThemes: 0,
     approvedThemes: 0,
+    publishedThemes: 0,
     rejectedThemes: 0,
   })
   const [activities, setActivities] = useState<Activity[]>([])
@@ -87,11 +89,13 @@ export default function AdminDashboard() {
         { data: total },
         { data: pending },
         { data: approved },
+        { data: published },
         { data: rejected },
       ] = await Promise.all([
         supabase.from('sponsor_themes').select('id'),
         supabase.from('sponsor_themes').select('id').eq('status', 'pending'),
         supabase.from('sponsor_themes').select('id').eq('status', 'approved'),
+        supabase.from('sponsor_themes').select('id').eq('status', 'published'),
         supabase.from('sponsor_themes').select('id').eq('status', 'rejected'),
       ])
 
@@ -99,6 +103,7 @@ export default function AdminDashboard() {
         totalThemes: total?.length || 0,
         pendingThemes: pending?.length || 0,
         approvedThemes: approved?.length || 0,
+        publishedThemes: published?.length || 0,
         rejectedThemes: rejected?.length || 0,
       })
 
@@ -200,6 +205,12 @@ export default function AdminDashboard() {
       href: '/admin/themes?status=approved',
     },
     {
+      label: '配信済み',
+      value: stats.publishedThemes,
+      color: 'from-blue-400 to-cyan-500',
+      href: '/admin/themes?status=published',
+    },
+    {
       label: '却下',
       value: stats.rejectedThemes,
       color: 'from-red-400 to-pink-500',
@@ -208,7 +219,7 @@ export default function AdminDashboard() {
     {
       label: '総お題数',
       value: stats.totalThemes,
-      color: 'from-blue-400 to-indigo-500',
+      color: 'from-purple-400 to-indigo-500',
       href: '/admin/themes',
     },
   ]
@@ -234,7 +245,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* Stats Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {statCards.map((card) => (
           <Link key={card.label} href={card.href} className="card group hover:bg-[var(--color-washi)] transition-colors">
             <div className="flex flex-col h-full justify-between space-y-4">
