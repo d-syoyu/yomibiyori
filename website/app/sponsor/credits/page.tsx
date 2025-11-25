@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getImpersonation } from '@/lib/impersonation'
 
 interface Transaction {
   id: string
@@ -29,8 +30,17 @@ export default function SponsorCreditsPage() {
 
   async function loadCreditsAndTransactions() {
     try {
+      // Check for impersonation first
+      const impersonation = getImpersonation()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+
+      // Determine sponsor ID - use impersonation if available, otherwise session
+      let sponsorId: string
+      if (impersonation) {
+        sponsorId = impersonation.sponsorId
+      } else if (session) {
+        sponsorId = session.user.id
+      } else {
         window.location.href = '/sponsor-login'
         return
       }
@@ -39,23 +49,25 @@ export default function SponsorCreditsPage() {
       const { data: sponsor } = await supabase
         .from('sponsors')
         .select('credits')
-        .eq('id', session.user.id)
+        .eq('id', sponsorId)
         .single()
 
       if (sponsor) {
         setCredits(sponsor.credits)
       }
 
-      // Get transaction history from backend API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/credits/transactions`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      })
+      // Get transaction history from backend API (only if session exists)
+      if (session) {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/credits/transactions`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        })
 
-      if (response.ok) {
-        const data = await response.json()
-        setTransactions(data)
+        if (response.ok) {
+          const data = await response.json()
+          setTransactions(data)
+        }
       }
     } catch (err) {
       console.error('Failed to load credits:', err)

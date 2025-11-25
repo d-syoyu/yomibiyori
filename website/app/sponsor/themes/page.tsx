@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getImpersonation } from '@/lib/impersonation'
 
 interface SponsorTheme {
   id: string
@@ -30,14 +31,24 @@ function SponsorThemesContent() {
     try {
       setLoading(true)
 
-      // Get current user's campaigns
+      // Check for impersonation first
+      const impersonation = getImpersonation()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+
+      // Determine sponsor ID - use impersonation if available, otherwise session
+      let sponsorId: string
+      if (impersonation) {
+        sponsorId = impersonation.sponsorId
+      } else if (session) {
+        sponsorId = session.user.id
+      } else {
+        return
+      }
 
       const { data: campaigns } = await supabase
         .from('sponsor_campaigns')
         .select('id')
-        .eq('sponsor_id', session.user.id)
+        .eq('sponsor_id', sponsorId)
 
       if (!campaigns || campaigns.length === 0) {
         setThemes([])

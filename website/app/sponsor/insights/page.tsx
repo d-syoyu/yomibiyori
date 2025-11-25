@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getImpersonation } from '@/lib/impersonation'
 
 function formatDateForCsv(value: string) {
     const date = new Date(value)
@@ -208,14 +209,24 @@ export default function SponsorInsightsPage() {
         try {
             setLoading(true)
 
-            // 1. Get user's approved themes from Supabase
+            // Check for impersonation first
+            const impersonation = getImpersonation()
             const { data: { session } } = await supabase.auth.getSession()
-            if (!session) return
+
+            // Determine sponsor ID - use impersonation if available, otherwise session
+            let sponsorId: string
+            if (impersonation) {
+                sponsorId = impersonation.sponsorId
+            } else if (session) {
+                sponsorId = session.user.id
+            } else {
+                return
+            }
 
             const { data: campaigns, error: campaignsError } = await supabase
                 .from('sponsor_campaigns')
                 .select('id')
-                .eq('sponsor_id', session.user.id)
+                .eq('sponsor_id', sponsorId)
 
             if (campaignsError) {
                 throw campaignsError
@@ -247,11 +258,10 @@ export default function SponsorInsightsPage() {
             const sponsorThemeIds = sponsorThemes.map(st => st.id)
 
             // themesテーブルから、sponsor_theme_idが一致するお題を取得
-            // または、sponsored=trueのお題を取得（承認後にコピーされたお題に対応）
             const { data: distributedThemes, error: themesError } = await supabase
                 .from('themes')
                 .select('id, text, date, sponsor_theme_id')
-                .or(`sponsor_theme_id.in.(${sponsorThemeIds.join(',')}),and(sponsored.eq.true,sponsor_theme_id.in.(${sponsorThemeIds.join(',')}))`)
+                .in('sponsor_theme_id', sponsorThemeIds)
                 .order('date', { ascending: false })
 
             if (themesError) {

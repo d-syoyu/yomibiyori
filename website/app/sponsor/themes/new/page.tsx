@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getImpersonation } from '@/lib/impersonation'
 import ThemeCalendar from '@/components/ThemeCalendar'
 
 const CATEGORIES = ['恋愛', '季節', '日常', 'ユーモア']
@@ -32,14 +33,25 @@ export default function NewThemePage() {
 
   async function ensureCampaign() {
     try {
+      // Check for impersonation first
+      const impersonation = getImpersonation()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+
+      // Determine sponsor ID - use impersonation if available, otherwise session
+      let sponsorId: string
+      if (impersonation) {
+        sponsorId = impersonation.sponsorId
+      } else if (session) {
+        sponsorId = session.user.id
+      } else {
+        return
+      }
 
       // Check if sponsor record exists and get credits
       let { data: sponsor } = await supabase
         .from('sponsors')
         .select('id, credits')
-        .eq('id', session.user.id)
+        .eq('id', sponsorId)
         .single()
 
       // Set credits if sponsor exists
@@ -47,8 +59,17 @@ export default function NewThemePage() {
         setCredits(sponsor.credits || 0)
       }
 
-      // Create sponsor record if not exists
+      // Create sponsor record if not exists (only for non-impersonation)
       if (!sponsor) {
+        if (impersonation) {
+          // Impersonation but sponsor not found - this shouldn't happen
+          setError('スポンサー情報が見つかりません')
+          return
+        }
+        if (!session) {
+          setError('ログインしてください')
+          return
+        }
         const { data: newSponsor, error: sponsorError } = await supabase
           .from('sponsors')
           .insert({

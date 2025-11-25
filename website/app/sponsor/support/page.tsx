@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getImpersonation } from '@/lib/impersonation'
 import Link from 'next/link'
 
 interface Ticket {
@@ -25,13 +26,24 @@ export default function SponsorSupportPage() {
 
   async function fetchTickets() {
     try {
+      // Check for impersonation first
+      const impersonation = getImpersonation()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+
+      // Determine user ID - use impersonation if available, otherwise session
+      let userId: string
+      if (impersonation) {
+        userId = impersonation.sponsorId
+      } else if (user) {
+        userId = user.id
+      } else {
+        return
+      }
 
       const { data, error } = await supabase
         .from('support_tickets')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) throw error

@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getImpersonation } from '@/lib/impersonation'
 import { useParams, useRouter } from 'next/navigation'
 
 interface Message {
@@ -85,15 +86,26 @@ export default function SponsorSupportChatPage() {
 
     setSending(true)
     try {
+      // Check for impersonation first
+      const impersonation = getImpersonation()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+
+      // Determine sender ID - use impersonation if available, otherwise session
+      let senderId: string
+      if (impersonation) {
+        senderId = impersonation.sponsorId
+      } else if (user) {
+        senderId = user.id
+      } else {
+        throw new Error('Not authenticated')
+      }
 
       // Insert message
       const { error } = await supabase
         .from('support_ticket_messages')
         .insert({
           ticket_id: ticket.id,
-          sender_id: user.id,
+          sender_id: senderId,
           message: newMessage,
           is_admin: false
         })
