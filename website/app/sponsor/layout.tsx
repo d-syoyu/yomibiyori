@@ -40,6 +40,36 @@ export default function SponsorLayout({
       // Get current session
       const { data: { session } } = await supabase.auth.getSession()
 
+      // If impersonating, handle admin access first
+      if (impersonationData) {
+        // Admin is impersonating - verify sponsor exists and allow access
+        const { data: sponsorData } = await supabase
+          .from('sponsors')
+          .select('id, company_name')
+          .eq('id', impersonationData.sponsorId)
+          .single()
+
+        if (sponsorData) {
+          // Valid impersonation - set user as the sponsor
+          setUser({
+            id: impersonationData.sponsorId,
+            email: session?.user?.email || 'admin@example.com',
+            role: 'sponsor',
+            display_name: sponsorData.company_name,
+          })
+          setLoading(false)
+          return
+        } else {
+          // Sponsor not found, end impersonation
+          endImpersonation()
+          setImpersonation(null)
+          alert('スポンサーが見つかりません')
+          router.push('/admin/sponsors')
+          return
+        }
+      }
+
+      // Normal flow - require session for non-impersonation access
       if (!session) {
         router.push('/sponsor-login')
         return
@@ -59,58 +89,22 @@ export default function SponsorLayout({
         return
       }
 
-      // If impersonating, allow admin users
-      if (impersonationData) {
-        if (userData.role !== 'admin') {
-          // Not an admin, clear impersonation and check if sponsor
-          endImpersonation()
-          setImpersonation(null)
-          if (userData.role !== 'sponsor') {
-            alert('スポンサー権限が必要です')
-            router.push('/sponsor-login')
-            return
-          }
-        }
-        // Admin is impersonating - get sponsor info
-        const { data: sponsorData } = await supabase
-          .from('sponsors')
-          .select('id, company_name')
-          .eq('id', impersonationData.sponsorId)
-          .single()
-
-        if (sponsorData) {
-          setUser({
-            id: impersonationData.sponsorId,
-            email: userData.email,
-            role: 'sponsor',
-            display_name: sponsorData.company_name,
-          })
-        } else {
-          // Sponsor not found, end impersonation
-          endImpersonation()
-          setImpersonation(null)
-          alert('スポンサーが見つかりません')
-          router.push('/admin/sponsors')
-          return
-        }
-      } else {
-        // Normal sponsor access
-        if (userData.role !== 'sponsor') {
-          alert('スポンサー権限が必要です')
-          router.push('/sponsor-login')
-          return
-        }
-
-        setUser({
-          id: userData.id,
-          email: userData.email,
-          role: userData.role,
-          display_name: userData.name || userData.email,
-        })
+      // Normal sponsor access
+      if (userData.role !== 'sponsor') {
+        alert('スポンサー権限が必要です')
+        router.push('/sponsor-login')
+        return
       }
+
+      setUser({
+        id: userData.id,
+        email: userData.email,
+        role: userData.role,
+        display_name: userData.name || userData.email,
+      })
     } catch (error) {
       console.error('Auth error:', error)
-      router.push('/sponsor/login')
+      router.push('/sponsor-login')
     } finally {
       setLoading(false)
     }
