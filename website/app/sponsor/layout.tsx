@@ -7,6 +7,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import SupportWidget from '../../components/sponsor/SupportWidget'
+import ImpersonationBanner from '../../components/admin/ImpersonationBanner'
+import { getImpersonation, endImpersonation, ImpersonationData } from '@/lib/impersonation'
 
 interface User {
   id: string
@@ -23,12 +26,16 @@ export default function SponsorLayout({
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [impersonation, setImpersonation] = useState<ImpersonationData | null>(null)
 
   useEffect(() => {
-    checkUser()
+    // Check for impersonation first
+    const impersonationData = getImpersonation()
+    setImpersonation(impersonationData)
+    checkUser(impersonationData)
   }, [])
 
-  async function checkUser() {
+  async function checkUser(impersonationData: ImpersonationData | null) {
     try {
       // Get current session
       const { data: { session } } = await supabase.auth.getSession()
@@ -52,19 +59,55 @@ export default function SponsorLayout({
         return
       }
 
-      // Check if user is sponsor
-      if (userData.role !== 'sponsor') {
-        alert('スポンサー権限が必要です')
-        router.push('/sponsor-login')
-        return
-      }
+      // If impersonating, allow admin users
+      if (impersonationData) {
+        if (userData.role !== 'admin') {
+          // Not an admin, clear impersonation and check if sponsor
+          endImpersonation()
+          setImpersonation(null)
+          if (userData.role !== 'sponsor') {
+            alert('スポンサー権限が必要です')
+            router.push('/sponsor-login')
+            return
+          }
+        }
+        // Admin is impersonating - get sponsor info
+        const { data: sponsorData } = await supabase
+          .from('sponsors')
+          .select('id, company_name')
+          .eq('id', impersonationData.sponsorId)
+          .single()
 
-      setUser({
-        id: userData.id,
-        email: userData.email,
-        role: userData.role,
-        display_name: userData.name || userData.email,
-      })
+        if (sponsorData) {
+          setUser({
+            id: impersonationData.sponsorId,
+            email: userData.email,
+            role: 'sponsor',
+            display_name: sponsorData.company_name,
+          })
+        } else {
+          // Sponsor not found, end impersonation
+          endImpersonation()
+          setImpersonation(null)
+          alert('スポンサーが見つかりません')
+          router.push('/admin/sponsors')
+          return
+        }
+      } else {
+        // Normal sponsor access
+        if (userData.role !== 'sponsor') {
+          alert('スポンサー権限が必要です')
+          router.push('/sponsor-login')
+          return
+        }
+
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          role: userData.role,
+          display_name: userData.name || userData.email,
+        })
+      }
     } catch (error) {
       console.error('Auth error:', error)
       router.push('/sponsor/login')
@@ -74,6 +117,12 @@ export default function SponsorLayout({
   }
 
   async function handleLogout() {
+    // If impersonating, just end impersonation
+    if (impersonation) {
+      endImpersonation()
+      router.push('/admin/sponsors')
+      return
+    }
     await supabase.auth.signOut()
     router.push('/sponsor-login')
   }
@@ -92,8 +141,11 @@ export default function SponsorLayout({
 
   return (
     <div className="page-wrapper">
+      {/* Impersonation Banner */}
+      {impersonation && <ImpersonationBanner />}
+
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-[var(--color-border)] sticky top-0 z-10">
+      <header className={`bg-white/80 backdrop-blur-sm border-b border-[var(--color-border)] sticky z-10 ${impersonation ? 'top-[52px]' : 'top-0'}`}>
         <div className="page-container">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
@@ -113,7 +165,7 @@ export default function SponsorLayout({
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-igusa)] hover:bg-[var(--color-washi)] rounded-lg transition-colors"
               >
-                ログアウト
+                {impersonation ? '終了' : 'ログアウト'}
               </button>
             </div>
           </div>
@@ -156,6 +208,14 @@ export default function SponsorLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg> 新規投稿
             </a>
+            <a
+              href="/sponsor/support"
+              className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-igusa)] hover:bg-[var(--color-washi)] rounded-lg transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-1 inline-block">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+              </svg> サポート
+            </a>
           </div>
         </div>
       </nav>
@@ -164,6 +224,7 @@ export default function SponsorLayout({
       <main className="page-container py-8">
         {children}
       </main>
+      <SupportWidget />
     </div>
   )
 }

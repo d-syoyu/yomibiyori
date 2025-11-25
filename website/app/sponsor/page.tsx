@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getImpersonation } from '@/lib/impersonation'
 
 interface Stats {
   totalThemes: number
@@ -69,21 +70,27 @@ export default function SponsorDashboard() {
 
   async function loadStats() {
     try {
+      // Check for impersonation
+      const impersonation = getImpersonation()
+
       // Get current user's campaigns
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
+
+      // Use impersonated sponsor ID if available
+      const sponsorId = impersonation?.sponsorId || session.user.id
 
       // Get sponsor credits
       const { data: sponsor } = await supabase
         .from('sponsors')
         .select('credits')
-        .eq('id', session.user.id)
+        .eq('id', sponsorId)
         .single()
 
       const { data: campaigns } = await supabase
         .from('sponsor_campaigns')
         .select('id')
-        .eq('sponsor_id', session.user.id)
+        .eq('sponsor_id', sponsorId)
 
       if (!campaigns || campaigns.length === 0) {
         setStats(prev => ({
@@ -146,13 +153,19 @@ export default function SponsorDashboard() {
 
   async function loadThemeNotifications() {
     try {
+      // Check for impersonation
+      const impersonation = getImpersonation()
+
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
+
+      // Use impersonated sponsor ID if available
+      const sponsorId = impersonation?.sponsorId || session.user.id
 
       const { data, error } = await supabase
         .from('sponsor_theme_notifications')
         .select('*')
-        .eq('sponsor_id', session.user.id)
+        .eq('sponsor_id', sponsorId)
         .order('created_at', { ascending: false })
         .limit(10)
 

@@ -1,11 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   AdminSponsor,
   fetchSponsorList,
   updateSponsorVerification,
 } from '@/lib/adminApi'
+import { startImpersonation } from '@/lib/impersonation'
+import { supabase } from '@/lib/supabase'
 
 type FilterValue = 'all' | 'verified' | 'pending'
 
@@ -24,6 +27,7 @@ function formatDate(value: string) {
 }
 
 export default function AdminSponsorsPage() {
+  const router = useRouter()
   const [sponsors, setSponsors] = useState<AdminSponsor[]>([])
   const [total, setTotal] = useState(0)
   const [filter, setFilter] = useState<FilterValue>('all')
@@ -95,6 +99,25 @@ export default function AdminSponsorsPage() {
       setProcessingId(null)
       setRefreshKey((value) => value + 1)
     }
+  }
+
+  async function handleImpersonate(sponsor: AdminSponsor) {
+    // Get current admin user ID
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      alert('セッションが切れました。再ログインしてください。')
+      return
+    }
+
+    // Start impersonation
+    startImpersonation({
+      sponsorId: sponsor.id,
+      sponsorName: sponsor.company_name,
+      adminId: session.user.id,
+    })
+
+    // Redirect to sponsor dashboard
+    router.push('/sponsor')
   }
 
   return (
@@ -200,6 +223,15 @@ export default function AdminSponsorsPage() {
                   >
                     {sponsor.verified ? '承認済み' : '審査待ち'}
                   </span>
+                  <button
+                    onClick={() => handleImpersonate(sponsor)}
+                    className="rounded-xl px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 transition-colors flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                    なりすまし
+                  </button>
                   <a
                     href={`/admin/sponsors/${sponsor.id}`}
                     className="rounded-xl px-4 py-2 text-sm font-medium bg-white text-[var(--color-text-primary)] border border-[var(--color-border)] hover:border-[var(--color-igusa)] transition-colors text-center"
