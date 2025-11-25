@@ -182,9 +182,9 @@ export default function AdminSupportPage() {
   }
 
   return (
-    <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
+    <div className="-mt-6 space-y-4 h-[calc(100vh-130px)] flex flex-col">
       <header className="flex justify-between items-center shrink-0">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
             サポート
           </div>
@@ -270,7 +270,7 @@ export default function AdminSupportPage() {
           {selectedTicket ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-washi)]/50 flex justify-between items-center shrink-0">
+              <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-washi)]/50 flex justify-between items-center shrink-0">
                 <div>
                   <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{selectedTicket.subject}</h3>
                   <p className="text-sm text-[var(--color-text-secondary)]">
@@ -288,14 +288,14 @@ export default function AdminSupportPage() {
               </div>
 
               {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex ${msg.is_admin ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${
+                      className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
                         msg.is_admin
                           ? 'bg-[var(--color-igusa)] text-white'
                           : 'bg-white text-gray-800 border border-gray-200'
@@ -312,13 +312,13 @@ export default function AdminSupportPage() {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 bg-white border-t border-[var(--color-border)] shrink-0">
+              <div className="px-4 py-3 bg-white border-t border-[var(--color-border)] shrink-0">
                 <form onSubmit={handleReply} className="flex gap-4">
                   <textarea
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="返信を入力..."
-                    rows={3}
+                    rows={2}
                     className="flex-1 px-4 py-2 border border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)] resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
