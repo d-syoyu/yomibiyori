@@ -32,6 +32,9 @@ function formatDemographicsValue(map?: Record<string, number>) {
         .join(' | ')
 }
 
+import { TrendChart } from '../../../components/charts/TrendChart'
+import { DemographicsChart } from '../../../components/charts/DemographicsChart'
+
 // Tooltip component for metric explanations
 function InfoTooltip({ text, position = 'top-left' }: { text: string; position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' }) {
     const [isVisible, setIsVisible] = useState(false)
@@ -548,6 +551,21 @@ export default function SponsorInsightsPage() {
                 </div>
             </section>
 
+            {/* Trend Chart */}
+            <section className="card p-6 relative hover:z-20">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">投稿パフォーマンス推移</h2>
+                <TrendChart
+                    data={themes
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .map(t => ({
+                            date: new Date(t.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
+                            impressions: t.impressions,
+                            submissions: t.submissions
+                        }))
+                    }
+                />
+            </section>
+
             {/* Theme List Table */}
             <section className="card p-0 relative hover:z-20">
                 <div className="p-6 border-b border-[var(--color-border)] flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -603,7 +621,7 @@ export default function SponsorInsightsPage() {
                                 <th className="p-4 font-medium text-left">
                                     <span className="inline-flex items-center">
                                         リンククリック
-                                        <InfoTooltip text="スポンサー公式URLがクリックされた回数です。" position="bottom-left" />
+                                        <InfoTooltip text="スポンサー公式URLがクリックされた回数です。" position="bottom-right" />
                                     </span>
                                 </th>
                                 <th className="p-4 font-medium text-left">分析</th>
@@ -685,30 +703,17 @@ export default function SponsorInsightsPage() {
                         {/* Age Groups */}
                         <div>
                             <h3 className="text-lg font-medium text-[var(--color-text-secondary)] mb-4">年代別投稿数</h3>
-                            <div className="space-y-3">
+                            <div className="h-[300px]">
                                 {Object.entries(selectedTheme.demographics.age_groups).length === 0 ? (
                                     <p className="text-[var(--color-text-muted)] text-sm">データがありません</p>
                                 ) : (
-                                    Object.entries(selectedTheme.demographics.age_groups)
-                                        .sort((a, b) => b[1] - a[1])
-                                        .map(([age, count]) => {
-                                            const total = Object.values(selectedTheme.demographics!.age_groups).reduce((a, b) => a + b, 0);
-                                            const percentage = (count / total) * 100;
-                                            return (
-                                                <div key={age} className="flex items-center gap-3">
-                                                    <div className="w-20 text-sm text-[var(--color-text-secondary)]">{age}</div>
-                                                    <div className="flex-1 h-4 bg-[var(--color-washi)] rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-[var(--color-igusa)] opacity-80"
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className="w-16 text-right text-sm font-medium text-[var(--color-text-primary)]">
-                                                        {count}件
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
+                                    <DemographicsChart
+                                        type="pie"
+                                        data={Object.entries(selectedTheme.demographics.age_groups)
+                                            .sort((a, b) => b[1] - a[1])
+                                            .map(([name, value]) => ({ name, value }))
+                                        }
+                                    />
                                 )}
                             </div>
                         </div>
@@ -716,31 +721,18 @@ export default function SponsorInsightsPage() {
                         {/* Regions */}
                         <div>
                             <h3 className="text-lg font-medium text-[var(--color-text-secondary)] mb-4">地域別投稿数 (Top 5)</h3>
-                            <div className="space-y-3">
+                            <div className="h-[300px]">
                                 {Object.entries(selectedTheme.demographics.regions).length === 0 ? (
                                     <p className="text-[var(--color-text-muted)] text-sm">データがありません</p>
                                 ) : (
-                                    Object.entries(selectedTheme.demographics.regions)
-                                        .sort((a, b) => b[1] - a[1])
-                                        .slice(0, 5)
-                                        .map(([region, count]) => {
-                                            const total = Object.values(selectedTheme.demographics!.regions).reduce((a, b) => a + b, 0);
-                                            const percentage = (count / total) * 100;
-                                            return (
-                                                <div key={region} className="flex items-center gap-3">
-                                                    <div className="w-20 text-sm text-[var(--color-text-secondary)]">{region}</div>
-                                                    <div className="flex-1 h-4 bg-[var(--color-washi)] rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-[var(--color-sakura)] opacity-80"
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className="w-16 text-right text-sm font-medium text-[var(--color-text-primary)]">
-                                                        {count}件
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
+                                    <DemographicsChart
+                                        type="pie"
+                                        data={Object.entries(selectedTheme.demographics.regions)
+                                            .sort((a, b) => b[1] - a[1])
+                                            .slice(0, 5)
+                                            .map(([name, value]) => ({ name, value }))
+                                        }
+                                    />
                                 )}
                             </div>
                         </div>
