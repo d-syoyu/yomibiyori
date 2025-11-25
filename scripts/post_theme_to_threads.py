@@ -386,12 +386,24 @@ def main():
 
     logger.info(f"Found {len(themes)} themes for today")
 
-    # カテゴリラベル
+    # カテゴリラベル（日本語→英語マッピング）
     category_labels = {
         "romance": "恋愛",
         "season": "季節",
         "daily": "日常",
         "humor": "ユーモア",
+    }
+    # ファイル名用の英語カテゴリ名（日本語カテゴリ→英語）
+    category_to_english = {
+        "恋愛": "romance",
+        "季節": "season",
+        "日常": "daily",
+        "ユーモア": "humor",
+        # 英語のままの場合もサポート
+        "romance": "romance",
+        "season": "season",
+        "daily": "daily",
+        "humor": "humor",
     }
 
     # クライアントを初期化
@@ -440,8 +452,9 @@ def main():
                 failed_count += 1
                 continue
 
-            # 画像をSupabase Storageにアップロード
-            filename = f"threads_{theme.category}_{uuid.uuid4().hex[:8]}.png"
+            # 画像をSupabase Storageにアップロード（ファイル名は英語のみ）
+            category_en = category_to_english.get(theme.category, "general")
+            filename = f"threads_{category_en}_{uuid.uuid4().hex[:8]}.png"
             image_url = storage_client.upload_image(image_bytes, filename)
             if not image_url:
                 logger.error(f"Failed to upload image for {theme.category}")
