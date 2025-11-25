@@ -46,7 +46,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-tr from-[#6B7B4F]/20 to-[#FFB7C5]/20 rounded-full blur-3xl opacity-60 transform scale-110"></div>
               <div className="relative w-[280px] sm:w-[320px] rotate-[-6deg] hover:rotate-0 transition-transform duration-700 ease-out">
                 <Image
-                  src="/images/hero.png"
+                  src="/images/hero-final.png"
                   alt="よみびより アプリ画面"
                   width={600}
                   height={1200}
@@ -68,7 +68,7 @@ export default function Home() {
               <div className="order-2 lg:order-1 relative">
                 <div className="absolute inset-0 bg-[#6B7B4F]/10 rounded-full blur-3xl opacity-60 transform scale-90"></div>
                 <Image
-                  src="/images/hero.png"
+                  src="/images/feature-theme.png"
                   alt="上の句選択画面"
                   width={500}
                   height={1000}
@@ -108,7 +108,7 @@ export default function Home() {
               <div className="relative">
                 <div className="absolute inset-0 bg-[#FFB7C5]/20 rounded-full blur-3xl opacity-60 transform scale-90"></div>
                 <Image
-                  src="/images/feature-compose.png"
+                  src="/images/feature-compose-new.png"
                   alt="下の句入力UI"
                   width={500}
                   height={1000}
@@ -122,7 +122,7 @@ export default function Home() {
               <div className="order-2 lg:order-1 relative">
                 <div className="absolute inset-0 bg-[#88B04B]/10 rounded-full blur-3xl opacity-60 transform scale-90"></div>
                 <Image
-                  src="/images/feature-view.png"
+                  src="/images/feature-view-new.png"
                   alt="作品一覧画面"
                   width={500}
                   height={1000}
@@ -137,13 +137,39 @@ export default function Home() {
                 </div>
                 <h2 className="text-3xl font-bold text-[var(--color-igusa)]">響き合いを眺める</h2>
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  いいねで共感を送り合い、その場で響き合いを楽しめます。<br />
-                  投稿はその日のうちに流れていき、あとから振り返ることはできません。<br />
-                  今この瞬間のことばを味わう、一期一会の出会いです。
+                  完成した短歌は、その日だけの物語としてタイムラインに流れます。<br />
+                  共感した作品には「いいね」を送り、言葉の響き合いを楽しみましょう。<br />
+                  24時間で消えてしまう、儚くも美しい一期一会の出会いがここにあります。
                 </p>
               </div>
             </div>
 
+            {/* Feature 4 (Ranking) */}
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="space-y-6 text-center lg:text-left">
+                <div className="w-12 h-12 rounded-2xl bg-[#E0F2F1] text-[#009688] flex items-center justify-center mx-auto lg:mx-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0V5.625a1.125 1.125 0 00-1.125-1.125h-2.25a1.125 1.125 0 00-1.125 1.125v9.75" />
+                  </svg>
+                </div>
+                <h2 className="text-3xl font-bold text-[var(--color-igusa)]">名作と出会う、ランキング</h2>
+                <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
+                  毎日更新されるランキングで、その日多くの共感を集めた作品を紹介します。<br />
+                  心に響く名作との出会いが、あなたの感性を刺激します。
+                </p>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-0 bg-[#009688]/10 rounded-full blur-3xl opacity-60 transform scale-90"></div>
+                <Image
+                  src="/images/feature-ranking-new.png"
+                  alt="ランキング画面"
+                  width={500}
+                  height={1000}
+                  className="relative rounded-2xl shadow-xl border border-white/50 mx-auto max-w-[280px]"
+                />
+              </div>
+
+            </div>
           </div>
         </section>
 
@@ -183,6 +209,6 @@ export default function Home() {
           </div>
         </footer>
       </main>
-    </div>
+    </div >
   );
 }
