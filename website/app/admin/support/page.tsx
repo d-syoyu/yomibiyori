@@ -270,22 +270,16 @@ export default function AdminSupportPage() {
           {selectedTicket ? (
             <>
               {/* Chat Header */}
-              <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-washi)]/50 flex justify-between items-center shrink-0">
-                <div>
-                  <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{selectedTicket.subject}</h3>
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    {selectedTicket.user?.name} ({selectedTicket.user?.email})
-                  </p>
-                </div>
-                {selectedTicket.status !== 'resolved' && (
+              {selectedTicket.status !== 'resolved' && (
+                <div className="px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-washi)]/50 flex justify-end items-center shrink-0">
                   <button
                     onClick={handleResolve}
                     className="px-3 py-1 text-sm border border-green-600 text-green-600 rounded hover:bg-green-50"
                   >
                     解決済みにする
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
