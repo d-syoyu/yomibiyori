@@ -64,6 +64,10 @@ setup_github_secrets.ps1
 *.secret
 *.credentials
 
+# Local screenshot dumps (store listings / QA)
+screenshots_temp/
+スクリーンショット_sample/
+
 # Test & Development Files (root directory only)
 /test_*.json
 /test_*.py

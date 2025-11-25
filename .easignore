@@ -1,0 +1,16 @@
+# Ignore local screenshot folders that can break Windows tarball cleanup
+screenshots_temp/
+スクリーンショット_sample/
+
+# Python virtual environment
+.venv/
+
+# Backend files (not needed for mobile build)
+app/
+tests/
+scripts/
+alembic/
+*.py
+requirements*.txt
+pyproject.toml
+alembic.ini

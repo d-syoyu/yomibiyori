@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { PREFECTURES } from '../constants/prefectures';
 import { colors, fontFamily, fontSize } from '../theme';
@@ -39,7 +39,7 @@ export function PrefecturePicker({ value, onChange, pickerStyle }: PrefecturePic
 
 const styles = StyleSheet.create({
   picker: {
-    height: 56,
+    height: Platform.select({ ios: 180, android: 56 }),
   },
   pickerText: {
     color: colors.text.primary,
