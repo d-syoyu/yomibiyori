@@ -23,6 +23,7 @@ export default function SponsorCreditsPage() {
   const [purchaseQuantity, setPurchaseQuantity] = useState(1)
   const [purchasing, setPurchasing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isImpersonating, setIsImpersonating] = useState(false)
 
   useEffect(() => {
     loadCreditsAndTransactions()
@@ -38,8 +39,10 @@ export default function SponsorCreditsPage() {
       let sponsorId: string
       if (impersonation) {
         sponsorId = impersonation.sponsorId
+        setIsImpersonating(true)
       } else if (session) {
         sponsorId = session.user.id
+        setIsImpersonating(false)
       } else {
         window.location.href = '/sponsor-login'
         return
@@ -194,46 +197,57 @@ export default function SponsorCreditsPage() {
             </p>
           </div>
 
+          {isImpersonating && (
+            <div className="bg-purple-50 border border-purple-300 text-purple-800 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+              なりすましモード中は購入機能を利用できません
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 border border-red-600 text-red-600 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="quantity" className="block text-sm font-medium text-[var(--color-text-primary)]">
-                購入数量
-              </label>
-              <input
-                type="number"
-                id="quantity"
-                min="1"
-                max="100"
-                value={purchaseQuantity}
-                onChange={(e) => setPurchaseQuantity(parseInt(e.target.value) || 1)}
-                className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
+          {!isImpersonating && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="quantity" className="block text-sm font-medium text-[var(--color-text-primary)]">
+                  購入数量
+                </label>
+                <input
+                  type="number"
+                  id="quantity"
+                  min="1"
+                  max="100"
+                  value={purchaseQuantity}
+                  onChange={(e) => setPurchaseQuantity(parseInt(e.target.value) || 1)}
+                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
+                  disabled={purchasing}
+                />
+                <p className="text-sm font-bold text-[var(--color-text-primary)]">
+                  合計: ¥{(purchaseQuantity * 10000).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={handlePurchase}
                 disabled={purchasing}
-              />
-              <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                合計: ¥{(purchaseQuantity * 10000).toLocaleString()}
-              </p>
+                className="w-full px-8 py-3 bg-[var(--color-igusa)] text-white rounded-lg font-bold hover:bg-[var(--color-igusa-light)] transition-all shadow-lg hover:shadow-xl transform hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {purchasing ? '処理中...' : (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                    </svg>
+                    Stripeで購入
+                  </span>
+                )}
+              </button>
             </div>
-            <button
-              onClick={handlePurchase}
-              disabled={purchasing}
-              className="w-full px-8 py-3 bg-[var(--color-igusa)] text-white rounded-lg font-bold hover:bg-[var(--color-igusa-light)] transition-all shadow-lg hover:shadow-xl transform hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              {purchasing ? '処理中...' : (
-                <span className="flex items-center justify-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
-                  </svg>
-                  Stripeで購入
-                </span>
-              )}
-            </button>
-          </div>
+          )}
 
           <div className="bg-[var(--color-washi)] p-4 rounded-lg space-y-2 text-sm">
             <p className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
