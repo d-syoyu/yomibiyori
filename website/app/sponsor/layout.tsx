@@ -134,12 +134,12 @@ export default function SponsorLayout({
   }
 
   return (
-    <div className="page-wrapper">
+    <div className={`page-wrapper ${impersonation ? 'pt-[52px]' : ''}`}>
       {/* Impersonation Banner */}
       {impersonation && <ImpersonationBanner />}
 
       {/* Header */}
-      <header className={`bg-white/80 backdrop-blur-sm border-b border-[var(--color-border)] sticky z-10 ${impersonation ? 'top-[52px]' : 'top-0'}`}>
+      <header className={`bg-white/80 backdrop-blur-sm border-b border-[var(--color-border)] sticky z-40 ${impersonation ? 'top-[52px]' : 'top-0'}`}>
         <div className="page-container">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">

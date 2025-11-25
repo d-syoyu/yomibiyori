@@ -75,10 +75,16 @@ export default function SponsorDashboard() {
 
       // Get current user's campaigns
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
 
-      // Use impersonated sponsor ID if available
-      const sponsorId = impersonation?.sponsorId || session.user.id
+      // Determine sponsor ID - use impersonation if available, otherwise session
+      let sponsorId: string
+      if (impersonation) {
+        sponsorId = impersonation.sponsorId
+      } else if (session) {
+        sponsorId = session.user.id
+      } else {
+        return
+      }
 
       // Get sponsor credits
       const { data: sponsor } = await supabase
@@ -157,10 +163,16 @@ export default function SponsorDashboard() {
       const impersonation = getImpersonation()
 
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
 
-      // Use impersonated sponsor ID if available
-      const sponsorId = impersonation?.sponsorId || session.user.id
+      // Determine sponsor ID - use impersonation if available, otherwise session
+      let sponsorId: string
+      if (impersonation) {
+        sponsorId = impersonation.sponsorId
+      } else if (session) {
+        sponsorId = session.user.id
+      } else {
+        return
+      }
 
       const { data, error } = await supabase
         .from('sponsor_theme_notifications')
