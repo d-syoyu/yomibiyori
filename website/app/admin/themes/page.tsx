@@ -8,15 +8,37 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+type ThemeStatus = 'pending' | 'approved' | 'rejected' | 'published'
+
 interface SponsorTheme {
   id: string
   campaign_id: string
   date: string
   category: string
   text_575: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: ThemeStatus
   rejected_reason?: string
   created_at: string
+}
+
+// ステータス表示の設定（一箇所で管理してバグを防止）
+const STATUS_CONFIG: Record<ThemeStatus, { label: string; className: string }> = {
+  pending: {
+    label: '審査待ち',
+    className: 'bg-yellow-100 text-yellow-900',
+  },
+  approved: {
+    label: '承認済み',
+    className: 'bg-green-100 text-green-900',
+  },
+  rejected: {
+    label: '却下',
+    className: 'bg-red-100 text-red-900',
+  },
+  published: {
+    label: '配信済み',
+    className: 'bg-blue-100 text-blue-900',
+  },
 }
 
 export default function ThemesPage() {
@@ -161,6 +183,7 @@ export default function ThemesPage() {
     { label: '全て', value: null },
     { label: '審査待ち', value: 'pending' },
     { label: '承認済み', value: 'approved' },
+    { label: '配信済み', value: 'published' },
     { label: '却下', value: 'rejected' },
   ]
 
@@ -230,18 +253,10 @@ export default function ThemesPage() {
                 </div>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    theme.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-900'
-                      : theme.status === 'approved'
-                      ? 'bg-green-100 text-green-900'
-                      : 'bg-red-100 text-red-900'
+                    STATUS_CONFIG[theme.status]?.className || 'bg-gray-100 text-gray-900'
                   }`}
                 >
-                  {theme.status === 'pending'
-                    ? '審査待ち'
-                    : theme.status === 'approved'
-                    ? '承認済み'
-                    : '却下'}
+                  {STATUS_CONFIG[theme.status]?.label || theme.status}
                 </span>
               </div>
 
