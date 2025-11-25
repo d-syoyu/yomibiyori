@@ -16,6 +16,7 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -150,25 +151,9 @@ export default function CompositionScreen({ route }: Props) {
               >
                 <View style={styles.glassOverlay}>
                   {theme.sponsored && theme.sponsor_company_name && (
-                    <TouchableOpacity
-                      style={styles.sponsorBadge}
-                      onPress={() => {
-                        if (theme.sponsor_official_url) {
-                          trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
-                            theme_id: theme.id,
-                            sponsor_name: theme.sponsor_company_name,
-                            url: theme.sponsor_official_url,
-                          });
-                          Linking.openURL(theme.sponsor_official_url);
-                        }
-                      }}
-                      disabled={!theme.sponsor_official_url}
-                    >
-                      <Text style={styles.sponsorBadgeText}>
-                        スポンサー提供
-                        {theme.sponsor_official_url && ' ↗'}
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={styles.sponsorBadge}>
+                      <Text style={styles.sponsorBadgeText}>スポンサー提供</Text>
+                    </View>
                   )}
                   <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
                   <View style={styles.verticalTextContainer}>
@@ -181,6 +166,10 @@ export default function CompositionScreen({ route }: Props) {
                   <Text style={styles.themeCategory}>{theme.category}</Text>
                   {theme.sponsored && theme.sponsor_company_name && (
                     <TouchableOpacity
+                      style={[
+                        styles.sponsorChip,
+                        !theme.sponsor_official_url && styles.sponsorChipDisabled,
+                      ]}
                       onPress={() => {
                         if (theme.sponsor_official_url) {
                           trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
@@ -192,10 +181,24 @@ export default function CompositionScreen({ route }: Props) {
                         }
                       }}
                       disabled={!theme.sponsor_official_url}
+                      activeOpacity={0.7}
                     >
-                      <Text style={styles.sponsorInfo}>
+                      <Ionicons
+                        name="ribbon-outline"
+                        size={14}
+                        color={theme.sponsor_official_url ? colors.text.primary : colors.text.tertiary}
+                      />
+                      <Text
+                        style={[
+                          styles.sponsorChipText,
+                          !theme.sponsor_official_url && styles.sponsorChipTextDisabled,
+                        ]}
+                      >
                         {theme.sponsor_company_name}
                       </Text>
+                      {theme.sponsor_official_url && (
+                        <Ionicons name="open-outline" size={14} color={colors.text.primary} />
+                      )}
                     </TouchableOpacity>
                   )}
                 </View>
@@ -385,13 +388,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 2,
   },
-  sponsorInfo: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.medium,
-    color: colors.text.secondary,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-    letterSpacing: 0.5,
+  sponsorChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(26, 54, 93, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(26, 54, 93, 0.1)',
+    marginTop: spacing.md,
+  },
+  sponsorChipDisabled: {
+    opacity: 0.6,
+  },
+  sponsorChipText: {
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    letterSpacing: 0.3,
+  },
+  sponsorChipTextDisabled: {
+    color: colors.text.tertiary,
   },
   noThemeCard: {
     backgroundColor: colors.background.secondary,

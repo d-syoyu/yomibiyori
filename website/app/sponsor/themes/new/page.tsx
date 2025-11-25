@@ -9,14 +9,36 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getImpersonation } from '@/lib/impersonation'
 import ThemeCalendar from '@/components/ThemeCalendar'
+import VerticalText from '@/components/VerticalText'
 
 const CATEGORIES = ['恋愛', '季節', '日常', 'ユーモア']
+
+// カテゴリ別カラー（モバイルアプリと同じ）
+const CATEGORY_COLORS: Record<string, { gradient: [string, string]; shadow: string }> = {
+  恋愛: {
+    gradient: ['#FFB7C5', '#FFE4E8'], // 桜色
+    shadow: 'rgba(255, 183, 197, 0.3)',
+  },
+  季節: {
+    gradient: ['#88B04B', '#A8C98B'], // 抹茶/若葉色
+    shadow: 'rgba(136, 176, 75, 0.3)',
+  },
+  日常: {
+    gradient: ['#A7D8DE', '#D4ECF0'], // 空色
+    shadow: 'rgba(167, 216, 222, 0.3)',
+  },
+  ユーモア: {
+    gradient: ['#F0E68C', '#FFF9C4'], // 金色
+    shadow: 'rgba(240, 230, 140, 0.3)',
+  },
+}
 
 export default function NewThemePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [campaignId, setCampaignId] = useState<string | null>(null)
   const [credits, setCredits] = useState<number>(0)
+  const [companyName, setCompanyName] = useState<string>('')
   const [formData, setFormData] = useState({
     date: '',
     category: '恋愛',
@@ -50,13 +72,14 @@ export default function NewThemePage() {
       // Check if sponsor record exists and get credits
       let { data: sponsor } = await supabase
         .from('sponsors')
-        .select('id, credits')
+        .select('id, credits, company_name')
         .eq('id', sponsorId)
         .single()
 
-      // Set credits if sponsor exists
+      // Set credits and company name if sponsor exists
       if (sponsor) {
         setCredits(sponsor.credits || 0)
+        setCompanyName(sponsor.company_name || '')
       }
 
       // Create sponsor record if not exists (only for non-impersonation)
@@ -91,6 +114,7 @@ export default function NewThemePage() {
           return
         }
         sponsor = newSponsor
+        setCompanyName(newSponsor.company_name || '')
       }
 
       // At this point, sponsor cannot be null
@@ -336,7 +360,7 @@ export default function NewThemePage() {
               className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-igusa)] focus:border-[var(--color-igusa)] outline-none transition-all"
             />
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              スポンサー名と共に表示され、タップで開くリンクです。イベントやキャンペーンURLも入力いただけます。
+              スポンサー名をタップすると開くリンクです。イベントやキャンペーンURLも入力いただけます。
             </p>
           </div>
 
@@ -404,14 +428,71 @@ export default function NewThemePage() {
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Preview - モバイルアプリと同様の表示 */}
             {(formData.line1 || formData.line2 || formData.line3) && (
-              <div className="mt-4 p-6 bg-[var(--color-washi)] rounded-xl border border-[var(--color-border)]">
-                <p className="text-xs text-[var(--color-text-muted)] mb-3">プレビュー:</p>
-                <div className="text-xl font-serif font-bold text-[var(--color-text-primary)] text-center space-y-1">
-                  <p>{formData.line1 || '＿＿＿'}</p>
-                  <p>{formData.line2 || '＿＿＿＿＿'}</p>
-                  <p>{formData.line3 || '＿＿＿'}</p>
+              <div className="mt-4">
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">プレビュー（モバイルアプリでの表示イメージ）:</p>
+                <div
+                  className="relative overflow-hidden rounded-xl p-6 shadow-lg"
+                  style={{
+                    background: `linear-gradient(135deg, ${CATEGORY_COLORS[formData.category]?.gradient[0] || '#E8D4C4'}, ${CATEGORY_COLORS[formData.category]?.gradient[1] || '#D4C4B4'})`,
+                    boxShadow: `0 10px 25px -5px ${CATEGORY_COLORS[formData.category]?.shadow || 'rgba(0, 0, 0, 0.1)'}`,
+                  }}
+                >
+                  {/* Glass overlay */}
+                  <div className="bg-white/20 rounded-lg p-4">
+                    {/* スポンサーバッジ */}
+                    <div className="mb-3">
+                      <span className="inline-block bg-white/90 text-xs font-semibold text-[var(--color-text-primary)] px-2 py-1 rounded shadow-sm">
+                        スポンサー提供{formData.sponsor_official_url && ' ↗'}
+                      </span>
+                    </div>
+
+                    {/* お題ラベル */}
+                    <p className="text-xs text-[var(--color-text-secondary)] text-center mb-3 tracking-wider">
+                      今日のお題（上の句）
+                    </p>
+
+                    {/* 縦書きお題 */}
+                    <div className="flex justify-center py-4">
+                      <VerticalText
+                        text={`${formData.line1 || '＿＿＿'}\n${formData.line2 || '＿＿＿＿＿'}\n${formData.line3 || '＿＿＿'}`}
+                        charClassName="text-xl font-serif font-bold text-[var(--color-text-primary)]"
+                      />
+                    </div>
+
+                    {/* カテゴリ */}
+                    <p className="text-sm text-[var(--color-text-secondary)] text-center mt-2 tracking-widest">
+                      {formData.category}
+                    </p>
+
+                    {/* スポンサーリンク（チップ形式） */}
+                    <div className="flex justify-center mt-3">
+                      <a
+                        href={formData.sponsor_official_url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                          formData.sponsor_official_url
+                            ? 'bg-[rgba(26,54,93,0.06)] border border-[rgba(26,54,93,0.1)] text-[var(--color-text-primary)] hover:bg-[rgba(26,54,93,0.1)]'
+                            : 'bg-white/60 border border-white/80 text-[var(--color-text-secondary)] cursor-default'
+                        }`}
+                        onClick={(e) => !formData.sponsor_official_url && e.preventDefault()}
+                      >
+                        {/* リボンアイコン */}
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-2.927 0" />
+                        </svg>
+                        <span>{companyName || 'スポンサー名'}</span>
+                        {/* リンクアイコン（URLがある場合のみ） */}
+                        {formData.sponsor_official_url && (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                          </svg>
+                        )}
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
