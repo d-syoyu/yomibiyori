@@ -162,36 +162,44 @@ export default function AnnouncementsPage() {
   }
 
   if (loading) {
-    return <div className="text-amber-900">読み込み中...</div>
+    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-amber-900 mb-2">
+      <header className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
             お知らせ管理
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
+              お知らせ管理
+            </span>
           </h1>
-          <p className="text-amber-700">
+          <p className="text-[var(--color-text-secondary)]">
             スポンサー向けのお知らせを作成・管理できます
           </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+          className="px-6 py-3 bg-[var(--color-igusa)] text-white rounded-xl font-semibold hover:bg-[var(--color-igusa-light)] transition-all flex items-center gap-2"
         >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
           {showForm ? 'キャンセル' : '新規お知らせ'}
         </button>
-      </div>
+      </header>
 
       {showForm && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-amber-100 shadow-lg">
-          <h2 className="text-xl font-bold text-amber-900 mb-4">
+        <div className="card">
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
             {editingId ? 'お知らせを編集' : '新しいお知らせを作成'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-amber-900 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
                 タイトル <span className="text-red-500">*</span>
               </label>
               <input
@@ -200,13 +208,13 @@ export default function AnnouncementsPage() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
                 maxLength={200}
-                className="w-full px-4 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
                 placeholder="お知らせのタイトルを入力"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-amber-900 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
                 本文 <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -215,20 +223,20 @@ export default function AnnouncementsPage() {
                 required
                 maxLength={2000}
                 rows={6}
-                className="w-full px-4 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
                 placeholder="お知らせの内容を入力"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-amber-900 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
                   タイプ
                 </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-4 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
                 >
                   {Object.entries(typeLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -237,28 +245,28 @@ export default function AnnouncementsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-amber-900 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
                   優先度
                 </label>
                 <input
                   type="number"
                   value={formData.priority}
                   onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
                   placeholder="0"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-amber-900 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
                 有効期限（オプション）
               </label>
               <input
                 type="datetime-local"
                 value={formData.expires_at}
                 onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
               />
             </div>
 
@@ -268,9 +276,9 @@ export default function AnnouncementsPage() {
                   type="checkbox"
                   checked={formData.is_pinned}
                   onChange={(e) => setFormData({ ...formData, is_pinned: e.target.checked })}
-                  className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                  className="w-4 h-4 text-[var(--color-igusa)] focus:ring-[var(--color-igusa)]"
                 />
-                <span className="text-sm font-medium text-amber-900">ピン留め</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">ピン留め</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -278,16 +286,16 @@ export default function AnnouncementsPage() {
                   type="checkbox"
                   checked={formData.is_published}
                   onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                  className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                  className="w-4 h-4 text-[var(--color-igusa)] focus:ring-[var(--color-igusa)]"
                 />
-                <span className="text-sm font-medium text-amber-900">公開</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">公開</span>
               </label>
             </div>
 
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                className="px-6 py-3 bg-[var(--color-igusa)] text-white rounded-xl font-semibold hover:bg-[var(--color-igusa-light)] transition-all"
               >
                 {editingId ? '更新' : '作成'}
               </button>
@@ -304,12 +312,12 @@ export default function AnnouncementsPage() {
       )}
 
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-amber-900">
+        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
           お知らせ一覧 ({announcements.length}件)
         </h2>
 
         {announcements.length === 0 ? (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-amber-100 text-center text-amber-700">
+          <div className="card p-8 text-center text-[var(--color-text-secondary)]">
             お知らせがありません
           </div>
         ) : (
@@ -317,14 +325,17 @@ export default function AnnouncementsPage() {
             {announcements.map((announcement) => (
               <div
                 key={announcement.id}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-amber-100 shadow-lg hover:shadow-xl transition-all"
+                className="card hover:shadow-xl transition-all"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       {announcement.is_pinned && (
-                        <span className="px-2 py-0.5 text-xs font-bold bg-red-100 text-red-700 rounded">
-                          📌 ピン留め
+                        <span className="px-2 py-0.5 text-xs font-bold bg-red-100 text-red-700 rounded flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                          </svg>
+                          ピン留め
                         </span>
                       )}
                       {!announcement.is_published && (
@@ -341,13 +352,13 @@ export default function AnnouncementsPage() {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-lg font-bold text-amber-900">
+                    <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
                       {announcement.title}
                     </h3>
-                    <p className="text-amber-700 whitespace-pre-wrap">
+                    <p className="text-[var(--color-text-secondary)] whitespace-pre-wrap">
                       {announcement.content}
                     </p>
-                    <div className="text-xs text-amber-600">
+                    <div className="text-xs text-[var(--color-text-muted)]">
                       作成: {new Date(announcement.created_at).toLocaleString('ja-JP')}
                       {announcement.expires_at && (
                         <> | 期限: {new Date(announcement.expires_at).toLocaleString('ja-JP')}</>

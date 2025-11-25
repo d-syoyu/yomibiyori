@@ -131,7 +131,7 @@ export default function AdminSponsorDetailPage({
   }
 
   if (loading) {
-    return <div className="text-amber-900">読み込み中...</div>
+    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
   }
 
   if (error || !sponsor) {
@@ -139,9 +139,12 @@ export default function AdminSponsorDetailPage({
       <div className="space-y-4">
         <Link
           href="/admin/sponsors"
-          className="inline-block text-amber-600 hover:text-amber-800"
+          className="inline-flex items-center gap-1 text-[var(--color-igusa)] hover:text-[var(--color-igusa-light)]"
         >
-          ← スポンサー一覧に戻る
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          スポンサー一覧に戻る
         </Link>
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error || 'スポンサー情報が見つかりません'}
@@ -155,31 +158,39 @@ export default function AdminSponsorDetailPage({
       <div>
         <Link
           href="/admin/sponsors"
-          className="inline-block text-amber-600 hover:text-amber-800 mb-4"
+          className="inline-flex items-center gap-1 text-[var(--color-igusa)] hover:text-[var(--color-igusa-light)] mb-4"
         >
-          ← スポンサー一覧に戻る
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          スポンサー一覧に戻る
         </Link>
-        <h1 className="text-3xl font-bold text-amber-900">
-          {sponsor.company_name} - クレジット管理
-        </h1>
-        <p className="text-amber-700">取引履歴とクレジット調整</p>
+        <div className="space-y-2">
+          <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
+            クレジット管理
+          </div>
+          <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
+            {sponsor.company_name}
+          </h1>
+          <p className="text-[var(--color-text-secondary)]">取引履歴とクレジット調整</p>
+        </div>
       </div>
 
       {/* Current Credits */}
-      <div className="rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6">
-        <p className="text-sm font-medium text-amber-700">現在のクレジット残高</p>
-        <p className="text-5xl font-bold font-serif text-amber-900 mt-2">
+      <div className="card border-2 border-[var(--color-igusa)]/20 bg-gradient-to-br from-[var(--color-washi)] to-white">
+        <p className="text-sm font-medium text-[var(--color-text-secondary)]">現在のクレジット残高</p>
+        <p className="text-5xl font-bold font-serif text-[var(--color-text-primary)] mt-2">
           {sponsor.current_credits}
         </p>
-        <p className="text-sm text-amber-600 mt-1">1クレジット = お題1件の投稿</p>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">1クレジット = お題1件の投稿</p>
       </div>
 
       {/* Adjust Credits */}
-      <div className="rounded-2xl border border-amber-100 bg-white/80 p-6 space-y-4">
-        <h2 className="text-xl font-bold text-amber-900">クレジット調整</h2>
+      <div className="card space-y-4">
+        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">クレジット調整</h2>
         <div className="space-y-4">
           <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-amber-900 mb-2">
+            <label htmlFor="amount" className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               調整額（正の数で追加、負の数で減少）
             </label>
             <input
@@ -187,20 +198,20 @@ export default function AdminSponsorDetailPage({
               id="amount"
               value={adjustAmount}
               onChange={(e) => setAdjustAmount(parseInt(e.target.value) || 0)}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
               disabled={adjusting}
               placeholder="例: 10 (追加) または -5 (減少)"
             />
           </div>
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-amber-900 mb-2">
+            <label htmlFor="description" className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               調整理由
             </label>
             <textarea
               id="description"
               value={adjustDescription}
               onChange={(e) => setAdjustDescription(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
               disabled={adjusting}
               rows={3}
               placeholder="調整の理由を入力してください"
@@ -209,7 +220,7 @@ export default function AdminSponsorDetailPage({
           <button
             onClick={handleAdjust}
             disabled={adjusting || adjustAmount === 0 || !adjustDescription.trim()}
-            className="w-full px-6 py-3 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 bg-[var(--color-igusa)] text-white rounded-xl font-bold hover:bg-[var(--color-igusa-light)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {adjusting ? '処理中...' : 'クレジットを調整'}
           </button>
@@ -217,14 +228,14 @@ export default function AdminSponsorDetailPage({
       </div>
 
       {/* Stripe Refund */}
-      <div className="rounded-2xl border border-red-100 bg-white/80 p-6 space-y-4">
+      <div className="card border border-red-100 space-y-4">
         <h2 className="text-xl font-bold text-red-900">Stripe返金処理</h2>
         <p className="text-sm text-red-700">
-          ⚠️ この操作はStripeで実際の返金を実行し、クレジットを減算します。元に戻すことはできません。
+          この操作はStripeで実際の返金を実行し、クレジットを減算します。元に戻すことはできません。
         </p>
         <div className="space-y-4">
           <div>
-            <label htmlFor="paymentIntentId" className="block text-sm font-medium text-amber-900 mb-2">
+            <label htmlFor="paymentIntentId" className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               Payment Intent ID
             </label>
             <input
@@ -232,16 +243,16 @@ export default function AdminSponsorDetailPage({
               id="paymentIntentId"
               value={refundPaymentIntentId}
               onChange={(e) => setRefundPaymentIntentId(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-red-500"
               disabled={refunding}
               placeholder="pi_xxxxxxxxxxxxxxxxxxxxx"
             />
-            <p className="text-xs text-amber-600 mt-1">
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
               取引履歴からPayment Intent IDをコピーしてください
             </p>
           </div>
           <div>
-            <label htmlFor="refundCredits" className="block text-sm font-medium text-amber-900 mb-2">
+            <label htmlFor="refundCredits" className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               返金クレジット数
             </label>
             <input
@@ -249,21 +260,21 @@ export default function AdminSponsorDetailPage({
               id="refundCredits"
               value={refundAmountCredits}
               onChange={(e) => setRefundAmountCredits(parseInt(e.target.value) || 0)}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-red-500"
               disabled={refunding}
               placeholder="例: 10"
               min="1"
             />
           </div>
           <div>
-            <label htmlFor="refundReason" className="block text-sm font-medium text-amber-900 mb-2">
+            <label htmlFor="refundReason" className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
               返金理由
             </label>
             <textarea
               id="refundReason"
               value={refundReason}
               onChange={(e) => setRefundReason(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-red-500"
               disabled={refunding}
               rows={3}
               placeholder="返金の理由を詳しく入力してください"
@@ -285,28 +296,28 @@ export default function AdminSponsorDetailPage({
       </div>
 
       {/* Transaction History */}
-      <div className="rounded-2xl border border-amber-100 bg-white/80 p-6 space-y-4">
-        <h2 className="text-xl font-bold text-amber-900">取引履歴（{total}件）</h2>
+      <div className="card space-y-4">
+        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">取引履歴（{total}件）</h2>
         {transactions.length === 0 ? (
-          <p className="text-sm text-amber-700 text-center py-8">
+          <p className="text-sm text-[var(--color-text-secondary)] text-center py-8">
             まだ取引履歴がありません
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-amber-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">日時</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">種類</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-amber-700">増減</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">Payment Intent ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-amber-700">詳細</th>
+                <tr className="border-b border-[var(--color-border)]">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--color-text-secondary)]">日時</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--color-text-secondary)]">種類</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-[var(--color-text-secondary)]">増減</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--color-text-secondary)]">Payment Intent ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--color-text-secondary)]">詳細</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-amber-100 hover:bg-amber-50 transition-colors">
-                    <td className="py-3 px-4 text-sm text-amber-900">
+                  <tr key={transaction.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-washi)]/50 transition-colors">
+                    <td className="py-3 px-4 text-sm text-[var(--color-text-primary)]">
                       {new Date(transaction.created_at).toLocaleString('ja-JP', {
                         year: 'numeric',
                         month: '2-digit',
@@ -323,14 +334,14 @@ export default function AdminSponsorDetailPage({
                     <td className={`py-3 px-4 text-sm font-bold text-right ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {transaction.amount > 0 ? '+' : ''}{transaction.amount}
                     </td>
-                    <td className="py-3 px-4 text-xs font-mono text-amber-600">
+                    <td className="py-3 px-4 text-xs font-mono text-[var(--color-text-muted)]">
                       {transaction.stripe_payment_intent_id ? (
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(transaction.stripe_payment_intent_id!)
                             alert('Payment Intent IDをコピーしました')
                           }}
-                          className="hover:text-amber-800 underline"
+                          className="hover:text-[var(--color-igusa)] underline"
                           title="クリックしてコピー"
                         >
                           {transaction.stripe_payment_intent_id}
@@ -339,7 +350,7 @@ export default function AdminSponsorDetailPage({
                         '—'
                       )}
                     </td>
-                    <td className="py-3 px-4 text-sm text-amber-700">
+                    <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">
                       {transaction.description || '—'}
                     </td>
                   </tr>

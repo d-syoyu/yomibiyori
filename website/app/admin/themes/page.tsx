@@ -188,21 +188,24 @@ export default function ThemesPage() {
   ]
 
   if (loading) {
-    return <div className="text-amber-900">読み込み中...</div>
+    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-amber-900 mb-2">
-            スポンサーお題審査
-          </h1>
-          <p className="text-amber-700">
-            提出されたお題の審査を行います
-          </p>
+    <div className="space-y-8">
+      <header className="space-y-4">
+        <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
+          お題審査
         </div>
-      </div>
+        <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
+            スポンサーお題審査
+          </span>
+        </h1>
+        <p className="text-[var(--color-text-secondary)]">
+          提出されたお題の審査を行います
+        </p>
+      </header>
 
       <div className="flex gap-2 flex-wrap">
         {statusFilters.map((filter) => {
@@ -217,8 +220,8 @@ export default function ThemesPage() {
               }
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-gradient-to-r from-amber-500 to-pink-500 text-white shadow-md'
-                  : 'bg-white/80 text-amber-700 hover:bg-amber-50 border border-amber-200'
+                  ? 'bg-[var(--color-igusa)] text-white shadow-md'
+                  : 'bg-white text-[var(--color-text-secondary)] hover:bg-[var(--color-washi)] border border-[var(--color-border)]'
               }`}
             >
               {filter.label}
@@ -228,8 +231,8 @@ export default function ThemesPage() {
       </div>
 
       {themes.length === 0 ? (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-12 border border-amber-100 text-center">
-          <p className="text-amber-700 text-lg">
+        <div className="card p-12 text-center">
+          <p className="text-[var(--color-text-secondary)] text-lg">
             {status
               ? `${statusFilters.find((f) => f.value === status)?.label}のお題はありません`
               : 'お題がありません'}
@@ -238,16 +241,13 @@ export default function ThemesPage() {
       ) : (
         <div className="grid gap-6">
           {themes.map((theme) => (
-            <div
-              key={theme.id}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-amber-100 shadow-lg"
-            >
+            <div key={theme.id} className="card">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-900 mb-2">
+                  <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-[var(--color-washi)] text-[var(--color-igusa)] mb-2">
                     {theme.category}
                   </span>
-                  <p className="text-sm text-amber-600">
+                  <p className="text-sm text-[var(--color-text-muted)]">
                     {new Date(theme.date).toLocaleDateString('ja-JP')}
                   </p>
                 </div>
@@ -261,7 +261,7 @@ export default function ThemesPage() {
               </div>
 
               <div className="mb-4">
-                <p className="text-2xl font-bold text-amber-900 text-center py-8">
+                <p className="text-2xl font-bold text-[var(--color-text-primary)] text-center py-8 font-serif">
                   {theme.text_575}
                 </p>
               </div>
