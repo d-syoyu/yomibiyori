@@ -15,14 +15,14 @@ export default function Home() {
                 日々を詠む、詩的SNS
               </div>
               <h1 className="section-heading leading-tight">
-                よみびより、<br />
+                日々のひとこまを、<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-igusa)] to-[var(--color-igusa-light)]">
-                  今日のひらめきを一首に。
+                  短歌にして。
                 </span>
               </h1>
               <p className="section-subheading lg:mx-0 text-lg">
-                上の句を受け取り、下の句で返す。<br className="hidden sm:block" />
-                朝の気配や夜の余音を、五七五七七にそっと閉じ込めます。
+                毎朝、新しい「上の句」が届きます。<br className="hidden sm:block" />
+                あなたの「下の句」で、一首を完成させてみませんか。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
