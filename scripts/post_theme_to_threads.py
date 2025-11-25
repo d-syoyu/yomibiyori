@@ -1,6 +1,8 @@
 """
 Threadsへお題を自動投稿するスクリプト
 毎朝6時にGitHub Actionsから実行される
+
+トークンはDBに保存され、期限が近づくと自動更新される。
 """
 
 import os
@@ -10,7 +12,7 @@ import time
 import uuid
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import requests
 
@@ -21,6 +23,7 @@ sys.path.insert(0, str(project_root))
 from sqlalchemy import select
 from app.db.session import SessionLocal
 from app.models.theme import Theme
+from app.models.api_token import ApiToken
 from app.utils.theme_card_generator import ThemeCardGenerator
 
 # ロギング設定
@@ -148,6 +151,143 @@ class SupabaseStorageClient:
         except Exception as e:
             logger.error(f"Error deleting image: {e}")
             return False
+
+
+class ThreadsTokenManager:
+    """Threadsトークンの取得・更新を管理"""
+
+    TOKEN_ID = "threads"
+    REFRESH_THRESHOLD_DAYS = 7  # 残り7日以内なら更新
+
+    def __init__(self, client_secret: str):
+        self.client_secret = client_secret
+
+    def get_token_from_db(self) -> Optional[Tuple[str, str, datetime]]:
+        """
+        DBからトークンを取得
+
+        Returns:
+            (access_token, user_id, expires_at) または None
+        """
+        db = SessionLocal()
+        try:
+            result = db.execute(
+                select(ApiToken).where(ApiToken.id == self.TOKEN_ID)
+            )
+            token = result.scalar_one_or_none()
+            if token:
+                return (token.access_token, token.user_id, token.expires_at)
+            return None
+        finally:
+            db.close()
+
+    def save_token_to_db(self, access_token: str, user_id: str, expires_at: datetime) -> bool:
+        """トークンをDBに保存（upsert）"""
+        db = SessionLocal()
+        try:
+            result = db.execute(
+                select(ApiToken).where(ApiToken.id == self.TOKEN_ID)
+            )
+            token = result.scalar_one_or_none()
+
+            if token:
+                token.access_token = access_token
+                token.user_id = user_id
+                token.expires_at = expires_at
+            else:
+                token = ApiToken(
+                    id=self.TOKEN_ID,
+                    access_token=access_token,
+                    user_id=user_id,
+                    expires_at=expires_at,
+                )
+                db.add(token)
+
+            db.commit()
+            logger.info(f"Token saved to DB. Expires at: {expires_at}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save token to DB: {e}")
+            db.rollback()
+            return False
+        finally:
+            db.close()
+
+    def refresh_token(self, current_token: str) -> Optional[Tuple[str, int]]:
+        """
+        トークンを更新
+
+        Args:
+            current_token: 現在のアクセストークン
+
+        Returns:
+            (new_access_token, expires_in_seconds) または None
+        """
+        try:
+            url = "https://graph.threads.net/refresh_access_token"
+            params = {
+                "grant_type": "th_refresh_token",
+                "access_token": current_token,
+            }
+
+            response = requests.get(url, params=params, timeout=30)
+
+            if response.status_code == 200:
+                data = response.json()
+                new_token = data.get("access_token")
+                expires_in = data.get("expires_in", 5184000)  # デフォルト60日
+                logger.info(f"Token refreshed successfully. Expires in {expires_in} seconds")
+                return (new_token, expires_in)
+            else:
+                logger.error(f"Failed to refresh token: {response.status_code} - {response.text}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error refreshing token: {e}")
+            return None
+
+    def get_valid_token(self) -> Optional[Tuple[str, str]]:
+        """
+        有効なトークンを取得（必要に応じて更新）
+
+        Returns:
+            (access_token, user_id) または None
+        """
+        token_data = self.get_token_from_db()
+        if not token_data:
+            logger.error("No token found in database")
+            return None
+
+        access_token, user_id, expires_at = token_data
+
+        # タイムゾーン対応
+        now = datetime.now(timezone.utc)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+        days_until_expiry = (expires_at - now).days
+
+        logger.info(f"Token expires in {days_until_expiry} days (at {expires_at})")
+
+        # 期限切れチェック
+        if now >= expires_at:
+            logger.error("Token has expired!")
+            return None
+
+        # 更新が必要かチェック
+        if days_until_expiry <= self.REFRESH_THRESHOLD_DAYS:
+            logger.info(f"Token expires in {days_until_expiry} days. Refreshing...")
+            refresh_result = self.refresh_token(access_token)
+
+            if refresh_result:
+                new_token, expires_in = refresh_result
+                new_expires_at = now + timedelta(seconds=expires_in)
+                self.save_token_to_db(new_token, user_id, new_expires_at)
+                return (new_token, user_id)
+            else:
+                logger.warning("Token refresh failed, using current token")
+
+        return (access_token, user_id)
 
 
 class ThreadsAPIClient:
@@ -356,22 +496,33 @@ def main():
     logger.info("Starting post_theme_to_threads script")
 
     # 環境変数から認証情報を取得
-    threads_user_id = os.getenv("THREADS_USER_ID")
-    threads_access_token = os.getenv("THREADS_ACCESS_TOKEN")
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    threads_client_secret = os.getenv("THREADS_CLIENT_SECRET")
 
-    # Threads認証情報のチェック
-    if not threads_user_id or not threads_access_token:
-        logger.error("Missing Threads API credentials")
-        logger.error("Required: THREADS_USER_ID, THREADS_ACCESS_TOKEN")
-        sys.exit(1)
-
-    # Supabase認証情報のチェック
+    # Supabase認証情報のチェック（DB接続とStorage用）
     if not supabase_url or not supabase_service_role_key:
-        logger.error("Missing Supabase credentials for image upload")
+        logger.error("Missing Supabase credentials")
         logger.error("Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY")
         sys.exit(1)
+
+    # トークンマネージャーを初期化してDBからトークンを取得
+    token_manager = ThreadsTokenManager(client_secret=threads_client_secret or "")
+    token_result = token_manager.get_valid_token()
+
+    if not token_result:
+        # DBにトークンがない場合、環境変数からフォールバック
+        logger.warning("No token in DB, falling back to environment variables")
+        threads_user_id = os.getenv("THREADS_USER_ID")
+        threads_access_token = os.getenv("THREADS_ACCESS_TOKEN")
+
+        if not threads_user_id or not threads_access_token:
+            logger.error("Missing Threads API credentials")
+            logger.error("Required: THREADS_USER_ID, THREADS_ACCESS_TOKEN (or set up token in DB)")
+            sys.exit(1)
+    else:
+        threads_access_token, threads_user_id = token_result
+        logger.info("Using token from database")
 
     # 認証情報の一部をログ（デバッグ用）
     logger.info(f"THREADS_USER_ID: {threads_user_id[:10]}..." if len(threads_user_id) > 10 else threads_user_id)
