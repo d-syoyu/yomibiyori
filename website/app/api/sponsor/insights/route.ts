@@ -42,7 +42,28 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // 2. Env Check
+        // 2. Check for sponsor_id parameter (for admin impersonation)
+        const url = new URL(request.url)
+        const sponsorIdParam = url.searchParams.get('sponsor_id')
+        let targetSponsorId = session.user.id
+
+        if (sponsorIdParam) {
+            // Verify the user is an admin before allowing sponsor_id override
+            const { data: userData } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', session.user.id)
+                .single()
+
+            if (userData?.role === 'admin') {
+                targetSponsorId = sponsorIdParam
+                console.log('[Insights API] Admin impersonation, using sponsor_id:', targetSponsorId)
+            } else {
+                console.warn('[Insights API] Non-admin tried to use sponsor_id param, ignoring')
+            }
+        }
+
+        // 3. Env Check
         const projectId = process.env.POSTHOG_PROJECT_ID
         const apiKey = process.env.POSTHOG_PERSONAL_API_KEY
 
@@ -55,11 +76,11 @@ export async function GET(request: Request) {
             })
         }
 
-        // 3. Resolve sponsorが持つテーマIDを取得し、PostHogを絞り込む
+        // 4. Resolve sponsorが持つテーマIDを取得し、PostHogを絞り込む
         const { data: campaigns, error: campaignsError } = await supabase
             .from('sponsor_campaigns')
             .select('id')
-            .eq('sponsor_id', session.user.id)
+            .eq('sponsor_id', targetSponsorId)
 
         if (campaignsError) {
             console.error('[Insights API] Failed to fetch sponsor campaigns:', campaignsError)

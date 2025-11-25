@@ -293,7 +293,12 @@ export default function SponsorInsightsPage() {
 
                 console.log('[Insights] Access token available:', !!accessToken)
 
-                const res = await fetch('/api/sponsor/insights', {
+                // なりすまし中はsponsor_idをクエリパラメータで渡す
+                const apiUrl = impersonation
+                    ? `/api/sponsor/insights?sponsor_id=${sponsorId}`
+                    : '/api/sponsor/insights'
+
+                const res = await fetch(apiUrl, {
                     credentials: 'include',
                     cache: 'no-store',
                     headers: accessToken ? {
