@@ -79,6 +79,20 @@ export default function CompanyPage() {
                 </a>
                 <p className="text-xs text-[var(--color-text-secondary)]">更新頻度：静的掲載（必要に応じて手動で反映します）</p>
               </div>
+
+              <div className="card space-y-3">
+                <h2 className="text-2xl font-bold text-[var(--color-igusa)]">法的情報</h2>
+                <p className="text-[var(--color-text-secondary)]">有料サービスに関する表記はこちら。</p>
+                <Link
+                  href="/company/tokushoho"
+                  className="inline-flex items-center gap-2 text-[var(--color-ai)] font-semibold hover:underline underline-offset-4"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  特定商取引法に基づく表記
+                </Link>
+              </div>
             </div>
           </div>
         </div>
