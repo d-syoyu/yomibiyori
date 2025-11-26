@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.analytics import track_event, identify_user, EventNames
+from app.core.analytics import track_event, identify_user, EventNames, is_sample_account, get_email_domain
 from app.db.session import set_request_user_context
 from app.models import User
 from app.schemas.auth import (
@@ -365,6 +365,8 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
                 properties={
                     "has_display_name": bool(user.name),
                     "registration_method": "email_password",
+                    "is_sample_account": is_sample_account(user.email),
+                    "email_domain": get_email_domain(user.email),
                 },
             )
         except Exception as e:
@@ -454,6 +456,8 @@ def login_user(session: Session, *, payload: LoginRequest) -> LoginResponse:
                 event_name=EventNames.USER_LOGGED_IN,
                 properties={
                     "auth_method": "email_password",
+                    "is_sample_account": is_sample_account(user.email),
+                    "email_domain": get_email_domain(user.email),
                 },
             )
         except Exception as e:
@@ -916,6 +920,8 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
                     properties={
                         "has_display_name": bool(user.name),
                         "registration_method": f"{oauth_provider}_oauth",
+                        "is_sample_account": is_sample_account(user.email),
+                        "email_domain": get_email_domain(user.email),
                     },
                 )
             else:
@@ -924,6 +930,8 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
                     event_name=EventNames.USER_LOGGED_IN,
                     properties={
                         "auth_method": f"{oauth_provider}_oauth",
+                        "is_sample_account": is_sample_account(user.email),
+                        "email_domain": get_email_domain(user.email),
                     },
                 )
         except Exception as e:
@@ -989,7 +997,11 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
     # Track profile update event (only if not opted out)
     if not user.analytics_opt_out:
         try:
-            track_properties = {"display_name": user.name}
+            track_properties = {
+                "display_name": user.name,
+                "is_sample_account": is_sample_account(user.email),
+                "email_domain": get_email_domain(user.email),
+            }
             if user.birth_year:
                 track_properties["birth_year"] = user.birth_year
             if user.prefecture:
@@ -1021,7 +1033,10 @@ def delete_user_account(session: Session, *, user_id: str) -> None:
             track_event(
                 distinct_id=str(user.id),
                 event_name=EventNames.ACCOUNT_DELETED,
-                properties=None,
+                properties={
+                    "is_sample_account": is_sample_account(user.email),
+                    "email_domain": get_email_domain(user.email),
+                },
             )
         except Exception as e:
             print(f"[Analytics] Failed to track account deletion: {e}")

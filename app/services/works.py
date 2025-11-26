@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import logger
-from app.core.analytics import track_event, EventNames
+from app.core.analytics import track_event, EventNames, is_sample_account, get_email_domain
 from app.models import Like, Theme, User, Work
 from app.schemas.work import (
     WorkCreate,
@@ -154,15 +154,13 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
     # Track work creation event (respect opt-out preference)
     if user and not user.analytics_opt_out:
         try:
-            # Check if user is a sample account (by email domain)
-            is_sample_account = user.email.endswith('@yomibiyori.app') if user.email else False
-
             properties = {
                 "work_id": str(work.id),
                 "theme_id": str(theme.id),
                 "category": theme.category,
                 "text_length": len(text),
-                "is_sample_account": is_sample_account,
+                "is_sample_account": is_sample_account(user.email),
+                "email_domain": get_email_domain(user.email),
             }
             # Add user attributes if available
             if user.birth_year:

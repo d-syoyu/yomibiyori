@@ -134,6 +134,26 @@ def shutdown_analytics() -> None:
             _posthog_client = None
 
 
+def is_sample_account(email: Optional[str]) -> bool:
+    """Check if the email belongs to a sample/test account.
+
+    Sample accounts are identified by the @yomibiyori.app domain.
+    """
+    if not email:
+        return False
+    return email.endswith("@yomibiyori.app")
+
+
+def get_email_domain(email: Optional[str]) -> Optional[str]:
+    """Extract the domain from an email address.
+
+    Returns the domain part (after @) or None if email is invalid.
+    """
+    if not email or "@" not in email:
+        return None
+    return email.split("@")[-1].lower()
+
+
 # Event names constants
 class EventNames:
     """Standard event names for tracking"""
