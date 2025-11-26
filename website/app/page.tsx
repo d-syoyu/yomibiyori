@@ -177,10 +177,10 @@ export default function Home() {
         <section className="py-24 relative overflow-hidden">
           <div className="page-container relative z-10">
             <div className="card max-w-4xl mx-auto text-center space-y-8 bg-white/60 backdrop-blur-xl">
-              <h2 className="text-2xl font-bold text-[var(--color-igusa)]">応援・スポンサー募集</h2>
+              <h2 className="text-2xl font-bold text-[var(--color-igusa)]">上の句スポンサー募集</h2>
               <p className="text-[var(--color-text-secondary)] max-w-2xl mx-auto">
-                よみびよりを一緒に育ててくださる個人・企業の方を募集しています。<br />
-                スポンサーには特典や管理ダッシュボードをご用意しています。
+                あなたの上の句が、毎朝の「お題」になります。<br />
+                スポンサーとして上の句を投稿し、全国の詠み人と一緒に一首を完成させませんか。
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <Link href="/sponsors" className="btn-primary">
