@@ -225,7 +225,7 @@ class Settings(BaseSettings):
         description="Stripe webhook signing secret for verifying webhook events.",
     )
     sponsor_credit_price_jpy: int = Field(
-        default=10000,
+        default=11000,
         alias="SPONSOR_CREDIT_PRICE_JPY",
         description="Price of one sponsor credit in Japanese Yen.",
         ge=1,

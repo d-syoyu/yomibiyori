@@ -166,7 +166,7 @@ export default function SponsorCreditsPage() {
               </svg> クレジットを購入
             </h2>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              1クレジット = ¥10,000 (税込)
+              1クレジット = ¥11,000 (税込)
             </p>
           </div>
 
@@ -202,7 +202,7 @@ export default function SponsorCreditsPage() {
                   disabled={purchasing}
                 />
                 <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                  合計: ¥{(purchaseQuantity * 10000).toLocaleString()}
+                  合計: ¥{(purchaseQuantity * 11000).toLocaleString()}
                 </p>
               </div>
 
