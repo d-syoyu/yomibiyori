@@ -121,6 +121,7 @@ def create_checkout_session(
                 }
             ],
             mode="payment",
+            allow_promotion_codes=True,  # Enable coupon/promotion codes
             success_url=success_url,
             cancel_url=cancel_url,
             client_reference_id=sponsor.id,
