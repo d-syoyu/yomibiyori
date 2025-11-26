@@ -237,11 +237,16 @@ def _upsert_user_record(
     user_id: str,
     email: str,
     display_name: str | None,
-) -> User:
-    """Synchronise the Supabase user with the local database."""
+) -> tuple[User, bool]:
+    """Synchronise the Supabase user with the local database.
+
+    Returns:
+        A tuple of (user, is_new) where is_new is True if the user was newly created.
+    """
 
     now = datetime.now(timezone.utc)
     user = session.get(User, user_id)
+    is_new = user is None
 
     # Use display_name if provided, otherwise use existing name, or extract from email
     if display_name:
@@ -273,7 +278,7 @@ def _upsert_user_record(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered") from exc
 
     session.refresh(user)
-    return user
+    return user, is_new
 
 
 def _build_user_profile_response(user: User) -> UserProfileResponse:
@@ -342,7 +347,7 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
     metadata = user_payload.get("user_metadata") or {}
     display_name = metadata.get("display_name") or payload.display_name
 
-    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+    user, _is_new = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
     if not user.analytics_opt_out:
         try:
@@ -440,7 +445,7 @@ def login_user(session: Session, *, payload: LoginRequest) -> LoginResponse:
     display_name = metadata.get("display_name")
 
     # Sync user record if needed
-    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+    user, _is_new = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
     if not user.analytics_opt_out:
         try:
@@ -529,7 +534,7 @@ def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
     metadata = payload.get("user_metadata") or {}
     display_name = metadata.get("display_name")
 
-    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+    user, _is_new = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
     return _build_user_profile_response(user)
 
@@ -879,16 +884,20 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
     display_name = metadata.get("display_name") or metadata.get("full_name") or metadata.get("name")
 
     # If no display name in metadata, try to get from identities (OAuth provider data)
+    # Also extract the OAuth provider name
+    identities = user_data.get("identities", [])
+    oauth_provider = "oauth"
     if not display_name:
-        identities = user_data.get("identities", [])
         for identity in identities:
             identity_data = identity.get("identity_data", {})
             display_name = identity_data.get("full_name") or identity_data.get("name")
             if display_name:
                 break
+    if identities:
+        oauth_provider = identities[0].get("provider", "oauth")
 
     # Synchronize user to local database
-    user = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
+    user, is_new = _upsert_user_record(session, user_id=user_id, email=email, display_name=display_name)
 
     if not user.analytics_opt_out:
         try:
@@ -897,15 +906,26 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
                 properties={
                     "display_name": user.name,
                     "has_display_name": bool(user.name),
+                    "created_at": user.created_at.isoformat() if user.created_at else None,
                 },
             )
-            track_event(
-                distinct_id=str(user.id),
-                event_name=EventNames.USER_LOGGED_IN,
-                properties={
-                    "auth_method": "google_oauth",
-                },
-            )
+            if is_new:
+                track_event(
+                    distinct_id=str(user.id),
+                    event_name=EventNames.USER_REGISTERED,
+                    properties={
+                        "has_display_name": bool(user.name),
+                        "registration_method": f"{oauth_provider}_oauth",
+                    },
+                )
+            else:
+                track_event(
+                    distinct_id=str(user.id),
+                    event_name=EventNames.USER_LOGGED_IN,
+                    properties={
+                        "auth_method": f"{oauth_provider}_oauth",
+                    },
+                )
         except Exception as e:
             print(f"[Analytics] Failed to track OAuth login: {e}")
 
