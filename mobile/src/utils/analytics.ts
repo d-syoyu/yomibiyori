@@ -9,6 +9,10 @@ import PostHog from 'posthog-react-native';
 import { logger } from './logger';
 
 let posthogClient: PostHog | null = null;
+
+// Current user context for analytics
+let currentUserEmail: string | null = null;
+
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as {
   posthogApiKey?: string;
   posthogHost?: string;
@@ -28,6 +32,39 @@ const resolvePosthogApiKey = (): string =>
 const resolvePosthogHost = (): string =>
   extra.posthogHost ?? process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com';
 
+/**
+ * Check if email belongs to a sample account
+ */
+const isSampleAccount = (email: string | null): boolean => {
+  if (!email) return false;
+  return email.endsWith('@yomibiyori.app');
+};
+
+/**
+ * Extract domain from email address
+ */
+const getEmailDomain = (email: string | null): string | null => {
+  if (!email || !email.includes('@')) return null;
+  return email.split('@').pop()?.toLowerCase() ?? null;
+};
+
+/**
+ * Set current user context for analytics
+ * Call this after login/signup to enable automatic sample account detection
+ */
+export const setAnalyticsUserContext = (email: string | null): void => {
+  currentUserEmail = email;
+  logger.debug('[Analytics] User context set:', email ? getEmailDomain(email) : 'null');
+};
+
+/**
+ * Clear user context (call on logout)
+ */
+export const clearAnalyticsUserContext = (): void => {
+  currentUserEmail = null;
+  logger.debug('[Analytics] User context cleared');
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sanitizeProperties = (properties?: Record<string, any>): Record<string, any> | undefined => {
   if (!properties) {
@@ -36,6 +73,21 @@ const sanitizeProperties = (properties?: Record<string, any>): Record<string, an
 
   const { email, ...rest } = properties;
   return rest;
+};
+
+/**
+ * Enrich properties with sample account info
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const enrichWithUserContext = (properties?: Record<string, any>): Record<string, any> => {
+  const enriched = { ...properties };
+
+  if (currentUserEmail) {
+    enriched.is_sample_account = isSampleAccount(currentUserEmail);
+    enriched.email_domain = getEmailDomain(currentUserEmail);
+  }
+
+  return enriched;
 };
 
 /**
@@ -74,6 +126,7 @@ export const getAnalyticsClient = (): PostHog | null => {
 
 /**
  * Track an event
+ * Automatically adds is_sample_account and email_domain if user context is set
  */
 export const trackEvent = (
   eventName: string,
@@ -85,7 +138,8 @@ export const trackEvent = (
   }
 
   try {
-    posthogClient.capture(eventName, sanitizeProperties(properties));
+    const enrichedProps = enrichWithUserContext(properties);
+    posthogClient.capture(eventName, sanitizeProperties(enrichedProps));
   } catch (error) {
     logger.error(`[Analytics] Failed to track event '${eventName}':`, error);
   }
@@ -119,6 +173,9 @@ export const identifyUser = async (
  * Reset user identity (call on logout)
  */
 export const resetAnalytics = (): void => {
+  // Clear user context
+  clearAnalyticsUserContext();
+
   if (!posthogClient) {
     return;
   }

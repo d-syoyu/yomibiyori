@@ -7,6 +7,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.core.analytics import EventNames, track_event
+
 
 class ErrorDetail(BaseModel):
     """Standard error response schema."""
@@ -37,6 +39,21 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     Returns:
         JSONResponse with standardized error format
     """
+    # Track API errors (4xx and 5xx)
+    if exc.status_code >= 400:
+        track_event(
+            distinct_id="system",
+            event_name=EventNames.API_ERROR,
+            properties={
+                "status_code": exc.status_code,
+                "detail": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+                "path": str(request.url.path),
+                "method": request.method,
+                "error_type": "http_exception",
+            },
+            prehashed_distinct_id=True,
+        )
+
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
@@ -67,6 +84,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         detail = f"Validation error in {field}: {message}"
     else:
         detail = "Validation error occurred"
+        field = None
+
+    # Track validation errors
+    track_event(
+        distinct_id="system",
+        event_name=EventNames.API_ERROR,
+        properties={
+            "status_code": 422,
+            "detail": detail,
+            "path": str(request.url.path),
+            "method": request.method,
+            "error_type": "validation_error",
+            "field": field,
+        },
+        prehashed_distinct_id=True,
+    )
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -94,6 +127,21 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
     # Log the error for debugging
     logger.error(f"Unexpected error: {exc}", exc_info=True)
+
+    # Track internal server errors
+    track_event(
+        distinct_id="system",
+        event_name=EventNames.API_ERROR,
+        properties={
+            "status_code": 500,
+            "detail": str(exc),
+            "path": str(request.url.path),
+            "method": request.method,
+            "error_type": "internal_error",
+            "exception_class": exc.__class__.__name__,
+        },
+        prehashed_distinct_id=True,
+    )
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

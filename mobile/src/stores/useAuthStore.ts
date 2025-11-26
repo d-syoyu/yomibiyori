@@ -12,7 +12,7 @@ import {
   deleteSecureItems,
 } from '../utils/secureStorage';
 import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest, UpdateProfileRequest, ApiError } from '../types';
-import { resetAnalytics } from '../utils/analytics';
+import { resetAnalytics, setAnalyticsUserContext, identifyUser } from '../utils/analytics';
 import { logger } from '../utils/logger';
 
 // ============================================================================
@@ -96,6 +96,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Store user profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
 
+      // Set analytics user context for sample account detection
+      setAnalyticsUserContext(userProfile.email);
+
       set({
         isAuthenticated: true,
         user: userProfile,
@@ -147,6 +150,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Store user profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
 
+      // Set analytics user context for sample account detection
+      setAnalyticsUserContext(userProfile.email);
+
       set({
         isAuthenticated: true,
         user: userProfile,
@@ -197,6 +203,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Store user profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+
+      // Set analytics user context for sample account detection
+      setAnalyticsUserContext(userProfile.email);
 
       set({
         isAuthenticated: true,
@@ -284,6 +293,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const freshProfile = await api.getUserProfile();
           logger.debug('[Auth] Token verified successfully');
 
+          // Set analytics user context for sample account detection
+          setAnalyticsUserContext(freshProfile.email);
+
+          // Identify user in PostHog to merge anonymous events
+          if (freshProfile.user_id) {
+            await identifyUser(freshProfile.user_id, {
+              display_name: freshProfile.display_name,
+            });
+          }
+
           set({
             isAuthenticated: true,
             user: freshProfile,
@@ -324,6 +343,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 const freshProfile = await api.getUserProfile();
                 logger.debug('[Auth] Profile fetched with new token');
 
+                // Set analytics user context for sample account detection
+                setAnalyticsUserContext(freshProfile.email);
+
+                // Identify user in PostHog to merge anonymous events
+                if (freshProfile.user_id) {
+                  await identifyUser(freshProfile.user_id, {
+                    display_name: freshProfile.display_name,
+                  });
+                }
+
                 set({
                   isAuthenticated: true,
                   user: freshProfile,
@@ -352,6 +381,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Other errors: use cached profile anyway
           logger.debug('[Auth] Token verification failed, using cached profile');
           logger.debug('[Auth] Error:', profileErr);
+
+          // Set analytics user context for sample account detection
+          setAnalyticsUserContext(user.email);
+
+          // Identify user in PostHog to merge anonymous events
+          if (user.user_id) {
+            await identifyUser(user.user_id, {
+              display_name: user.display_name,
+            });
+          }
 
           // Use cached profile for now
           set({
