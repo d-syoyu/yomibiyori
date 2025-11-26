@@ -9,6 +9,7 @@ import {
 } from '@/lib/adminApi'
 import { startImpersonation } from '@/lib/impersonation'
 import { supabase } from '@/lib/supabase'
+import { useToast } from '@/lib/hooks/useToast'
 
 type FilterValue = 'all' | 'verified' | 'pending'
 
@@ -28,6 +29,7 @@ function formatDate(value: string) {
 
 export default function AdminSponsorsPage() {
   const router = useRouter()
+  const toast = useToast()
   const [sponsors, setSponsors] = useState<AdminSponsor[]>([])
   const [total, setTotal] = useState(0)
   const [filter, setFilter] = useState<FilterValue>('all')
@@ -94,7 +96,7 @@ export default function AdminSponsorsPage() {
       )
     } catch (err) {
       console.error('Failed to update verification:', err)
-      alert(err instanceof Error ? err.message : '更新に失敗しました')
+      toast.error(err instanceof Error ? err.message : '更新に失敗しました')
     } finally {
       setProcessingId(null)
       setRefreshKey((value) => value + 1)
@@ -105,7 +107,7 @@ export default function AdminSponsorsPage() {
     // Get current admin user ID
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
-      alert('セッションが切れました。再ログインしてください。')
+      toast.error('セッションが切れました。再ログインしてください。')
       return
     }
 

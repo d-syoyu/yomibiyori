@@ -4,46 +4,26 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getImpersonation } from '@/lib/impersonation'
+import { useSponsorAuth } from '@/lib/hooks/useSponsorAuth'
+import { getTicketStatusLabel, getTicketStatusClassName } from '@/lib/constants'
+import type { SupportTicket, TicketStatus } from '@/types/sponsor'
 import Link from 'next/link'
 
-interface Ticket {
-  id: string
-  subject: string
-  status: 'open' | 'in_progress' | 'resolved'
-  created_at: string
-}
-
 export default function SponsorSupportPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([])
+  const { sponsorId, loading: authLoading } = useSponsorAuth()
+  const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchTickets()
-  }, [])
+  const fetchTickets = useCallback(async () => {
+    if (!sponsorId) return
 
-  async function fetchTickets() {
     try {
-      // Check for impersonation first
-      const impersonation = getImpersonation()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      // Determine user ID - use impersonation if available, otherwise session
-      let userId: string
-      if (impersonation) {
-        userId = impersonation.sponsorId
-      } else if (user) {
-        userId = user.id
-      } else {
-        return
-      }
-
       const { data, error } = await supabase
         .from('support_tickets')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', sponsorId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -53,22 +33,18 @@ export default function SponsorSupportPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [sponsorId])
 
-  function getStatusBadge(status: string) {
-    const styles = {
-      open: 'bg-blue-100 text-blue-800',
-      in_progress: 'bg-yellow-100 text-yellow-800',
-      resolved: 'bg-gray-100 text-gray-800',
+  useEffect(() => {
+    if (!authLoading) {
+      fetchTickets()
     }
-    const labels = {
-      open: '受付中',
-      in_progress: '対応中',
-      resolved: '解決済み',
-    }
+  }, [authLoading, fetchTickets])
+
+  function getStatusBadge(status: TicketStatus) {
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels] || status}
+      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getTicketStatusClassName(status)}`}>
+        {getTicketStatusLabel(status)}
       </span>
     )
   }

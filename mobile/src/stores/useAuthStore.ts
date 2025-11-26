@@ -11,8 +11,9 @@ import {
   getSecureItems,
   deleteSecureItems,
 } from '../utils/secureStorage';
-import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest, UpdateProfileRequest } from '../types';
+import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest, UpdateProfileRequest, ApiError } from '../types';
 import { resetAnalytics } from '../utils/analytics';
+import { logger } from '../utils/logger';
 
 // ============================================================================
 // Constants
@@ -101,8 +102,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
       });
-    } catch (err: any) {
-      const errorMessage = err.detail || 'サインアップに失敗しました';
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.detail || 'サインアップに失敗しました';
       set({
         isLoading: false,
         error: errorMessage,
@@ -151,8 +153,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
       });
-    } catch (err: any) {
-      const errorMessage = err.detail || 'ログインに失敗しました';
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.detail || 'ログインに失敗しました';
       set({
         isLoading: false,
         error: errorMessage,
@@ -201,8 +204,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
       });
-    } catch (err: any) {
-      const errorMessage = err.detail || 'OAuthログインに失敗しました';
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.detail || 'OAuthログインに失敗しました';
       set({
         isLoading: false,
         error: errorMessage,
@@ -234,15 +238,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
       });
-    } catch (err: any) {
-      console.error('Logout error:', err);
+    } catch (err: unknown) {
+      logger.error('Logout error:', err);
       set({ isLoading: false });
     }
   },
 
   // Load stored session on app start
   loadStoredSession: async () => {
-    console.log('[Auth] Loading stored session...');
+    logger.debug('[Auth] Loading stored session...');
     set({ isLoading: true });
     try {
       const items = await getSecureItems([
@@ -255,14 +259,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const refresh = items.find(([key]) => key === REFRESH_TOKEN_KEY)?.[1];
       const profileData = items.find(([key]) => key === USER_PROFILE_KEY)?.[1];
 
-      console.log('[Auth] Token found:', !!token);
-      console.log('[Auth] Refresh token found:', !!refresh);
-      console.log('[Auth] Profile data found:', !!profileData);
+      logger.debug('[Auth] Token found:', !!token);
+      logger.debug('[Auth] Refresh token found:', !!refresh);
+      logger.debug('[Auth] Profile data found:', !!profileData);
 
       if (token && profileData) {
         // Set API token
         api.setAccessToken(token);
-        console.log('[Auth] API token set');
+        logger.debug('[Auth] API token set');
 
         // Parse user profile
         const parsedUser = JSON.parse(profileData) as Partial<UserProfile>;
@@ -272,13 +276,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           notify_ranking_result: true,
           ...parsedUser,
         } as UserProfile;
-        console.log('[Auth] User profile parsed:', user.email);
+        logger.debug('[Auth] User profile parsed:', user.email);
 
         // Try to verify token, but fall back to cached profile if verification fails
         try {
-          console.log('[Auth] Verifying token...');
+          logger.debug('[Auth] Verifying token...');
           const freshProfile = await api.getUserProfile();
-          console.log('[Auth] Token verified successfully');
+          logger.debug('[Auth] Token verified successfully');
 
           set({
             isAuthenticated: true,
@@ -289,17 +293,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           // Update stored profile securely
           await setSecureItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
-        } catch (profileErr: any) {
+        } catch (profileErr: unknown) {
+          const apiError = profileErr as ApiError;
           // Check if token has expired
-          if (profileErr?.detail?.includes('expired')) {
-            console.log('[Auth] Token expired, attempting to refresh...');
+          if (apiError?.detail?.includes('expired')) {
+            logger.debug('[Auth] Token expired, attempting to refresh...');
 
             // Try to refresh the token
             if (refresh) {
               try {
-                console.log('[Auth] Refreshing token...');
+                logger.debug('[Auth] Refreshing token...');
                 const newSession = await api.refreshToken(refresh);
-                console.log('[Auth] Token refreshed successfully');
+                logger.debug('[Auth] Token refreshed successfully');
 
                 // Store new tokens securely
                 if (newSession.access_token) {
@@ -317,7 +322,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
                 // Verify with new token
                 const freshProfile = await api.getUserProfile();
-                console.log('[Auth] Profile fetched with new token');
+                logger.debug('[Auth] Profile fetched with new token');
 
                 set({
                   isAuthenticated: true,
@@ -329,15 +334,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 // Update stored profile securely
                 await setSecureItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
                 return;
-              } catch (refreshErr: any) {
-                console.log('[Auth] Token refresh failed, logging out');
-                console.log('[Auth] Refresh error:', refreshErr);
+              } catch (refreshErr: unknown) {
+                logger.debug('[Auth] Token refresh failed, logging out');
+                logger.debug('[Auth] Refresh error:', refreshErr);
                 // Refresh failed, force logout
                 await get().logout();
                 return;
               }
             } else {
-              console.log('[Auth] No refresh token available, logging out');
+              logger.debug('[Auth] No refresh token available, logging out');
               // No refresh token, force logout
               await get().logout();
               return;
@@ -345,8 +350,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
 
           // Other errors: use cached profile anyway
-          console.log('[Auth] Token verification failed, using cached profile');
-          console.log('[Auth] Error:', profileErr);
+          logger.debug('[Auth] Token verification failed, using cached profile');
+          logger.debug('[Auth] Error:', profileErr);
 
           // Use cached profile for now
           set({
@@ -357,11 +362,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       } else {
-        console.log('[Auth] No stored session found');
+        logger.debug('[Auth] No stored session found');
         set({ isLoading: false, isAuthenticated: false });
       }
-    } catch (err: any) {
-      console.error('[Auth] Load session error:', err);
+    } catch (err: unknown) {
+      logger.error('[Auth] Load session error:', err);
       set({ isLoading: false, isAuthenticated: false });
     }
   },
@@ -380,8 +385,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
       });
-    } catch (err: any) {
-      const errorMessage = err.detail || 'プロフィールの更新に失敗しました';
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.detail || 'プロフィールの更新に失敗しました';
       set({
         isLoading: false,
         error: errorMessage,
@@ -399,7 +405,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   ensureValidToken: async () => {
     // Prevent concurrent refresh attempts
     if (isRefreshing) {
-      console.log('[Auth] Refresh already in progress, skipping');
+      logger.debug('[Auth] Refresh already in progress, skipping');
       return;
     }
 
@@ -418,13 +424,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const now = Date.now();
       const timeRemaining = expiresAt - now;
 
-      console.log('[Auth] Token expires in:', Math.floor(timeRemaining / 1000), 'seconds');
+      logger.debug('[Auth] Token expires in:', Math.floor(timeRemaining / 1000), 'seconds');
 
       // If token is already expired or expiring soon, refresh it proactively
       if (timeRemaining < 0) {
-        console.log('[Auth] Token already expired, attempting refresh...');
+        logger.debug('[Auth] Token already expired, attempting refresh...');
       } else if (timeRemaining < TOKEN_REFRESH_THRESHOLD_MS) {
-        console.log('[Auth] Token expiring soon, refreshing proactively...');
+        logger.debug('[Auth] Token expiring soon, refreshing proactively...');
       } else {
         // Token is still valid and not expiring soon
         return;
@@ -436,7 +442,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       try {
         const newSession = await api.refreshToken(refreshToken);
-        console.log('[Auth] Token refreshed successfully');
+        logger.debug('[Auth] Token refreshed successfully');
 
         // Store new tokens securely
         if (newSession.access_token) {
@@ -452,11 +458,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const newExpiresAt = Date.now() + newSession.expires_in * 1000;
           await setSecureItem(TOKEN_EXPIRES_AT_KEY, newExpiresAt.toString());
         }
-      } catch (refreshErr: any) {
-        console.error('[Auth] Token refresh failed:', refreshErr);
+      } catch (refreshErr: unknown) {
+        const apiError = refreshErr as ApiError;
+        logger.error('[Auth] Token refresh failed:', refreshErr);
         // Check if it's an auth error (refresh token expired)
-        if (refreshErr?.status === 401 || refreshErr?.detail?.includes('expired')) {
-          console.log('[Auth] Refresh token expired, logging out');
+        if (apiError?.status === 401 || apiError?.detail?.includes('expired')) {
+          logger.debug('[Auth] Refresh token expired, logging out');
           await get().logout();
         }
         // For other errors, let the request proceed and handle it there
@@ -464,8 +471,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Clear refreshing flag
         isRefreshing = false;
       }
-    } catch (err: any) {
-      console.error('[Auth] ensureValidToken error:', err);
+    } catch (err: unknown) {
+      logger.error('[Auth] ensureValidToken error:', err);
       isRefreshing = false;
       // Don't throw, let the request proceed
     }

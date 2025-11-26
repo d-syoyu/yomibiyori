@@ -109,14 +109,8 @@ export default function SponsorDashboard() {
 
       const campaignIds = campaigns.map(c => c.id)
 
-      // Get themes stats
-      const [
-        { data: total },
-        { data: pending },
-        { data: approved },
-        { data: rejected },
-        { data: published },
-      ] = await Promise.all([
+      // Get themes stats with Promise.allSettled for better error handling
+      const results = await Promise.allSettled([
         supabase.from('sponsor_themes').select('id').in('campaign_id', campaignIds),
         supabase.from('sponsor_themes').select('id').in('campaign_id', campaignIds).eq('status', 'pending'),
         supabase.from('sponsor_themes').select('id').in('campaign_id', campaignIds).eq('status', 'approved'),
@@ -124,12 +118,23 @@ export default function SponsorDashboard() {
         supabase.from('sponsor_themes').select('id').in('campaign_id', campaignIds).eq('status', 'published'),
       ])
 
+      // Extract data from settled promises, defaulting to empty arrays on failure
+      const extractData = (result: PromiseSettledResult<{ data: { id: string }[] | null }>) => {
+        if (result.status === 'fulfilled') {
+          return result.value.data || []
+        }
+        console.error('Query failed:', result.reason)
+        return []
+      }
+
+      const [total, pending, approved, rejected, published] = results.map(extractData)
+
       setStats({
-        totalThemes: total?.length || 0,
-        pendingThemes: pending?.length || 0,
-        approvedThemes: approved?.length || 0,
-        rejectedThemes: rejected?.length || 0,
-        publishedThemes: published?.length || 0,
+        totalThemes: total.length,
+        pendingThemes: pending.length,
+        approvedThemes: approved.length,
+        rejectedThemes: rejected.length,
+        publishedThemes: published.length,
         credits: sponsor?.credits || 0,
       })
     } catch (error) {

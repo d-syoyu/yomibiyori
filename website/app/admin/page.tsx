@@ -84,14 +84,8 @@ export default function AdminDashboard() {
 
   async function loadDashboardData() {
     try {
-      // 1. Load Stats
-      const [
-        { data: total },
-        { data: pending },
-        { data: approved },
-        { data: published },
-        { data: rejected },
-      ] = await Promise.all([
+      // 1. Load Stats with Promise.allSettled for better error handling
+      const statsResults = await Promise.allSettled([
         supabase.from('sponsor_themes').select('id'),
         supabase.from('sponsor_themes').select('id').eq('status', 'pending'),
         supabase.from('sponsor_themes').select('id').eq('status', 'approved'),
@@ -99,32 +93,77 @@ export default function AdminDashboard() {
         supabase.from('sponsor_themes').select('id').eq('status', 'rejected'),
       ])
 
+      // Extract data from settled promises, defaulting to empty arrays on failure
+      const extractData = (result: PromiseSettledResult<{ data: { id: string }[] | null }>) => {
+        if (result.status === 'fulfilled') {
+          return result.value.data || []
+        }
+        console.error('Query failed:', result.reason)
+        return []
+      }
+
+      const [total, pending, approved, published, rejected] = statsResults.map(extractData)
+
       setStats({
-        totalThemes: total?.length || 0,
-        pendingThemes: pending?.length || 0,
-        approvedThemes: approved?.length || 0,
-        publishedThemes: published?.length || 0,
-        rejectedThemes: rejected?.length || 0,
+        totalThemes: total.length,
+        pendingThemes: pending.length,
+        approvedThemes: approved.length,
+        publishedThemes: published.length,
+        rejectedThemes: rejected.length,
       })
 
-      // 2. Load Activity Feed
+      // 2. Load Activity Feed with Promise.allSettled
       // Fetch recent items from multiple tables
       const limit = 5
-      const [
-        { data: recentThemes },
-        { data: recentPurchases },
-        { data: recentUsers },
-        { data: recentTickets }
-      ] = await Promise.all([
+      const activityResults = await Promise.allSettled([
         supabase.from('sponsor_themes').select('*, campaign:sponsor_campaigns(sponsor:sponsors(company_name))').order('created_at', { ascending: false }).limit(limit),
         supabase.from('sponsor_credit_transactions').select('*, sponsor:sponsors(company_name)').eq('transaction_type', 'purchase').order('created_at', { ascending: false }).limit(limit),
         supabase.from('users').select('id, name, role, created_at').order('created_at', { ascending: false }).limit(limit),
         supabase.from('support_tickets').select('*, user:users(name)').order('created_at', { ascending: false }).limit(limit)
       ])
 
+      // Define types for activity feed items
+      interface ThemeItem {
+        id: string
+        text_575: string
+        created_at: string
+        campaign?: { sponsor?: { company_name?: string } }
+      }
+      interface PurchaseItem {
+        id: string
+        amount: number
+        created_at: string
+        sponsor?: { company_name?: string }
+      }
+      interface UserItem {
+        id: string
+        name?: string
+        role?: string
+        created_at: string
+      }
+      interface TicketItem {
+        id: string
+        subject: string
+        created_at: string
+        user?: { name?: string }
+      }
+
+      // Extract data safely
+      const recentThemes: ThemeItem[] = activityResults[0].status === 'fulfilled' ? (activityResults[0].value.data || []) : []
+      const recentPurchases: PurchaseItem[] = activityResults[1].status === 'fulfilled' ? (activityResults[1].value.data || []) : []
+      const recentUsers: UserItem[] = activityResults[2].status === 'fulfilled' ? (activityResults[2].value.data || []) : []
+      const recentTickets: TicketItem[] = activityResults[3].status === 'fulfilled' ? (activityResults[3].value.data || []) : []
+
+      // Log any failures
+      activityResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Activity query ${index} failed:`, result.reason)
+        }
+      })
+
       const feed: Activity[] = []
 
-      recentThemes?.forEach((t: any) => {
+      recentThemes.forEach((t) => {
         feed.push({
           id: `theme-${t.id}`,
           type: 'submit',
@@ -135,7 +174,7 @@ export default function AdminDashboard() {
         })
       })
 
-      recentPurchases?.forEach((p: any) => {
+      recentPurchases.forEach((p) => {
         feed.push({
           id: `purchase-${p.id}`,
           type: 'purchase',
@@ -146,7 +185,7 @@ export default function AdminDashboard() {
         })
       })
 
-      recentUsers?.forEach((u: any) => {
+      recentUsers.forEach((u) => {
         feed.push({
           id: `user-${u.id}`,
           type: 'register',
@@ -157,7 +196,7 @@ export default function AdminDashboard() {
         })
       })
 
-      recentTickets?.forEach((t: any) => {
+      recentTickets.forEach((t) => {
         feed.push({
           id: `ticket-${t.id}`,
           type: 'support',

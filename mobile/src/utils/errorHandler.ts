@@ -4,6 +4,7 @@
  */
 
 import type { ApiError } from '../types';
+import { logger } from './logger';
 
 /**
  * エラータイプ
@@ -165,7 +166,7 @@ export function canRetry(type: ErrorType): boolean {
 /**
  * ApiErrorからErrorInfoを生成
  */
-export function parseApiError(error: any): ErrorInfo {
+export function parseApiError(error: unknown): ErrorInfo {
   try {
     // エラーオブジェクトのバリデーション
     if (!error) {
@@ -177,11 +178,13 @@ export function parseApiError(error: any): ErrorInfo {
       };
     }
 
+    const apiError = error as ApiError;
+
     // statusの取得（デフォルト: -1）
-    const status = typeof error.status === 'number' ? error.status : -1;
+    const status = typeof apiError.status === 'number' ? apiError.status : -1;
 
     // detailの取得（デフォルト: エラーメッセージまたは'Unknown error'）
-    const detail = error.detail || error.message || 'Unknown error occurred';
+    const detail = apiError.detail || (error instanceof Error ? error.message : null) || 'Unknown error occurred';
 
     const type = getErrorType(status);
     const message = translateErrorMessage(detail, type);
@@ -195,7 +198,7 @@ export function parseApiError(error: any): ErrorInfo {
       canRetry: retry,
     };
   } catch (parseError) {
-    console.error('[parseApiError] Failed to parse error:', parseError);
+    logger.error('[parseApiError] Failed to parse error:', parseError);
     // パースに失敗した場合のフォールバック
     return {
       type: ErrorType.UNKNOWN,
@@ -209,9 +212,9 @@ export function parseApiError(error: any): ErrorInfo {
 /**
  * 汎用エラーハンドラー（ログ記録用）
  */
-export function logError(error: any, context?: string): void {
+export function logError(error: unknown, context?: string): void {
   const prefix = context ? `[${context}]` : '[Error]';
-  console.error(`${prefix}`, error);
+  logger.error(`${prefix}`, error);
 
   // 本番環境では Sentry などにエラーを送信
   // if (__DEV__) {

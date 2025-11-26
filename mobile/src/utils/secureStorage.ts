@@ -6,6 +6,7 @@
 
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { logger } from './logger';
 
 // Check if we're running on web
 const isWeb = Platform.OS === 'web';
@@ -24,7 +25,7 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
       await SecureStore.setItemAsync(key, value);
     }
   } catch (error) {
-    console.error(`[SecureStorage] Failed to store ${key}:`, error);
+    logger.error(`[SecureStorage] Failed to store ${key}:`, error);
     throw error;
   }
 }
@@ -44,7 +45,7 @@ export async function getSecureItem(key: string): Promise<string | null> {
       return await SecureStore.getItemAsync(key);
     }
   } catch (error) {
-    console.error(`[SecureStorage] Failed to retrieve ${key}:`, error);
+    logger.error(`[SecureStorage] Failed to retrieve ${key}:`, error);
     return null;
   }
 }
@@ -63,7 +64,7 @@ export async function deleteSecureItem(key: string): Promise<void> {
       await SecureStore.deleteItemAsync(key);
     }
   } catch (error) {
-    console.error(`[SecureStorage] Failed to delete ${key}:`, error);
+    logger.error(`[SecureStorage] Failed to delete ${key}:`, error);
     throw error;
   }
 }
@@ -82,7 +83,7 @@ export async function deleteSecureItems(keys: string[]): Promise<void> {
       await Promise.all(keys.map((key) => SecureStore.deleteItemAsync(key)));
     }
   } catch (error) {
-    console.error(`[SecureStorage] Failed to delete items:`, error);
+    logger.error(`[SecureStorage] Failed to delete items:`, error);
     throw error;
   }
 }
@@ -110,7 +111,7 @@ export async function getSecureItems(
       return values;
     }
   } catch (error) {
-    console.error(`[SecureStorage] Failed to retrieve items:`, error);
+    logger.error(`[SecureStorage] Failed to retrieve items:`, error);
     throw error;
   }
 }

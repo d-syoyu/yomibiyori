@@ -7,6 +7,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getImpersonation } from '@/lib/impersonation'
+import { useToast } from '@/lib/hooks/useToast'
 import { useParams, useRouter } from 'next/navigation'
 
 interface Message {
@@ -27,6 +28,7 @@ interface Ticket {
 export default function SponsorSupportChatPage() {
   const params = useParams()
   const router = useRouter()
+  const toast = useToast()
   const [messages, setMessages] = useState<Message[]>([])
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [newMessage, setNewMessage] = useState('')
@@ -73,7 +75,7 @@ export default function SponsorSupportChatPage() {
       setMessages(msgs || [])
     } catch (error) {
       console.error('Failed to load chat:', error)
-      alert('データの読み込みに失敗しました')
+      toast.error('データの読み込みに失敗しました')
       router.push('/sponsor/support')
     } finally {
       setLoading(false)
@@ -116,7 +118,7 @@ export default function SponsorSupportChatPage() {
       fetchTicketAndMessages()
     } catch (error) {
       console.error('Failed to send:', error)
-      alert('送信に失敗しました')
+      toast.error('送信に失敗しました')
     } finally {
       setSending(false)
     }

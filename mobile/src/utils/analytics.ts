@@ -6,6 +6,7 @@
 import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import PostHog from 'posthog-react-native';
+import { logger } from './logger';
 
 let posthogClient: PostHog | null = null;
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as {
@@ -27,6 +28,7 @@ const resolvePosthogApiKey = (): string =>
 const resolvePosthogHost = (): string =>
   extra.posthogHost ?? process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sanitizeProperties = (properties?: Record<string, any>): Record<string, any> | undefined => {
   if (!properties) {
     return undefined;
@@ -45,7 +47,7 @@ export const initAnalytics = async (): Promise<PostHog | null> => {
   const POSTHOG_HOST = resolvePosthogHost();
 
   if (!POSTHOG_API_KEY) {
-    console.log('[Analytics] PostHog not configured (POSTHOG_API_KEY missing)');
+    logger.debug('[Analytics] PostHog not configured (POSTHOG_API_KEY missing)');
     return null;
   }
 
@@ -55,10 +57,10 @@ export const initAnalytics = async (): Promise<PostHog | null> => {
       // Enable debug mode in development
       enableSessionReplay: false, // Optional: enable session replay
     });
-    console.log('[Analytics] PostHog initialized');
+    logger.debug('[Analytics] PostHog initialized');
     return posthogClient;
   } catch (error) {
-    console.error('[Analytics] Failed to initialize PostHog:', error);
+    logger.error('[Analytics] Failed to initialize PostHog:', error);
     return null;
   }
 };
@@ -75,6 +77,7 @@ export const getAnalyticsClient = (): PostHog | null => {
  */
 export const trackEvent = (
   eventName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>
 ): void => {
   if (!posthogClient) {
@@ -84,7 +87,7 @@ export const trackEvent = (
   try {
     posthogClient.capture(eventName, sanitizeProperties(properties));
   } catch (error) {
-    console.error(`[Analytics] Failed to track event '${eventName}':`, error);
+    logger.error(`[Analytics] Failed to track event '${eventName}':`, error);
   }
 };
 
@@ -93,6 +96,7 @@ export const trackEvent = (
  */
 export const identifyUser = async (
   userId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>
 ): Promise<void> => {
   if (!posthogClient) {
@@ -107,7 +111,7 @@ export const identifyUser = async (
     );
     posthogClient.identify(distinctId, sanitizeProperties(properties));
   } catch (error) {
-    console.error(`[Analytics] Failed to identify user '${userId}':`, error);
+    logger.error('[Analytics] Failed to identify user:', error);
   }
 };
 
@@ -122,7 +126,7 @@ export const resetAnalytics = (): void => {
   try {
     posthogClient.reset();
   } catch (error) {
-    console.error('[Analytics] Failed to reset analytics:', error);
+    logger.error('[Analytics] Failed to reset analytics:', error);
   }
 };
 

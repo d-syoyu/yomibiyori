@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useToast } from '@/lib/hooks/useToast'
 
 type ThemeStatus = 'pending' | 'approved' | 'rejected' | 'published'
 
@@ -44,6 +45,7 @@ const STATUS_CONFIG: Record<ThemeStatus, { label: string; className: string }> =
 function ThemesContent() {
   const searchParams = useSearchParams()
   const status = searchParams.get('status')
+  const toast = useToast()
 
   const [themes, setThemes] = useState<SponsorTheme[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,7 +89,7 @@ function ThemesContent() {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
-        alert('セッションが切れました。再ログインしてください。')
+        toast.error('セッションが切れました。再ログインしてください。')
         return
       }
 
@@ -107,9 +109,9 @@ function ThemesContent() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
         if (response.status === 403) {
-          alert('管理者権限が必要です')
+          toast.error('管理者権限が必要です')
         } else {
-          alert(`承認に失敗しました: ${errorData.detail || response.statusText}`)
+          toast.error(`承認に失敗しました: ${errorData.detail || response.statusText}`)
         }
         setProcessingId(null)
         return
@@ -118,10 +120,10 @@ function ThemesContent() {
       // 即座にリストから削除
       setThemes(prevThemes => prevThemes.filter(t => t.id !== themeId))
 
-      alert('お題を承認しました')
+      toast.success('お題を承認しました')
     } catch (error) {
       console.error('Failed to approve theme:', error)
-      alert('予期しないエラーが発生しました')
+      toast.error('予期しないエラーが発生しました')
     } finally {
       setProcessingId(null)
     }
@@ -139,7 +141,7 @@ function ThemesContent() {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
-        alert('セッションが切れました。再ログインしてください。')
+        toast.error('セッションが切れました。再ログインしてください。')
         return
       }
 
@@ -159,9 +161,9 @@ function ThemesContent() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
         if (response.status === 403) {
-          alert('管理者権限が必要です')
+          toast.error('管理者権限が必要です')
         } else {
-          alert(`却下に失敗しました: ${errorData.detail || response.statusText}`)
+          toast.error(`却下に失敗しました: ${errorData.detail || response.statusText}`)
         }
         setProcessingId(null)
         return
@@ -170,10 +172,10 @@ function ThemesContent() {
       // 即座にリストから削除
       setThemes(prevThemes => prevThemes.filter(t => t.id !== themeId))
 
-      alert('お題を却下しました（クレジットは返金されました）')
+      toast.success('お題を却下しました（クレジットは返金されました）')
     } catch (error) {
       console.error('Failed to reject theme:', error)
-      alert('予期しないエラーが発生しました')
+      toast.error('予期しないエラーが発生しました')
     } finally {
       setProcessingId(null)
     }

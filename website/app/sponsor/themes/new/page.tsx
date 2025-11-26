@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getImpersonation } from '@/lib/impersonation'
+import { useToast } from '@/lib/hooks/useToast'
 import ThemeCalendar from '@/components/ThemeCalendar'
 import VerticalText from '@/components/VerticalText'
 
@@ -35,6 +36,7 @@ const CATEGORY_COLORS: Record<string, { gradient: [string, string]; shadow: stri
 
 export default function NewThemePage() {
   const router = useRouter()
+  const toast = useToast()
   const [loading, setLoading] = useState(false)
   const [campaignId, setCampaignId] = useState<string | null>(null)
   const [credits, setCredits] = useState<number>(0)
@@ -221,7 +223,7 @@ export default function NewThemePage() {
         throw new Error(errorData.detail || 'お題の投稿に失敗しました')
       }
 
-      alert('お題を投稿しました。審査をお待ちください。')
+      toast.success('お題を投稿しました。審査をお待ちください。')
       router.push('/sponsor/themes')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'お題の投稿に失敗しました')

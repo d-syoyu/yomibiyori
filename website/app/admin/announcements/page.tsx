@@ -6,21 +6,12 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-
-interface Announcement {
-  id: string
-  title: string
-  content: string
-  type: 'info' | 'warning' | 'success' | 'update'
-  priority: number
-  is_pinned: boolean
-  is_published: boolean
-  expires_at: string | null
-  created_at: string
-  updated_at: string
-}
+import { ANNOUNCEMENT_TYPE_CONFIG } from '@/lib/constants'
+import { useToast } from '@/lib/hooks/useToast'
+import type { Announcement, AnnouncementType } from '@/types/sponsor'
 
 export default function AnnouncementsPage() {
+  const toast = useToast()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -29,7 +20,7 @@ export default function AnnouncementsPage() {
   const [formData, setFormData] = useState<{
     title: string
     content: string
-    type: 'info' | 'warning' | 'success' | 'update'
+    type: AnnouncementType
     priority: number
     is_pinned: boolean
     is_published: boolean
@@ -61,7 +52,7 @@ export default function AnnouncementsPage() {
       setAnnouncements(data || [])
     } catch (error) {
       console.error('Failed to load announcements:', error)
-      alert('お知らせの読み込みに失敗しました')
+      toast.error('お知らせの読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -111,21 +102,21 @@ export default function AnnouncementsPage() {
           .eq('id', editingId)
 
         if (error) throw error
-        alert('お知らせを更新しました')
+        toast.success('お知らせを更新しました')
       } else {
         const { error } = await supabase
           .from('sponsor_announcements')
           .insert(payload)
 
         if (error) throw error
-        alert('お知らせを作成しました')
+        toast.success('お知らせを作成しました')
       }
 
       resetForm()
       loadAnnouncements()
     } catch (error) {
       console.error('Failed to save announcement:', error)
-      alert('保存に失敗しました')
+      toast.error('保存に失敗しました')
     }
   }
 
@@ -139,27 +130,22 @@ export default function AnnouncementsPage() {
         .eq('id', id)
 
       if (error) throw error
-      alert('お知らせを削除しました')
+      toast.success('お知らせを削除しました')
       loadAnnouncements()
     } catch (error) {
       console.error('Failed to delete announcement:', error)
-      alert('削除に失敗しました')
+      toast.error('削除に失敗しました')
     }
   }
 
-  const typeLabels = {
-    info: '情報',
-    warning: '警告',
-    success: '成功',
-    update: '更新',
-  }
+  // Use constants for type config
+  const typeLabels = Object.fromEntries(
+    Object.entries(ANNOUNCEMENT_TYPE_CONFIG).map(([key, val]) => [key, val.label])
+  ) as Record<AnnouncementType, string>
 
-  const typeColors = {
-    info: 'from-blue-400 to-blue-500',
-    warning: 'from-yellow-400 to-orange-500',
-    success: 'from-green-400 to-emerald-500',
-    update: 'from-purple-400 to-violet-500',
-  }
+  const typeColors = Object.fromEntries(
+    Object.entries(ANNOUNCEMENT_TYPE_CONFIG).map(([key, val]) => [key, val.gradientClassName])
+  ) as Record<AnnouncementType, string>
 
   if (loading) {
     return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
@@ -235,7 +221,7 @@ export default function AnnouncementsPage() {
                 </label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as AnnouncementType })}
                   className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
                 >
                   {Object.entries(typeLabels).map(([value, label]) => (

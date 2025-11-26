@@ -327,6 +327,7 @@ export default function SponsorInsightsPage() {
 
                     // Map API results to themes
                     type ApiMetrics = {
+                        theme_id: string
                         impressions: number
                         submissions: number
                         sponsor_link_clicks: number
@@ -339,7 +340,7 @@ export default function SponsorInsightsPage() {
                         }
                     }
                     const metricsMap = new Map<string, ApiMetrics>(
-                        apiResult.results.map((r: any) => [r.theme_id, r as ApiMetrics])
+                        apiResult.results.map((r: ApiMetrics) => [r.theme_id, r])
                     )
 
                     console.log('[Insights] Metrics map:', Object.fromEntries(metricsMap))

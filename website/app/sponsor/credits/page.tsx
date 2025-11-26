@@ -4,50 +4,31 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getImpersonation } from '@/lib/impersonation'
-
-interface Transaction {
-  id: string
-  amount: number
-  transaction_type: 'purchase' | 'use' | 'refund' | 'admin_adjustment'
-  description: string | null
-  created_at: string
-}
+import { useSponsorAuth } from '@/lib/hooks/useSponsorAuth'
+import {
+  getTransactionTypeLabel,
+  getTransactionTypeClassName,
+} from '@/lib/constants'
+import type { CreditTransaction } from '@/types/sponsor'
 
 export default function SponsorCreditsPage() {
+  const { sponsorId, isImpersonating, accessToken, loading: authLoading } = useSponsorAuth()
   const [credits, setCredits] = useState<number>(0)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactions, setTransactions] = useState<CreditTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [purchaseQuantity, setPurchaseQuantity] = useState(1)
   const [purchasing, setPurchasing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isImpersonating, setIsImpersonating] = useState(false)
 
-  useEffect(() => {
-    loadCreditsAndTransactions()
-  }, [])
+  const loadCreditsAndTransactions = useCallback(async () => {
+    if (!sponsorId) {
+      window.location.href = '/sponsor-login'
+      return
+    }
 
-  async function loadCreditsAndTransactions() {
     try {
-      // Check for impersonation first
-      const impersonation = getImpersonation()
-      const { data: { session } } = await supabase.auth.getSession()
-
-      // Determine sponsor ID - use impersonation if available, otherwise session
-      let sponsorId: string
-      if (impersonation) {
-        sponsorId = impersonation.sponsorId
-        setIsImpersonating(true)
-      } else if (session) {
-        sponsorId = session.user.id
-        setIsImpersonating(false)
-      } else {
-        window.location.href = '/sponsor-login'
-        return
-      }
-
       // Get current credits from sponsors table
       const { data: sponsor } = await supabase
         .from('sponsors')
@@ -59,11 +40,11 @@ export default function SponsorCreditsPage() {
         setCredits(sponsor.credits)
       }
 
-      // Get transaction history from backend API (only if session exists)
-      if (session) {
+      // Get transaction history from backend API (only if access token exists)
+      if (accessToken) {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/sponsor/credits/transactions`, {
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorization': `Bearer ${accessToken}`,
           },
         })
 
@@ -77,7 +58,13 @@ export default function SponsorCreditsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [sponsorId, accessToken])
+
+  useEffect(() => {
+    if (!authLoading) {
+      loadCreditsAndTransactions()
+    }
+  }, [authLoading, loadCreditsAndTransactions])
 
   async function handlePurchase() {
     if (purchaseQuantity < 1 || purchaseQuantity > 100) {
@@ -118,28 +105,14 @@ export default function SponsorCreditsPage() {
 
       // Redirect to Stripe Checkout
       window.location.href = url
-    } catch (err: any) {
+    } catch (err) {
       console.error('Purchase failed:', err)
-      setError(err.message || '購入処理に失敗しました')
+      setError(err instanceof Error ? err.message : '購入処理に失敗しました')
       setPurchasing(false)
     }
   }
 
-  const transactionTypeLabels: Record<string, string> = {
-    purchase: '購入',
-    use: '使用',
-    refund: '返金',
-    admin_adjustment: '管理者調整',
-  }
-
-  const transactionTypeColors: Record<string, string> = {
-    purchase: 'text-green-600 bg-green-50 border-green-600',
-    use: 'text-blue-600 bg-blue-50 border-blue-600',
-    refund: 'text-orange-600 bg-orange-50 border-orange-600',
-    admin_adjustment: 'text-purple-600 bg-purple-50 border-purple-600',
-  }
-
-  if (loading) {
+  if (loading || authLoading) {
     return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
   }
 
@@ -301,8 +274,8 @@ export default function SponsorCreditsPage() {
                         })}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full border ${transactionTypeColors[transaction.transaction_type]}`}>
-                          {transactionTypeLabels[transaction.transaction_type]}
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full border ${getTransactionTypeClassName(transaction.transaction_type)}`}>
+                          {getTransactionTypeLabel(transaction.transaction_type)}
                         </span>
                       </td>
                       <td className={`py-3 px-4 text-sm font-bold text-right ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>

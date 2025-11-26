@@ -6,32 +6,16 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-
-interface Ticket {
-  id: string
-  user_id: string
-  subject: string
-  status: 'open' | 'in_progress' | 'resolved'
-  created_at: string
-  user?: {
-    name: string
-    email: string
-  }
-}
-
-interface Message {
-  id: string
-  message: string
-  is_admin: boolean
-  created_at: string
-  sender_id: string
-}
+import { TICKET_STATUS_CONFIG_ADMIN } from '@/lib/constants'
+import { useToast } from '@/lib/hooks/useToast'
+import type { SupportTicket, SupportTicketMessage, TicketStatus } from '@/types/sponsor'
 
 export default function AdminSupportPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([])
+  const toast = useToast()
+  const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
+  const [messages, setMessages] = useState<SupportTicketMessage[]>([])
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
   const [filter, setFilter] = useState<'all' | 'open' | 'resolved'>('open')
@@ -75,7 +59,7 @@ export default function AdminSupportPage() {
       const { data, error } = await query
 
       if (error) throw error
-      setTickets(data as any || [])
+      setTickets((data || []) as SupportTicket[])
     } catch (error) {
       console.error('Failed to fetch tickets:', error)
     } finally {
@@ -136,7 +120,7 @@ export default function AdminSupportPage() {
       fetchMessages(selectedTicket.id)
     } catch (error) {
       console.error('Failed to reply:', error)
-      alert('返信の送信に失敗しました')
+      toast.error('返信の送信に失敗しました')
     } finally {
       setSending(false)
     }
@@ -157,26 +141,17 @@ export default function AdminSupportPage() {
         t.id === selectedTicket.id ? { ...t, status: 'resolved' } : t
       ))
       setSelectedTicket({ ...selectedTicket, status: 'resolved' })
-      alert('解決済みにしました')
+      toast.success('解決済みにしました')
     } catch (error) {
       console.error('Failed to resolve:', error)
     }
   }
 
-  function getStatusBadge(status: string) {
-    const styles = {
-      open: 'bg-red-100 text-red-800 border-red-200',
-      in_progress: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      resolved: 'bg-gray-100 text-gray-800 border-gray-200',
-    }
-    const labels = {
-      open: '未対応',
-      in_progress: '対応中',
-      resolved: '解決済み',
-    }
+  function getStatusBadge(status: TicketStatus) {
+    const config = TICKET_STATUS_CONFIG_ADMIN[status]
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels] || status}
+      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${config?.className || 'bg-gray-100 text-gray-800'}`}>
+        {config?.label || status}
       </span>
     )
   }

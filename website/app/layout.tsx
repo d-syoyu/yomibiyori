@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Serif_JP } from "next/font/google";
 import "./globals.css";
+import { ToastProviderWrapper } from "@/components/providers/ToastProviderWrapper";
 
 const notoSerifJP = Noto_Serif_JP({
   variable: "--font-noto-serif-jp",
@@ -33,7 +34,9 @@ export default function RootLayout({
       <body
         className={`${notoSerifJP.variable} antialiased`}
       >
-        {children}
+        <ToastProviderWrapper>
+          {children}
+        </ToastProviderWrapper>
       </body>
     </html>
   );

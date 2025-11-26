@@ -203,7 +203,16 @@ export async function GET(request: Request) {
         if (Array.isArray(data.result)) {
             console.log('[PostHog API] Processing', data.result.length, 'result items')
 
-            data.result.forEach((item: any, index: number) => {
+            interface PostHogResultItem {
+                breakdown_value?: string
+                action?: { id?: string; name?: string }
+                event?: string
+                count?: number
+                label?: string
+                data?: number[]
+                aggregated_value?: number
+            }
+            data.result.forEach((item: PostHogResultItem, index: number) => {
                 // Debug: Log first few items to understand structure
                 if (index < 3) {
                     console.log(`[PostHog API] Item ${index} structure:`, {
@@ -330,8 +339,14 @@ export async function GET(request: Request) {
             const regions: Record<string, number> = {}
             const currentYear = new Date().getFullYear()
 
+            interface UserInfo {
+                name?: string | null
+                email?: string | null
+                birth_year?: number | null
+                prefecture?: string | null
+            }
             worksWithLikes.forEach(work => {
-                const user = work.user as any
+                const user = work.user as UserInfo | null
                 if (!user) return
 
                 // Age Group
@@ -362,7 +377,7 @@ export async function GET(request: Request) {
             // Get user display name for top work
             let topWorkData = null
             if (topWork && topWork.likes_count > 0) {
-                const user = topWork.user as any
+                const user = topWork.user as UserInfo | null
                 topWorkData = {
                     text: topWork.text,
                     likes: topWork.likes_count,

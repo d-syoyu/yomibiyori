@@ -7,6 +7,7 @@ import {
   fetchSponsorCreditTransactions,
   refundStripePayment,
 } from '@/lib/adminApi'
+import { useToast } from '@/lib/hooks/useToast'
 import Link from 'next/link'
 
 export default function AdminSponsorDetailPage({
@@ -15,6 +16,7 @@ export default function AdminSponsorDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const toast = useToast()
   const [sponsor, setSponsor] = useState<{
     id: string
     company_name: string
@@ -55,11 +57,11 @@ export default function AdminSponsorDetailPage({
 
   async function handleAdjust() {
     if (adjustAmount === 0) {
-      alert('調整額を入力してください')
+      toast.warning('調整額を入力してください')
       return
     }
     if (!adjustDescription.trim()) {
-      alert('調整理由を入力してください')
+      toast.warning('調整理由を入力してください')
       return
     }
 
@@ -69,9 +71,10 @@ export default function AdminSponsorDetailPage({
       setAdjustAmount(0)
       setAdjustDescription('')
       setRefreshKey((v) => v + 1)
+      toast.success('クレジットを調整しました')
     } catch (err) {
       console.error('Failed to adjust credits:', err)
-      alert(err instanceof Error ? err.message : 'クレジット調整に失敗しました')
+      toast.error(err instanceof Error ? err.message : 'クレジット調整に失敗しました')
     } finally {
       setAdjusting(false)
     }
@@ -79,15 +82,15 @@ export default function AdminSponsorDetailPage({
 
   async function handleRefund() {
     if (!refundPaymentIntentId.trim()) {
-      alert('Payment Intent IDを入力してください')
+      toast.warning('Payment Intent IDを入力してください')
       return
     }
     if (refundAmountCredits <= 0) {
-      alert('返金クレジット数を入力してください')
+      toast.warning('返金クレジット数を入力してください')
       return
     }
     if (!refundReason.trim()) {
-      alert('返金理由を入力してください')
+      toast.warning('返金理由を入力してください')
       return
     }
 
@@ -103,14 +106,14 @@ export default function AdminSponsorDetailPage({
         refundAmountCredits,
         refundReason
       )
-      alert(result.message)
+      toast.success(result.message)
       setRefundPaymentIntentId('')
       setRefundAmountCredits(0)
       setRefundReason('')
       setRefreshKey((v) => v + 1)
     } catch (err) {
       console.error('Failed to refund payment:', err)
-      alert(err instanceof Error ? err.message : '返金処理に失敗しました')
+      toast.error(err instanceof Error ? err.message : '返金処理に失敗しました')
     } finally {
       setRefunding(false)
     }
@@ -339,7 +342,7 @@ export default function AdminSponsorDetailPage({
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(transaction.stripe_payment_intent_id!)
-                            alert('Payment Intent IDをコピーしました')
+                            toast.info('Payment Intent IDをコピーしました')
                           }}
                           className="hover:text-[var(--color-igusa)] underline"
                           title="クリックしてコピー"

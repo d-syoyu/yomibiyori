@@ -7,43 +7,27 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { getImpersonation } from '@/lib/impersonation'
-
-interface SponsorTheme {
-  id: string
-  campaign_id: string
-  date: string
-  category: string
-  text_575: string
-  status: 'pending' | 'approved' | 'rejected' | 'published'
-  rejection_reason?: string
-  created_at: string
-}
+import { useSponsorAuth } from '@/lib/hooks/useSponsorAuth'
+import {
+  THEME_STATUS_FILTERS,
+  getThemeStatusLabel,
+  getThemeStatusClassName,
+} from '@/lib/constants'
+import type { SponsorTheme, ThemeStatus } from '@/types/sponsor'
 
 function SponsorThemesContent() {
   const searchParams = useSearchParams()
-  const status = searchParams.get('status')
+  const status = searchParams.get('status') as ThemeStatus | null
+  const { sponsorId, loading: authLoading } = useSponsorAuth()
 
   const [themes, setThemes] = useState<SponsorTheme[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadThemes = useCallback(async () => {
+    if (!sponsorId) return
+
     try {
       setLoading(true)
-
-      // Check for impersonation first
-      const impersonation = getImpersonation()
-      const { data: { session } } = await supabase.auth.getSession()
-
-      // Determine sponsor ID - use impersonation if available, otherwise session
-      let sponsorId: string
-      if (impersonation) {
-        sponsorId = impersonation.sponsorId
-      } else if (session) {
-        sponsorId = session.user.id
-      } else {
-        return
-      }
 
       const { data: campaigns } = await supabase
         .from('sponsor_campaigns')
@@ -77,49 +61,13 @@ function SponsorThemesContent() {
     } finally {
       setLoading(false)
     }
-  }, [status])
+  }, [sponsorId, status])
 
   useEffect(() => {
-    loadThemes()
-  }, [loadThemes])
-
-  const statusFilters = [
-    { label: '全て', value: null },
-    { label: '審査待ち', value: 'pending' },
-    { label: '承認済み', value: 'approved' },
-    { label: '配信済み', value: 'published' },
-    { label: '却下', value: 'rejected' },
-  ]
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-50 text-yellow-800 border border-yellow-200'
-      case 'approved':
-        return 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-      case 'published':
-        return 'bg-[var(--color-washi)] text-[var(--color-igusa)] border border-[var(--color-igusa-light)]'
-      case 'rejected':
-        return 'bg-red-50 text-red-800 border border-red-200'
-      default:
-        return 'bg-gray-50 text-gray-800 border border-gray-200'
+    if (!authLoading) {
+      loadThemes()
     }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '審査待ち'
-      case 'approved':
-        return '承認済み'
-      case 'published':
-        return '配信済み'
-      case 'rejected':
-        return '却下'
-      default:
-        return status
-    }
-  }
+  }, [authLoading, loadThemes])
 
   if (loading) {
     return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
@@ -147,7 +95,7 @@ function SponsorThemesContent() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {statusFilters.map((filter) => {
+        {THEME_STATUS_FILTERS.map((filter) => {
           const isActive = filter.value === status
           return (
             <a
@@ -172,7 +120,7 @@ function SponsorThemesContent() {
         <div className="card text-center py-12">
           <p className="text-[var(--color-text-secondary)] text-lg mb-6">
             {status
-              ? `${statusFilters.find((f) => f.value === status)?.label}のお題はありません`
+              ? `${THEME_STATUS_FILTERS.find((f) => f.value === status)?.label}のお題はありません`
               : 'お題がありません'}
           </p>
           <a
@@ -199,9 +147,9 @@ function SponsorThemesContent() {
                   </p>
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(theme.status)}`}
+                  className={`px-3 py-1 rounded-full text-sm font-medium border ${getThemeStatusClassName(theme.status)}`}
                 >
-                  {getStatusLabel(theme.status)}
+                  {getThemeStatusLabel(theme.status)}
                 </span>
               </div>
 

@@ -5,6 +5,7 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import Constants from 'expo-constants';
+import { logger } from '../utils/logger';
 import type {
   SignUpRequest,
   SignUpResponse,
@@ -84,7 +85,7 @@ class ApiClient {
           try {
             await this.tokenValidationHook();
           } catch (err) {
-            console.error('[API] Token validation hook failed:', err);
+            logger.error('[API] Token validation hook failed:', err);
           }
         }
 
@@ -113,7 +114,7 @@ class ApiClient {
         if (shouldRetry && config._retryCount < MAX_RETRIES) {
           config._retryCount += 1;
 
-          console.log(
+          logger.debug(
             `[API] Retrying request (${config._retryCount}/${MAX_RETRIES}):`,
             config.url
           );
@@ -141,7 +142,7 @@ class ApiClient {
           ) {
             // Token has expired - need to logout
             // Note: This will be handled by the caller (UI components)
-            console.warn('[API] Token expired - user needs to re-login');
+            logger.warn('[API] Token expired - user needs to re-login');
           }
 
           return Promise.reject(apiError);

@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 
 import api from '../services/api';
 import type { NotificationTokenRequest } from '../types';
+import { logger } from './logger';
 
 let handlerConfigured = false;
 
@@ -26,7 +27,7 @@ export function configureNotificationHandler(): void {
 
 export async function registerForPushNotifications(): Promise<void> {
   if (!Device.isDevice) {
-    console.log('[Push] Physical device required for push notifications');
+    logger.debug('[Push] Physical device required for push notifications');
     return;
   }
 
@@ -40,7 +41,7 @@ export async function registerForPushNotifications(): Promise<void> {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('[Push] Notification permission not granted');
+      logger.debug('[Push] Notification permission not granted');
       return;
     }
 
@@ -55,7 +56,7 @@ export async function registerForPushNotifications(): Promise<void> {
     const expoPushToken = tokenResponse.data;
 
     if (!expoPushToken) {
-      console.warn('[Push] Expo push token is empty');
+      logger.warn('[Push] Expo push token is empty');
       return;
     }
 
@@ -76,8 +77,8 @@ export async function registerForPushNotifications(): Promise<void> {
     };
 
     await api.registerNotificationToken(payload);
-    console.log('[Push] Expo push token registered successfully');
+    logger.debug('[Push] Expo push token registered successfully');
   } catch (error) {
-    console.error('[Push] Failed to register push token:', error);
+    logger.error('[Push] Failed to register push token:', error);
   }
 }

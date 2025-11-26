@@ -28,6 +28,7 @@ import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { VALIDATION_MESSAGES } from '../constants/errorMessages';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { identifyUser, trackEvent, EventNames } from '../utils/analytics';
+import { logger } from '../utils/logger';
 import api from '../services/api';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -57,7 +58,7 @@ export default function LoginScreen() {
         display_name: user.display_name,
       });
     } catch (identifyError) {
-      console.error('[LoginScreen] Failed to identify user:', identifyError);
+      logger.error('[LoginScreen] Failed to identify user:', identifyError);
     }
   };
 
@@ -91,10 +92,11 @@ export default function LoginScreen() {
       if (navigation.canGoBack()) {
         navigation.goBack();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       trackEvent(isSignUp ? EventNames.SIGNUP_ATTEMPTED : EventNames.LOGIN_ATTEMPTED, {
         success: false,
-        error: err?.message || 'Unknown error',
+        error: errorMessage,
       });
       handleError(err, 'authentication');
       clearError();
@@ -103,7 +105,7 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     setIsOAuthLoading(true);
-    console.log('[Auth] Starting Google OAuth flow...');
+    logger.debug('[Auth] Starting Google OAuth flow...');
 
     try {
       // Determine redirect URL based on environment
@@ -112,29 +114,31 @@ export default function LoginScreen() {
         ? Linking.createURL('/')
         : 'yomibiyori://';
 
-      console.log('[Auth] Redirect URL:', redirectUrl);
-      console.log('[Auth] App ownership:', Constants.appOwnership);
+      logger.debug('[Auth] Redirect URL:', redirectUrl);
+      logger.debug('[Auth] App ownership:', Constants.appOwnership);
 
       // Get OAuth URL from backend with redirect URL for mobile app
-      console.log('[Auth] Fetching OAuth URL from backend...');
+      logger.debug('[Auth] Fetching OAuth URL from backend...');
       const oauthData = await api.getGoogleOAuthUrl(redirectUrl);
-      console.log('[Auth] OAuth URL received:', oauthData.url);
+      logger.sensitive('[Auth] OAuth URL received', oauthData.url);
 
       // Open browser for OAuth flow
-      console.log('[Auth] Opening browser for authentication...');
+      logger.debug('[Auth] Opening browser for authentication...');
       const result = await WebBrowser.openAuthSessionAsync(
         oauthData.url,
         redirectUrl
       );
 
-      console.log('[Auth] Browser result type:', result.type);
-      console.log('[Auth] Browser result:', JSON.stringify(result, null, 2));
+      logger.debug('[Auth] Browser result type:', result.type);
+      // Do not log full result in production - may contain tokens
+      logger.sensitive('[Auth] Browser result', result);
 
       if (result.type === 'success') {
         // Extract tokens from callback URL
         // Supabase can return tokens in URL fragment (#) or query parameters (?)
         const url = result.url;
-        console.log('[Auth] OAuth callback URL:', url);
+        // SECURITY: Never log OAuth callback URL - contains tokens
+        logger.sensitive('[Auth] OAuth callback received');
 
         // Try to parse from fragment first (#access_token=...)
         let params = new URLSearchParams(url.split('#')[1] || '');
@@ -149,8 +153,8 @@ export default function LoginScreen() {
           refreshToken = params.get('refresh_token');
         }
 
-        console.log('[Auth] Access token found:', !!accessToken);
-        console.log('[Auth] Refresh token found:', !!refreshToken);
+        logger.debug('[Auth] Access token found:', !!accessToken);
+        logger.debug('[Auth] Refresh token found:', !!refreshToken);
 
         if (!accessToken) {
           showError('Google認証に失敗しました');
@@ -185,19 +189,20 @@ export default function LoginScreen() {
         }
       } else {
         // User cancelled or other error
-        console.log('[Auth] OAuth cancelled or failed:', result.type);
+        logger.debug('[Auth] OAuth cancelled or failed:', result.type);
         trackEvent(EventNames.LOGIN_ATTEMPTED, {
           success: false,
           auth_method: 'google_oauth',
           error: result.type,
         });
       }
-    } catch (err: any) {
-      console.error('[Auth] Google OAuth error:', err);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      logger.error('[Auth] Google OAuth error:', err);
       trackEvent(EventNames.LOGIN_ATTEMPTED, {
         success: false,
         auth_method: 'google_oauth',
-        error: err?.message || 'Unknown error',
+        error: errorMessage,
       });
       handleError(err, 'authentication');
     } finally {
@@ -207,7 +212,7 @@ export default function LoginScreen() {
 
   const handleAppleLogin = async () => {
     setIsOAuthLoading(true);
-    console.log('[Auth] Starting Apple OAuth flow...');
+    logger.debug('[Auth] Starting Apple OAuth flow...');
 
     try {
       // Determine redirect URL based on environment
@@ -215,28 +220,30 @@ export default function LoginScreen() {
         ? Linking.createURL('/')
         : 'yomibiyori://';
 
-      console.log('[Auth] Redirect URL:', redirectUrl);
-      console.log('[Auth] App ownership:', Constants.appOwnership);
+      logger.debug('[Auth] Redirect URL:', redirectUrl);
+      logger.debug('[Auth] App ownership:', Constants.appOwnership);
 
       // Get OAuth URL from backend
-      console.log('[Auth] Fetching Apple OAuth URL from backend...');
+      logger.debug('[Auth] Fetching Apple OAuth URL from backend...');
       const oauthData = await api.getAppleOAuthUrl(redirectUrl);
-      console.log('[Auth] OAuth URL received:', oauthData.url);
+      logger.sensitive('[Auth] OAuth URL received', oauthData.url);
 
       // Open browser for OAuth flow
-      console.log('[Auth] Opening browser for authentication...');
+      logger.debug('[Auth] Opening browser for authentication...');
       const result = await WebBrowser.openAuthSessionAsync(
         oauthData.url,
         redirectUrl
       );
 
-      console.log('[Auth] Browser result type:', result.type);
-      console.log('[Auth] Browser result:', JSON.stringify(result, null, 2));
+      logger.debug('[Auth] Browser result type:', result.type);
+      // Do not log full result in production - may contain tokens
+      logger.sensitive('[Auth] Browser result', result);
 
       if (result.type === 'success') {
         // Extract tokens from callback URL
         const url = result.url;
-        console.log('[Auth] OAuth callback URL:', url);
+        // SECURITY: Never log OAuth callback URL - contains tokens
+        logger.sensitive('[Auth] OAuth callback received');
 
         // Try to parse from fragment first (#access_token=...)
         let params = new URLSearchParams(url.split('#')[1] || '');
@@ -251,8 +258,8 @@ export default function LoginScreen() {
           refreshToken = params.get('refresh_token');
         }
 
-        console.log('[Auth] Access token found:', !!accessToken);
-        console.log('[Auth] Refresh token found:', !!refreshToken);
+        logger.debug('[Auth] Access token found:', !!accessToken);
+        logger.debug('[Auth] Refresh token found:', !!refreshToken);
 
         if (!accessToken) {
           showError('Apple認証に失敗しました');
@@ -287,19 +294,20 @@ export default function LoginScreen() {
         }
       } else {
         // User cancelled or other error
-        console.log('[Auth] OAuth cancelled or failed:', result.type);
+        logger.debug('[Auth] OAuth cancelled or failed:', result.type);
         trackEvent(EventNames.LOGIN_ATTEMPTED, {
           success: false,
           auth_method: 'apple_oauth',
           error: result.type,
         });
       }
-    } catch (err: any) {
-      console.error('[Auth] Apple OAuth error:', err);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      logger.error('[Auth] Apple OAuth error:', err);
       trackEvent(EventNames.LOGIN_ATTEMPTED, {
         success: false,
         auth_method: 'apple_oauth',
-        error: err?.message || 'Unknown error',
+        error: errorMessage,
       });
       handleError(err, 'authentication');
     } finally {
