@@ -19,8 +19,48 @@ class StripeMissingAPIKeyError(Exception):
     pass
 
 
+def get_or_create_stripe_customer(
+    db_session: Session,
+    sponsor: Sponsor,
+) -> str:
+    """Get existing or create new Stripe Customer for a sponsor.
+
+    Args:
+        db_session: Database session
+        sponsor: Sponsor model instance
+
+    Returns:
+        Stripe Customer ID
+    """
+    import stripe
+
+    stripe.api_key = settings.stripe_api_key
+
+    # Return existing customer if available
+    if sponsor.stripe_customer_id:
+        return sponsor.stripe_customer_id
+
+    # Create new Stripe Customer
+    customer = stripe.Customer.create(
+        name=sponsor.company_name,
+        email=sponsor.contact_email,
+        metadata={
+            "sponsor_id": sponsor.id,
+        },
+    )
+
+    # Save customer ID to database
+    sponsor.stripe_customer_id = customer.id
+    db_session.commit()
+
+    logger.info(f"Created Stripe Customer {customer.id} for sponsor {sponsor.id}")
+
+    return customer.id
+
+
 def create_checkout_session(
-    sponsor_id: str,
+    db_session: Session,
+    sponsor: Sponsor,
     quantity: int,
     success_url: str,
     cancel_url: str,
@@ -28,7 +68,8 @@ def create_checkout_session(
     """Create a Stripe Checkout session for credit purchase.
 
     Args:
-        sponsor_id: Sponsor ID
+        db_session: Database session
+        sponsor: Sponsor model instance
         quantity: Number of credits to purchase
         success_url: URL to redirect after successful payment
         cancel_url: URL to redirect if payment is cancelled
@@ -47,13 +88,25 @@ def create_checkout_session(
 
         stripe.api_key = settings.stripe_api_key
 
+        # Get or create Stripe Customer (required for bank transfer)
+        customer_id = get_or_create_stripe_customer(db_session, sponsor)
+
         # Calculate total amount
         unit_price = settings.sponsor_credit_price_jpy
-        total_amount = unit_price * quantity
 
-        # Create Checkout Session
+        # Create Checkout Session with multiple payment methods
+        # User can choose payment method on Stripe's UI
         session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
+            customer=customer_id,
+            payment_method_types=["card", "customer_balance"],
+            payment_method_options={
+                "customer_balance": {
+                    "funding_type": "bank_transfer",
+                    "bank_transfer": {
+                        "type": "jp_bank_transfer",
+                    },
+                },
+            },
             line_items=[
                 {
                     "price_data": {
@@ -70,15 +123,15 @@ def create_checkout_session(
             mode="payment",
             success_url=success_url,
             cancel_url=cancel_url,
-            client_reference_id=sponsor_id,  # Store sponsor_id for webhook
+            client_reference_id=sponsor.id,
             metadata={
-                "sponsor_id": sponsor_id,
+                "sponsor_id": sponsor.id,
                 "credit_quantity": quantity,
             },
         )
 
         logger.info(
-            f"Created Stripe Checkout session {session.id} for sponsor {sponsor_id}, quantity: {quantity}"
+            f"Created Stripe Checkout session {session.id} for sponsor {sponsor.id}, quantity: {quantity}"
         )
 
         return (session.id, session.url)

@@ -25,6 +25,7 @@ class Sponsor(Base):
     official_url: Mapped[str | None] = mapped_column(Text)
     logo_url: Mapped[str | None] = mapped_column(Text)
     credits: Mapped[int] = mapped_column(Integer, default=0)  # Available credits for slot reservations
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255))  # Stripe Customer ID for payments
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     text: Mapped[str | None] = mapped_column(Text)
     category: Mapped[str | None] = mapped_column(String(50))

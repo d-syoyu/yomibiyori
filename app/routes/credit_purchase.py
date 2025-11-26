@@ -25,14 +25,24 @@ router = APIRouter(tags=["Sponsor Credits"])
 def create_purchase_session(
     payload: CreditPurchaseCreate,
     current_user: Annotated[User, Depends(get_current_sponsor)],
+    db_session: Annotated[Session, Depends(get_authenticated_db_session)],
 ):
     """Create a Stripe Checkout session for purchasing credits.
 
     Returns a session ID and URL to redirect the user to Stripe Checkout.
+    Payment method (card, bank transfer) is selected on Stripe's UI.
     """
+    from app.models.sponsor import Sponsor
+
+    # Get sponsor from database
+    sponsor = db_session.get(Sponsor, current_user.id)
+    if not sponsor:
+        raise HTTPException(status_code=404, detail="Sponsor not found")
+
     try:
         session_id, checkout_url = credit_service.create_checkout_session(
-            sponsor_id=current_user.id,
+            db_session=db_session,
+            sponsor=sponsor,
             quantity=payload.quantity,
             success_url=payload.success_url,
             cancel_url=payload.cancel_url,
