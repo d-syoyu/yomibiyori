@@ -19,15 +19,15 @@ const trimText = (value?: string): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const VerticalPoem: React.FC<VerticalPoemProps> = ({
+const VerticalPoem: React.FC<VerticalPoemProps> = React.memo(({
   upperText,
   lowerText,
   lowerBold = true,
   maxWidth = 280,
   columnMinHeight = 160,
 }) => {
-  const normalizedUpper = trimText(upperText);
-  const normalizedLower = trimText(lowerText) ?? '';
+  const normalizedUpper = React.useMemo(() => trimText(upperText), [upperText]);
+  const normalizedLower = React.useMemo(() => trimText(lowerText) ?? '', [lowerText]);
 
   return (
     <View
@@ -53,7 +53,7 @@ const VerticalPoem: React.FC<VerticalPoemProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   row: {
@@ -87,3 +87,6 @@ const styles = StyleSheet.create({
 });
 
 export default VerticalPoem;
+
+// VerticalPoemを表示名で識別可能にする
+VerticalPoem.displayName = 'VerticalPoem';

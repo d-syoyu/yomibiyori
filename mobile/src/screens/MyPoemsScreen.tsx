@@ -114,23 +114,43 @@ export default function MyPoemsScreen() {
 
     try {
       // その日の全ての作品を取得（すべてのカテゴリ）
-      const myWorks = await api.getMyWorks({ limit: 200 }); // 十分大きな数
+      const myWorks = await api.getMyWorks({ limit: 200 });
 
-      // その日の作品のみフィルタ（テーマの日付でフィルタ）
-      const worksForDate: Array<{ work: Work; theme?: Theme }> = [];
+      // 最適化: ユニークなテーマIDを収集し、バッチでプリロード
+      const uniqueThemeIds = [...new Set(myWorks.map(w => w.theme_id))];
+      console.log('[MyPoemsScreen] Pre-loading', uniqueThemeIds.length, 'unique themes');
 
-      await Promise.all(
-        myWorks.map(async (work) => {
-          try {
-            const theme = await getThemeById(work.theme_id);
-            if (theme.date === date) {
-              worksForDate.push({ work, theme });
+      // テーマを並列でプリロード（キャッシュがあればスキップされる）
+      const themesMap = new Map<string, Theme>();
+      const BATCH_SIZE = 5; // 並列度を制限
+
+      for (let i = 0; i < uniqueThemeIds.length; i += BATCH_SIZE) {
+        const batch = uniqueThemeIds.slice(i, i + BATCH_SIZE);
+        const themes = await Promise.all(
+          batch.map(async (id) => {
+            try {
+              return await getThemeById(id);
+            } catch (error) {
+              console.warn('[MyPoemsScreen] Failed to fetch theme:', id);
+              return null;
             }
-          } catch (error) {
-            console.error('[MyPoemsScreen] Failed to fetch theme:', work.theme_id, error);
+          })
+        );
+        themes.forEach((theme) => {
+          if (theme) {
+            themesMap.set(theme.id, theme);
           }
-        })
-      );
+        });
+      }
+
+      // その日の作品のみフィルタ（キャッシュ済みテーマから取得）
+      const worksForDate: Array<{ work: Work; theme?: Theme }> = [];
+      for (const work of myWorks) {
+        const theme = themesMap.get(work.theme_id);
+        if (theme && theme.date === date) {
+          worksForDate.push({ work, theme });
+        }
+      }
 
       console.log('[MyPoemsScreen] Loaded', worksForDate.length, 'works for date:', date);
 

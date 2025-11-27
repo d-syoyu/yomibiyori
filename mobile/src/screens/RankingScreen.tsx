@@ -8,7 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -193,24 +193,13 @@ export default function RankingScreen() {
           {/* Theme display removed to align with combined cards */}
         </View>
 
-        {/* Scrollable Ranking List */}
-        <ScrollView
-          style={styles.rankingScrollView}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-
-        {/* Loading State */}
-        {loading && (
+        {/* 仮想化されたランキングリスト */}
+        {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4A5568" />
             <Text style={styles.loadingText}>読み込み中...</Text>
           </View>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
+        ) : error ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>{error}</Text>
             <TouchableOpacity
@@ -220,23 +209,19 @@ export default function RankingScreen() {
               <Text style={styles.retryButtonText}>再試行</Text>
             </TouchableOpacity>
           </View>
-        )}
-
-        {/* Empty State */}
-        {!loading && !error && rankings.length === 0 && (
+        ) : rankings.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>ランキングデータがありません</Text>
             <Text style={styles.emptyStateSubtext}>
               作品が投稿されるとランキングが表示されます
             </Text>
           </View>
-        )}
-
-        {/* Ranking List */}
-        {!loading && rankings.length > 0 && (
-          <View style={styles.rankingList}>
-            {rankings.map((entry) => (
-              <View key={entry.work_id} style={styles.rankingCard}>
+        ) : (
+          <FlatList
+            data={rankings}
+            keyExtractor={(item) => item.work_id}
+            renderItem={({ item: entry }) => (
+              <View style={styles.rankingCard}>
                 <WorkCard
                   upperText={theme?.text}
                   lowerText={entry.text}
@@ -275,10 +260,19 @@ export default function RankingScreen() {
                   }
                 />
               </View>
-            ))}
-          </View>
+            )}
+            contentContainerStyle={styles.rankingList}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            // パフォーマンス最適化オプション
+            initialNumToRender={5}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={50}
+          />
         )}
-        </ScrollView>
 
         <ShareSheet
           visible={shareSheetVisible}
@@ -349,10 +343,6 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     marginBottom: spacing.md,
     letterSpacing: 0.5,
-  },
-  rankingScrollView: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
   },
   categorySelector: {
     flexDirection: 'row',

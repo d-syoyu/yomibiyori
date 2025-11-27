@@ -30,7 +30,7 @@ interface WorkCardProps {
 
 const DEFAULT_CATEGORY: ThemeCategory = '恋愛';
 
-const WorkCard: React.FC<WorkCardProps> = ({
+const WorkCard: React.FC<WorkCardProps> = React.memo(({
   upperText,
   lowerText,
   category,
@@ -155,7 +155,7 @@ const WorkCard: React.FC<WorkCardProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   outerContainer: {
@@ -260,3 +260,6 @@ const styles = StyleSheet.create({
 });
 
 export default WorkCard;
+
+// WorkCardを表示名で識別可能にする
+WorkCard.displayName = 'WorkCard';

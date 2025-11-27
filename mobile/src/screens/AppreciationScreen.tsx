@@ -8,7 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -61,39 +61,46 @@ export default function AppreciationScreen({ route }: Props) {
     }, [selectedCategory])
   );
 
-  const recordImpressionsForWorks = useCallback(async (worksList: Work[]) => {
+  // 印象記録をバックグラウンドで実行（UIをブロックしない）
+  const recordImpressionsForWorks = useCallback((worksList: Work[]) => {
     if (!worksList.length) {
       return;
     }
 
-    try {
-      const viewerHash = await getViewerHash();
-      const pendingWorks = worksList
-        .filter(work => !impressionsLoggedRef.current.has(work.id))
-        .slice(0, IMPRESSION_BATCH_LIMIT);
+    // 非同期でバックグラウンド実行
+    (async () => {
+      try {
+        const viewerHash = await getViewerHash();
+        const pendingWorks = worksList
+          .filter(work => !impressionsLoggedRef.current.has(work.id))
+          .slice(0, IMPRESSION_BATCH_LIMIT);
 
-      if (!pendingWorks.length) {
-        return;
+        if (!pendingWorks.length) {
+          return;
+        }
+
+        // バックグラウンドで並列実行
+        await Promise.all(
+          pendingWorks.map(work =>
+            api
+              .recordWorkImpression(work.id, {
+                viewer_hash: viewerHash,
+                count: 1,
+              })
+              .then(() => {
+                impressionsLoggedRef.current.add(work.id);
+              })
+              .catch(error => {
+                // エラーはログのみで続行（UIに影響を与えない）
+                console.warn('[AppreciationScreen] Impression failed for:', work.id);
+              })
+          )
+        );
+      } catch (error) {
+        // 全体エラーもログのみで続行
+        console.error('[AppreciationScreen] Impression tracking failed:', error);
       }
-
-      await Promise.all(
-        pendingWorks.map(work =>
-          api
-            .recordWorkImpression(work.id, {
-              viewer_hash: viewerHash,
-              count: 1,
-            })
-            .then(() => {
-              impressionsLoggedRef.current.add(work.id);
-            })
-            .catch(error => {
-              console.warn('[AppreciationScreen] Failed to record impression', error);
-            })
-        )
-      );
-    } catch (error) {
-      console.error('[AppreciationScreen] Impression tracking failed:', error);
-    }
+    })();
   }, []);
 
   // Load works for the selected category
@@ -222,65 +229,68 @@ export default function AppreciationScreen({ route }: Props) {
           {/* Theme info now handled within each work card */}
         </View>
 
-        {/* 作品リスト（スクロール可能） */}
-        <ScrollView
-          style={styles.worksScrollView}
-          refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-          }
-        >
-          <View style={styles.worksSection}>
-          <Text style={styles.sectionTitle}>
-            {selectedCategory}の作品
-          </Text>
-
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4A5568" />
-              <Text style={styles.loadingText}>作品を読み込み中...</Text>
-            </View>
-          ) : works.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>作品がありません</Text>
-              <Text style={styles.emptyStateSubtext}>
-                まだ誰も作品を投稿していません
+        {/* 作品リスト（仮想化されたスクロール） */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4A5568" />
+            <Text style={styles.loadingText}>作品を読み込み中...</Text>
+          </View>
+        ) : works.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>作品がありません</Text>
+            <Text style={styles.emptyStateSubtext}>
+              まだ誰も作品を投稿していません
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={works}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item: work }) => {
+              const theme = themesMap.get(work.theme_id);
+              return (
+                <WorkCard
+                  upperText={theme?.text}
+                  lowerText={work.text}
+                  category={theme?.category ?? '恋愛'}
+                  displayName={work.display_name}
+                  likesCount={work.likes_count}
+                  onLike={() => handleLike(work.id)}
+                  onShare={() => openShareSheet(work)}
+                  sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}
+                  sponsorUrl={theme?.sponsor_official_url}
+                  onSponsorPress={() => {
+                    if (!theme?.sponsor_company_name || !theme?.sponsor_official_url) {
+                      return;
+                    }
+                    trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
+                      theme_id: theme.id,
+                      sponsor_name: theme.sponsor_company_name,
+                      url: theme.sponsor_official_url,
+                      context: 'appreciation',
+                    });
+                    Linking.openURL(theme.sponsor_official_url);
+                  }}
+                />
+              );
+            }}
+            ListHeaderComponent={
+              <Text style={styles.sectionTitle}>
+                {selectedCategory}の作品
               </Text>
-            </View>
-          ) : (
-            <View style={styles.worksList}>
-              {works.map((work) => {
-                const theme = themesMap.get(work.theme_id);
-                return (
-                  <WorkCard
-                    key={work.id}
-                    upperText={theme?.text}
-                    lowerText={work.text}
-                    category={theme?.category ?? '恋愛'}
-                    displayName={work.display_name}
-                    likesCount={work.likes_count}
-                    onLike={() => handleLike(work.id)}
-                    onShare={() => openShareSheet(work)}
-                    sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}
-                    sponsorUrl={theme?.sponsor_official_url}
-                    onSponsorPress={() => {
-                      if (!theme?.sponsor_company_name || !theme?.sponsor_official_url) {
-                        return;
-                      }
-                      trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
-                        theme_id: theme.id,
-                        sponsor_name: theme.sponsor_company_name,
-                        url: theme.sponsor_official_url,
-                        context: 'appreciation',
-                      });
-                      Linking.openURL(theme.sponsor_official_url);
-                    }}
-                  />
-                );
-              })}
-            </View>
-          )}
-        </View>
-        </ScrollView>
+            }
+            contentContainerStyle={styles.worksSection}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+            }
+            // パフォーマンス最適化オプション
+            initialNumToRender={5}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={50}
+          />
+        )}
 
         <ShareSheet
           visible={shareSheetVisible}
@@ -343,9 +353,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontFamily: fontFamily.semiBold,
   },
-  worksScrollView: {
-    flex: 1,
-  },
   worksSection: {
     padding: spacing.lg,
   },
@@ -389,8 +396,5 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
     letterSpacing: 0.3,
-  },
-  worksList: {
-    gap: spacing.md,
   },
 });

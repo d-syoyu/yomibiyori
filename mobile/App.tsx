@@ -3,9 +3,10 @@
  * 詠日和 - 詩的SNSアプリ
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, Alert } from 'react-native';
+import { Alert } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import * as Updates from 'expo-updates';
 import {
   useFonts,
@@ -19,6 +20,9 @@ import useAuthStore from './src/stores/useAuthStore';
 import { initAnalytics, identifyUser } from './src/utils/analytics';
 import { configureNotificationHandler, registerForPushNotifications } from './src/utils/pushNotifications';
 
+// スプラッシュスクリーンを自動で非表示にしない
+SplashScreen.preventAutoHideAsync();
+
 configureNotificationHandler();
 
 export default function App() {
@@ -28,6 +32,19 @@ export default function App() {
     NotoSerifJP_600SemiBold,
   });
   const currentUserId = useAuthStore(state => state.user?.user_id);
+
+  // フォント読み込み完了時にスプラッシュを非表示
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      onLayoutRootView();
+    }
+  }, [fontsLoaded, onLayoutRootView]);
 
   // Setup token validation hook for proactive refresh
   useEffect(() => {
@@ -108,12 +125,9 @@ export default function App() {
     });
   }, []);
 
+  // フォント読み込み中はスプラッシュスクリーンを表示したままにする
   if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#4A5568" />
-      </View>
-    );
+    return null;
   }
 
   return (
