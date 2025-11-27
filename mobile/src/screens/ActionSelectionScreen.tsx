@@ -6,7 +6,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -89,16 +88,9 @@ export default function ActionSelectionScreen({ route }: Props) {
         <View style={styles.content}>
           {/* カテゴリヘッダー */}
           <View style={styles.categoryHeader}>
-            <LinearGradient
-              colors={[categoryColors.gradient[0], categoryColors.gradient[1]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.categoryIconWrapper, { shadowColor: categoryColors.shadow }]}
-            >
-              <View style={styles.glassOverlaySmall}>
-                <CategoryIcon category={category} size={56} color={colors.text.primary} />
-              </View>
-            </LinearGradient>
+            <View style={[styles.categoryIconWrapper, { borderColor: categoryColors.gradient[0] }]}>
+              <CategoryIcon category={category} size={48} color={categoryColors.gradient[0]} />
+            </View>
             <Text style={styles.categoryName}>{category}</Text>
             <Text style={styles.subtitle}>何をしますか？</Text>
           </View>
@@ -109,58 +101,33 @@ export default function ActionSelectionScreen({ route }: Props) {
             <TouchableOpacity
               onPress={handleCompose}
               disabled={isLoading}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
+              style={styles.actionCard}
             >
-              <LinearGradient
-                colors={[categoryColors.gradient[0], categoryColors.gradient[1]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[styles.actionCard, { shadowColor: categoryColors.shadow }]}
-              >
-                <View style={styles.glassOverlay}>
-                  <View style={styles.actionContent}>
-                    <View style={styles.actionIconContainer}>
-                      <ActionIcon action="compose" size={28} color={colors.text.primary} />
-                    </View>
-                    <View style={styles.actionTextContainer}>
-                      <Text style={styles.actionTitle}>一句を詠む</Text>
-                      <Text style={styles.actionDescription}>下の句を投稿する</Text>
-                    </View>
-                    <View style={styles.chevronContainer}>
-                      <Text style={styles.chevron}>▸</Text>
-                    </View>
-                  </View>
-                </View>
-              </LinearGradient>
+              <View style={[styles.actionIconCircle, { borderColor: categoryColors.gradient[0] }]}>
+                <ActionIcon action="compose" size={32} color={categoryColors.gradient[0]} />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>一句を詠む</Text>
+                <Text style={styles.actionDescription}>下の句を投稿する</Text>
+              </View>
+              <Text style={[styles.chevron, { color: categoryColors.gradient[0] }]}>›</Text>
             </TouchableOpacity>
 
             {/* 作品を鑑賞 */}
             <TouchableOpacity
               onPress={handleAppreciate}
-              activeOpacity={0.8}
-              style={styles.secondCard}
+              activeOpacity={0.7}
+              style={[styles.actionCard, styles.secondCard]}
             >
-              <LinearGradient
-                colors={[categoryColors.gradient[1], categoryColors.gradient[0]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[styles.actionCard, { shadowColor: categoryColors.shadow }]}
-              >
-                <View style={styles.glassOverlay}>
-                  <View style={styles.actionContent}>
-                    <View style={styles.actionIconContainer}>
-                      <ActionIcon action="appreciate" size={28} color={colors.text.primary} />
-                    </View>
-                    <View style={styles.actionTextContainer}>
-                      <Text style={styles.actionTitle}>作品を鑑賞</Text>
-                      <Text style={styles.actionDescription}>他の人の一句を楽しむ</Text>
-                    </View>
-                    <View style={styles.chevronContainer}>
-                      <Text style={styles.chevron}>▸</Text>
-                    </View>
-                  </View>
-                </View>
-              </LinearGradient>
+              <View style={[styles.actionIconCircle, { borderColor: categoryColors.gradient[1] }]}>
+                <ActionIcon action="appreciate" size={32} color={categoryColors.gradient[1]} />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>作品を鑑賞</Text>
+                <Text style={styles.actionDescription}>他の人の一句を楽しむ</Text>
+              </View>
+              <Text style={[styles.chevron, { color: categoryColors.gradient[1] }]}>›</Text>
             </TouchableOpacity>
           </View>
 
@@ -203,18 +170,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   categoryIconWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: borderRadius.xl,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
     marginBottom: spacing.lg,
-    ...shadow.lg,
-    overflow: 'hidden',
-  },
-  glassOverlaySmall: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.background.card,
   },
   categoryName: {
     fontSize: fontSize.h2,
@@ -232,30 +195,27 @@ const styles = StyleSheet.create({
   actionButtons: {
     marginBottom: spacing.xl,
   },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
   secondCard: {
     marginTop: spacing.md,
   },
-  actionCard: {
-    borderRadius: borderRadius.lg,
-    ...shadow.lg,
-    overflow: 'hidden',
-  },
-  glassOverlay: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: spacing.lg,
-  },
-  actionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  actionIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    backgroundColor: colors.background.primary,
   },
   actionTextContainer: {
     flex: 1,
@@ -270,16 +230,13 @@ const styles = StyleSheet.create({
   actionDescription: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.regular,
-    color: colors.text.secondary,
+    color: colors.text.tertiary,
     letterSpacing: 0.5,
   },
-  chevronContainer: {
-    marginLeft: spacing.sm,
-  },
   chevron: {
-    fontSize: 24,
-    color: colors.text.inverse,
-    opacity: 0.6,
+    fontSize: 28,
+    fontWeight: '300',
+    marginLeft: spacing.sm,
   },
   backButton: {
     alignItems: 'center',
