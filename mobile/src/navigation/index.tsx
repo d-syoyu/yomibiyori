@@ -16,6 +16,7 @@ import type { RootStackParamList, MainTabParamList, HomeStackParamList, MyPoemsS
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
+import LoadingScreen from '../components/LoadingScreen';
 import PasswordResetScreen from '../screens/PasswordResetScreen';
 import CategorySelectionScreen from '../screens/CategorySelectionScreen';
 import ActionSelectionScreen from '../screens/ActionSelectionScreen';
@@ -174,13 +175,9 @@ function RootNavigator() {
     loadStoredSession();
   }, [loadStoredSession]);
 
-  // Show loading spinner while checking auth status
+  // Show loading screen while checking auth status
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#4A5568" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (
