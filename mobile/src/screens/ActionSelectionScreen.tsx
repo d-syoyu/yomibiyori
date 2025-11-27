@@ -15,6 +15,7 @@ import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import CategoryIcon from '../components/CategoryIcon';
+import ActionIcon from '../components/ActionIcon';
 import { trackEvent, EventNames } from '../utils/analytics';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
@@ -119,7 +120,7 @@ export default function ActionSelectionScreen({ route }: Props) {
                 <View style={styles.glassOverlay}>
                   <View style={styles.actionContent}>
                     <View style={styles.actionIconContainer}>
-                      <Text style={styles.actionIcon}>✍️</Text>
+                      <ActionIcon action="compose" size={28} color={colors.text.primary} />
                     </View>
                     <View style={styles.actionTextContainer}>
                       <Text style={styles.actionTitle}>一句を詠む</Text>
@@ -148,7 +149,7 @@ export default function ActionSelectionScreen({ route }: Props) {
                 <View style={styles.glassOverlay}>
                   <View style={styles.actionContent}>
                     <View style={styles.actionIconContainer}>
-                      <Text style={styles.actionIcon}>📖</Text>
+                      <ActionIcon action="appreciate" size={28} color={colors.text.primary} />
                     </View>
                     <View style={styles.actionTextContainer}>
                       <Text style={styles.actionTitle}>作品を鑑賞</Text>
@@ -255,9 +256,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
-  },
-  actionIcon: {
-    fontSize: 28,
   },
   actionTextContainer: {
     flex: 1,

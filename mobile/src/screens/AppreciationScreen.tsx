@@ -185,31 +185,38 @@ export default function AppreciationScreen({ route }: Props) {
           <Text style={styles.title}>鑑賞</Text>
 
           <View style={styles.categorySelector}>
-            {CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.categoryButton,
-                  selectedCategory === category && styles.categoryButtonActive,
-                ]}
-                onPress={() => setSelectedCategory(category)}
-                activeOpacity={0.8}
-              >
-                <CategoryIcon
-                  category={category}
-                  size={24}
-                  color={selectedCategory === category ? colors.text.primary : colors.text.secondary}
-                />
-                <Text
+            {CATEGORIES.map((category) => {
+              const categoryColors = colors.category[category];
+              const isSelected = selectedCategory === category;
+              return (
+                <TouchableOpacity
+                  key={category}
                   style={[
-                    styles.categoryText,
-                    selectedCategory === category && styles.categoryTextActive,
+                    styles.categoryButton,
+                    isSelected && {
+                      borderColor: categoryColors.primary,
+                      backgroundColor: categoryColors.gradient[1],
+                    },
                   ]}
+                  onPress={() => setSelectedCategory(category)}
+                  activeOpacity={0.8}
                 >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <CategoryIcon
+                    category={category}
+                    size={24}
+                    color={isSelected ? colors.text.primary : colors.text.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      isSelected && styles.categoryTextActive,
+                    ]}
+                  >
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Theme info now handled within each work card */}
@@ -324,10 +331,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     ...shadow.sm,
-  },
-  categoryButtonActive: {
-    borderColor: colors.text.primary,
-    backgroundColor: colors.background.secondary,
   },
   categoryText: {
     fontSize: fontSize.bodySmall,
