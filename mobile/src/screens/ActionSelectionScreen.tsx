@@ -104,14 +104,14 @@ export default function ActionSelectionScreen({ route }: Props) {
               activeOpacity={0.7}
               style={styles.actionCard}
             >
-              <View style={[styles.actionIconBg, { backgroundColor: `${categoryColors.gradient[0]}20` }]}>
-                <ActionIcon action="compose" size={28} color={categoryColors.gradient[0]} />
+              <View style={styles.actionIconBg}>
+                <ActionIcon action="compose" size={28} color="#6B7B4F" />
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>一句を詠む</Text>
                 <Text style={styles.actionDescription}>下の句を投稿する</Text>
               </View>
-              <Text style={[styles.chevron, { color: colors.text.tertiary }]}>›</Text>
+              <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             {/* 作品を鑑賞 */}
@@ -120,14 +120,14 @@ export default function ActionSelectionScreen({ route }: Props) {
               activeOpacity={0.7}
               style={[styles.actionCard, styles.secondCard]}
             >
-              <View style={[styles.actionIconBg, { backgroundColor: `${categoryColors.gradient[1]}20` }]}>
-                <ActionIcon action="appreciate" size={28} color={categoryColors.gradient[1]} />
+              <View style={styles.actionIconBg}>
+                <ActionIcon action="appreciate" size={28} color="#6B7B4F" />
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>作品を鑑賞</Text>
                 <Text style={styles.actionDescription}>他の人の一句を楽しむ</Text>
               </View>
-              <Text style={[styles.chevron, { color: colors.text.tertiary }]}>›</Text>
+              <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           </View>
 
@@ -214,6 +214,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    backgroundColor: '#6B7B4F15',
   },
   actionTextContainer: {
     flex: 1,
@@ -235,6 +236,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '300',
     marginLeft: spacing.sm,
+    color: colors.text.tertiary,
   },
   backButton: {
     alignItems: 'center',
