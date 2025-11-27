@@ -104,14 +104,14 @@ export default function ActionSelectionScreen({ route }: Props) {
               activeOpacity={0.7}
               style={styles.actionCard}
             >
-              <View style={[styles.actionIconCircle, { borderColor: categoryColors.gradient[0] }]}>
-                <ActionIcon action="compose" size={32} color={categoryColors.gradient[0]} />
+              <View style={[styles.actionIconBg, { backgroundColor: `${categoryColors.gradient[0]}20` }]}>
+                <ActionIcon action="compose" size={28} color={categoryColors.gradient[0]} />
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>一句を詠む</Text>
                 <Text style={styles.actionDescription}>下の句を投稿する</Text>
               </View>
-              <Text style={[styles.chevron, { color: categoryColors.gradient[0] }]}>›</Text>
+              <Text style={[styles.chevron, { color: colors.text.tertiary }]}>›</Text>
             </TouchableOpacity>
 
             {/* 作品を鑑賞 */}
@@ -120,14 +120,14 @@ export default function ActionSelectionScreen({ route }: Props) {
               activeOpacity={0.7}
               style={[styles.actionCard, styles.secondCard]}
             >
-              <View style={[styles.actionIconCircle, { borderColor: categoryColors.gradient[1] }]}>
-                <ActionIcon action="appreciate" size={32} color={categoryColors.gradient[1]} />
+              <View style={[styles.actionIconBg, { backgroundColor: `${categoryColors.gradient[1]}20` }]}>
+                <ActionIcon action="appreciate" size={28} color={categoryColors.gradient[1]} />
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>作品を鑑賞</Text>
                 <Text style={styles.actionDescription}>他の人の一句を楽しむ</Text>
               </View>
-              <Text style={[styles.chevron, { color: categoryColors.gradient[1] }]}>›</Text>
+              <Text style={[styles.chevron, { color: colors.text.tertiary }]}>›</Text>
             </TouchableOpacity>
           </View>
 
@@ -207,15 +207,13 @@ const styles = StyleSheet.create({
   secondCard: {
     marginTop: spacing.md,
   },
-  actionIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2,
+  actionIconBg: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
-    backgroundColor: colors.background.primary,
   },
   actionTextContainer: {
     flex: 1,
