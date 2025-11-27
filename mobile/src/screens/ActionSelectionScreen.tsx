@@ -1,21 +1,22 @@
 /**
  * Action Selection Screen
- * アクション選択画面 - 詠む or 鑑賞
+ * アクション選択画面 - 詠む or 鑑賞（和×モダンデザイン）
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, RootStackParamList, ThemeCategory } from '../types';
-import api from '../services/api';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import CategoryIcon from '../components/CategoryIcon';
 import { trackEvent, EventNames } from '../utils/analytics';
+import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ActionSelection'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -78,60 +79,103 @@ export default function ActionSelectionScreen({ route }: Props) {
     navigation.navigate('Appreciation', { category });
   };
 
+  // カテゴリに応じたグラデーション色を取得
+  const categoryColors = colors.category[category];
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-      <View style={styles.content}>
-        {/* カテゴリ表示 */}
-        <View style={styles.categoryHeader}>
-          <View style={styles.categoryIconWrapper}>
-            <CategoryIcon category={category} size={72} color="#2D3748" />
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {/* カテゴリヘッダー */}
+          <View style={styles.categoryHeader}>
+            <LinearGradient
+              colors={[categoryColors.gradient[0], categoryColors.gradient[1]]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.categoryIconWrapper, { shadowColor: categoryColors.shadow }]}
+            >
+              <View style={styles.glassOverlaySmall}>
+                <CategoryIcon category={category} size={56} color={colors.text.primary} />
+              </View>
+            </LinearGradient>
+            <Text style={styles.categoryName}>{category}</Text>
+            <Text style={styles.subtitle}>何をしますか？</Text>
           </View>
-          <Text style={styles.categoryName}>{category}</Text>
-          <Text style={styles.subtitle}>何をしますか？</Text>
-        </View>
 
-        {/* アクションボタン */}
-        <View style={styles.actionButtons}>
+          {/* アクションカード */}
+          <View style={styles.actionButtons}>
+            {/* 一句を詠む */}
+            <TouchableOpacity
+              onPress={handleCompose}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[categoryColors.gradient[0], categoryColors.gradient[1]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.actionCard, { shadowColor: categoryColors.shadow }]}
+              >
+                <View style={styles.glassOverlay}>
+                  <View style={styles.actionContent}>
+                    <View style={styles.actionIconContainer}>
+                      <Text style={styles.actionIcon}>✍️</Text>
+                    </View>
+                    <View style={styles.actionTextContainer}>
+                      <Text style={styles.actionTitle}>一句を詠む</Text>
+                      <Text style={styles.actionDescription}>下の句を投稿する</Text>
+                    </View>
+                    <View style={styles.chevronContainer}>
+                      <Text style={styles.chevron}>▸</Text>
+                    </View>
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* 作品を鑑賞 */}
+            <TouchableOpacity
+              onPress={handleAppreciate}
+              activeOpacity={0.8}
+              style={styles.secondCard}
+            >
+              <LinearGradient
+                colors={[categoryColors.gradient[1], categoryColors.gradient[0]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.actionCard, { shadowColor: categoryColors.shadow }]}
+              >
+                <View style={styles.glassOverlay}>
+                  <View style={styles.actionContent}>
+                    <View style={styles.actionIconContainer}>
+                      <Text style={styles.actionIcon}>📖</Text>
+                    </View>
+                    <View style={styles.actionTextContainer}>
+                      <Text style={styles.actionTitle}>作品を鑑賞</Text>
+                      <Text style={styles.actionDescription}>他の人の一句を楽しむ</Text>
+                    </View>
+                    <View style={styles.chevronContainer}>
+                      <Text style={styles.chevron}>▸</Text>
+                    </View>
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* 戻るボタン */}
           <TouchableOpacity
-            style={styles.actionCard}
-            onPress={handleCompose}
-            disabled={isLoading}
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
           >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>✍️</Text>
-            </View>
-            <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>一句を詠む</Text>
-              <Text style={styles.actionDescription}>下の句を投稿する</Text>
-            </View>
-            <Text style={styles.chevron}>›</Text>
+            <Text style={styles.backButtonText}>← カテゴリ選択に戻る</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={handleAppreciate}
-          >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>📖</Text>
-            </View>
-            <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>作品を鑑賞</Text>
-              <Text style={styles.actionDescription}>他の人の一句を楽しむ</Text>
-            </View>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
+          {/* フッター余白 */}
+          <View style={styles.footer} />
         </View>
-
-        {/* 戻るボタン */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← カテゴリ選択に戻る</Text>
-        </TouchableOpacity>
-      </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -139,64 +183,78 @@ export default function ActionSelectionScreen({ route }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: colors.background.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: colors.background.primary,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
     justifyContent: 'center',
+    minHeight: '100%',
   },
   categoryHeader: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: spacing.xxl,
   },
   categoryIconWrapper: {
-    width: 80,
-    height: 80,
+    width: 96,
+    height: 96,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
+    ...shadow.lg,
+    overflow: 'hidden',
+  },
+  glassOverlaySmall: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
   },
   categoryName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginBottom: 8,
+    fontSize: fontSize.h2,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+    letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#718096',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
+    letterSpacing: 0.5,
   },
   actionButtons: {
-    gap: 16,
-    marginBottom: 32,
+    marginBottom: spacing.xl,
+  },
+  secondCard: {
+    marginTop: spacing.md,
   },
   actionCard: {
+    borderRadius: borderRadius.lg,
+    ...shadow.lg,
+    overflow: 'hidden',
+  },
+  glassOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: spacing.lg,
+  },
+  actionContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   actionIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#EDF2F7',
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: spacing.md,
   },
   actionIcon: {
     fontSize: 28,
@@ -205,25 +263,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D3748',
-    marginBottom: 4,
+    fontSize: fontSize.h3 - 2,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+    letterSpacing: 1,
   },
   actionDescription: {
-    fontSize: 14,
-    color: '#718096',
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.regular,
+    color: colors.text.secondary,
+    letterSpacing: 0.5,
+  },
+  chevronContainer: {
+    marginLeft: spacing.sm,
   },
   chevron: {
-    fontSize: 32,
-    color: '#CBD5E0',
+    fontSize: 24,
+    color: colors.text.inverse,
+    opacity: 0.6,
   },
   backButton: {
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: spacing.md,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#4A5568',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.secondary,
+    letterSpacing: 0.5,
+  },
+  footer: {
+    height: spacing.xl,
   },
 });
