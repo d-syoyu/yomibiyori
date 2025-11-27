@@ -5,7 +5,8 @@
 
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Alert } from 'react-native';
+import * as Updates from 'expo-updates';
 import {
   useFonts,
   NotoSerifJP_400Regular,
@@ -46,6 +47,47 @@ export default function App() {
     }
     registerForPushNotifications();
   }, [currentUserId]);
+
+  // Check for OTA updates
+  useEffect(() => {
+    async function checkAndApplyUpdates() {
+      if (__DEV__) {
+        console.log('[Updates] Skipping update check in development');
+        return;
+      }
+
+      try {
+        console.log('[Updates] Current channel:', Updates.channel);
+        console.log('[Updates] Runtime version:', Updates.runtimeVersion);
+        console.log('[Updates] Update ID:', Updates.updateId);
+        console.log('[Updates] Is embedded:', Updates.isEmbeddedLaunch);
+
+        const update = await Updates.checkForUpdateAsync();
+        console.log('[Updates] Check result:', update);
+
+        if (update.isAvailable) {
+          console.log('[Updates] New update available, downloading...');
+          const fetchResult = await Updates.fetchUpdateAsync();
+          console.log('[Updates] Fetch result:', fetchResult);
+
+          Alert.alert(
+            'アップデート完了',
+            '新しいバージョンをダウンロードしました。再起動して適用しますか？',
+            [
+              { text: '後で', style: 'cancel' },
+              { text: '再起動', onPress: () => Updates.reloadAsync() },
+            ]
+          );
+        } else {
+          console.log('[Updates] No updates available');
+        }
+      } catch (error) {
+        console.error('[Updates] Error checking for updates:', error);
+      }
+    }
+
+    checkAndApplyUpdates();
+  }, []);
 
   // Initialize PostHog analytics
   useEffect(() => {

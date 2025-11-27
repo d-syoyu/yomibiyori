@@ -32,6 +32,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "ios": {
         "resourceClass": "m-medium"
       },
