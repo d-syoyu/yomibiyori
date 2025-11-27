@@ -3,7 +3,7 @@
  * 詠日和 - 詩的SNSアプリ
  */
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Alert } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -32,20 +32,23 @@ export default function App() {
     NotoSerifJP_500Medium,
     NotoSerifJP_600SemiBold,
   });
+  const [appReady, setAppReady] = useState(false);
   const currentUserId = useAuthStore(state => state.user?.user_id);
 
-  // フォント読み込み完了時にスプラッシュを非表示
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
+  // ネイティブスプラッシュを非表示にしてローディング画面を表示
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
 
+  // フォント読み込み完了後、少し待ってからアプリを表示
   useEffect(() => {
     if (fontsLoaded) {
-      onLayoutRootView();
+      const timer = setTimeout(() => {
+        setAppReady(true);
+      }, 800);
+      return () => clearTimeout(timer);
     }
-  }, [fontsLoaded, onLayoutRootView]);
+  }, [fontsLoaded]);
 
   // Setup token validation hook for proactive refresh
   useEffect(() => {
@@ -126,8 +129,8 @@ export default function App() {
     });
   }, []);
 
-  // フォント読み込み中はローディング画面を表示
-  if (!fontsLoaded) {
+  // アプリ準備完了までローディング画面を表示
+  if (!appReady) {
     return <LoadingScreen />;
   }
 
