@@ -17,6 +17,7 @@ import {
 import Navigation from './src/navigation';
 import api from './src/services/api';
 import useAuthStore from './src/stores/useAuthStore';
+import LoadingScreen from './src/components/LoadingScreen';
 import { initAnalytics, identifyUser } from './src/utils/analytics';
 import { configureNotificationHandler, registerForPushNotifications } from './src/utils/pushNotifications';
 
@@ -125,9 +126,9 @@ export default function App() {
     });
   }, []);
 
-  // フォント読み込み中はスプラッシュスクリーンを表示したままにする
+  // フォント読み込み中はローディング画面を表示
   if (!fontsLoaded) {
-    return null;
+    return <LoadingScreen />;
   }
 
   return (
