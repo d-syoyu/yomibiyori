@@ -72,10 +72,10 @@ export default function App() {
 
           Alert.alert(
             'アップデート完了',
-            '新しいバージョンをダウンロードしました。再起動して適用しますか？',
+            '新しいバージョンをダウンロードしました。アプリを再起動して適用しますか？',
             [
               { text: '後で', style: 'cancel' },
-              { text: '再起動', onPress: () => Updates.reloadAsync() },
+              { text: 'アプリを再起動', onPress: () => Updates.reloadAsync() },
             ]
           );
         } else {
