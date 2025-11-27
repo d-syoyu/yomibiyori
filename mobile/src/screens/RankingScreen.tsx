@@ -221,7 +221,6 @@ export default function RankingScreen() {
             data={rankings}
             keyExtractor={(item) => item.work_id}
             renderItem={({ item: entry }) => (
-              <View style={styles.rankingCard}>
                 <WorkCard
                   upperText={theme?.text}
                   lowerText={entry.text}
@@ -259,7 +258,6 @@ export default function RankingScreen() {
                     </View>
                   }
                 />
-              </View>
             )}
             contentContainerStyle={styles.rankingList}
             refreshControl={
@@ -420,12 +418,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   rankingList: {
-    gap: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  rankingCard: {
-    marginBottom: spacing.sm,
+    padding: spacing.lg,
   },
   rankInfo: {
     minWidth: 70,
