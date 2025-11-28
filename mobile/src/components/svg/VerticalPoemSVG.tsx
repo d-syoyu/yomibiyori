@@ -73,8 +73,7 @@ const needsRotation = (char: string): boolean => {
     '…', '‥', '⋯',
     // 記号類（縦書き時に回転が必要）
     // 注: 括弧類は verticalCharMap で縦書き専用文字に置換するため除外
-    '"', '"', "'", "'",             // 全角引用符
-    '"', "'",                       // 半角引用符
+    // 注: 引用符は回転ではなく位置調整で対応するため除外
     ':', ';',                       // 半角コロン・セミコロン
     '：', '；',                     // 全角コロン・セミコロン
     '→', '←', '↔',                 // 矢印
@@ -84,11 +83,25 @@ const needsRotation = (char: string): boolean => {
 };
 
 /**
- * 縦書き時に右上に位置調整が必要な文字（句読点類）
+ * 縦書き時に右上に位置調整が必要な文字（句読点）
  */
-const needsPositionAdjustment = (char: string): boolean => {
-  const punctuationChars = ['、', '，', '。', '．'];
-  return punctuationChars.includes(char);
+const needsPositionAdjustmentTopRight = (char: string): boolean => {
+  const chars = [
+    '、', '，',                     // 読点
+    '。', '．',                     // 句点
+  ];
+  return chars.includes(char);
+};
+
+/**
+ * 引用符かどうかを判定
+ */
+const isQuoteMark = (char: string): boolean => {
+  const quoteChars = [
+    '"', '"', '"',                  // ダブルクォート（開き・閉じ・ストレート）
+    "'", "'", "'",                  // シングルクォート（開き・閉じ・ストレート）
+  ];
+  return quoteChars.includes(char);
 };
 
 /**
@@ -124,15 +137,30 @@ const VerticalPoemSVG: React.FC<VerticalPoemSVGProps> = ({
     textColor: string
   ): React.ReactElement[] => {
     const chars = text.split('');
+    let quoteCount = 0;
     return chars.map((char, index) => {
       const charY = y + index * lineHeight;
       const rotation = needsRotation(char);
-      const positionAdjust = needsPositionAdjustment(char);
+      const topRightAdjust = needsPositionAdjustmentTopRight(char);
       const displayChar = getVerticalChar(char);
 
-      // 句読点は右上に位置調整
-      const adjustedX = positionAdjust ? columnX + fontSize * 0.3 : columnX;
-      const adjustedY = positionAdjust ? charY - fontSize * 0.3 : charY;
+      // 引用符の場合、出現順で開き（奇数）/閉じ（偶数）を判定
+      let quotePosition: 'open' | 'close' | null = null;
+      if (isQuoteMark(char)) {
+        quoteCount++;
+        quotePosition = quoteCount % 2 === 1 ? 'open' : 'close';
+      }
+
+      // 位置調整: 右上（句読点・開き引用符）または左上（閉じ引用符）
+      let adjustedX = columnX;
+      let adjustedY = charY;
+      if (topRightAdjust || quotePosition === 'open') {
+        adjustedX = columnX + fontSize * 0.3;
+        adjustedY = charY - fontSize * 0.3;
+      } else if (quotePosition === 'close') {
+        adjustedX = columnX - fontSize * 0.3;
+        adjustedY = charY - fontSize * 0.3;
+      }
 
       return (
         <SVGText

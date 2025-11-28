@@ -162,9 +162,8 @@ class ShareCardGenerator:
         ellipsis_chars = ["…", "‥", "⋯"]
         # 記号類（縦書き時に回転が必要）
         # 注: 括弧類は VERTICAL_CHAR_MAP で縦書き専用文字に置換するため除外
+        # 注: 引用符は回転ではなく位置調整で対応するため除外
         symbol_chars = [
-            """, """, "'", "'",             # 全角引用符
-            '"', "'",                       # 半角引用符
             ":", ";",                       # 半角コロン・セミコロン
             "：", "；",                     # 全角コロン・セミコロン
             "→", "←", "↔",                 # 矢印
@@ -179,10 +178,22 @@ class ShareCardGenerator:
         return VERTICAL_CHAR_MAP.get(char, char)
 
     @staticmethod
-    def _needs_position_adjustment(char: str) -> bool:
-        """縦書き時に右上に位置調整が必要な文字（句読点類）"""
-        punctuation_chars = ["、", "，", "。", "．"]
-        return char in punctuation_chars
+    def _needs_position_adjustment_top_right(char: str) -> bool:
+        """縦書き時に右上に位置調整が必要な文字（句読点）"""
+        chars = [
+            "、", "，",                     # 読点
+            "。", "．",                     # 句点
+        ]
+        return char in chars
+
+    @staticmethod
+    def _is_quote_mark(char: str) -> bool:
+        """引用符かどうかを判定"""
+        quote_chars = [
+            """, """, '"',                  # ダブルクォート（開き・閉じ・ストレート）
+            "'", "'", "'",                  # シングルクォート（開き・閉じ・ストレート）
+        ]
+        return char in quote_chars
 
     def _draw_rotated_char(
         self,
@@ -245,17 +256,33 @@ class ShareCardGenerator:
 
         for line in lines:
             current_y = start_y
+            quote_count = 0
             for char in line.strip():
                 # 縦書き用の文字に変換（括弧類など）
                 display_char = self._get_vertical_char(char)
+
+                # 引用符の場合、出現順で開き（奇数）/閉じ（偶数）を判定
+                quote_position = None
+                if self._is_quote_mark(char):
+                    quote_count += 1
+                    quote_position = "open" if quote_count % 2 == 1 else "close"
+
                 if self._needs_rotation(char):
                     self._draw_rotated_char(img, display_char, current_x, current_y, font, fill)
-                elif self._needs_position_adjustment(char):
-                    # 句読点は右上に位置調整
+                elif self._needs_position_adjustment_top_right(char) or quote_position == "open":
+                    # 句読点・開き引用符は右上に位置調整
                     bbox = draw.textbbox((0, 0), display_char, font=font)
                     char_width = bbox[2] - bbox[0]
-                    offset = int(char_height * 0.25)  # 右上へのオフセット
+                    offset = int(char_height * 0.25)
                     char_x = current_x - (char_width // 2) + offset
+                    char_y = current_y - offset
+                    draw.text((char_x, char_y), display_char, font=font, fill=fill)
+                elif quote_position == "close":
+                    # 閉じ引用符は左上に位置調整
+                    bbox = draw.textbbox((0, 0), display_char, font=font)
+                    char_width = bbox[2] - bbox[0]
+                    offset = int(char_height * 0.25)
+                    char_x = current_x - (char_width // 2) - offset
                     char_y = current_y - offset
                     draw.text((char_x, char_y), display_char, font=font, fill=fill)
                 else:

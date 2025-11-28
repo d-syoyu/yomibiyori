@@ -79,9 +79,8 @@ function needsRotation(char: string): boolean {
 
   // 記号類（縦書き時に回転が必要）
   // 注: 括弧類は verticalCharMap で縦書き専用文字に置換するため除外
+  // 注: 引用符は回転ではなく位置調整で対応するため除外
   const symbolChars = [
-    '"', '"', "'", "'",             // 全角引用符
-    '"', "'",                       // 半角引用符
     ':', ';',                       // 半角コロン・セミコロン
     '：', '；',                     // 全角コロン・セミコロン
     '→', '←', '↔',                 // 矢印
@@ -95,14 +94,25 @@ function needsRotation(char: string): boolean {
 }
 
 /**
- * 縦書き時に右上に位置調整が必要な文字を判定（句読点類）
+ * 縦書き時に右上に位置調整が必要な文字を判定（句読点）
  */
-function needsPositionAdjustment(char: string): boolean {
-  const punctuationChars = [
+function needsPositionAdjustmentTopRight(char: string): boolean {
+  const chars = [
     '、', '，',                     // 読点
     '。', '．',                     // 句点
   ];
-  return punctuationChars.includes(char);
+  return chars.includes(char);
+}
+
+/**
+ * 引用符かどうかを判定
+ */
+function isQuoteMark(char: string): boolean {
+  const quoteChars = [
+    '"', '"', '"',                  // ダブルクォート（開き・閉じ・ストレート）
+    "'", "'", "'",                  // シングルクォート（開き・閉じ・ストレート）
+  ];
+  return quoteChars.includes(char);
 }
 
 export default function VerticalText({
@@ -153,25 +163,37 @@ export default function VerticalText({
             style={styles.column}
             collapsable={false}
           >
-            {line.split('').map((char, charIndex) => {
-              const shouldRotate = needsRotation(char);
-              const shouldAdjustPosition = needsPositionAdjustment(char);
-              const displayChar = getVerticalChar(char);
+            {(() => {
+              let quoteCount = 0;
+              return line.split('').map((char, charIndex) => {
+                const shouldRotate = needsRotation(char);
+                const shouldAdjustTopRight = needsPositionAdjustmentTopRight(char);
+                const displayChar = getVerticalChar(char);
 
-              return (
-                <Text
-                  key={charIndex}
-                  style={[
-                    styles.character,
-                    textStyle,
-                    shouldRotate && styles.rotatedCharacter,
-                    shouldAdjustPosition && styles.punctuationCharacter
-                  ]}
-                >
-                  {displayChar}
-                </Text>
-              );
-            })}
+                // 引用符の場合、出現順で開き（奇数）/閉じ（偶数）を判定
+                let quotePosition: 'open' | 'close' | null = null;
+                if (isQuoteMark(char)) {
+                  quoteCount++;
+                  quotePosition = quoteCount % 2 === 1 ? 'open' : 'close';
+                }
+
+                return (
+                  <Text
+                    key={charIndex}
+                    style={[
+                      styles.character,
+                      textStyle,
+                      shouldRotate && styles.rotatedCharacter,
+                      shouldAdjustTopRight && styles.topRightCharacter,
+                      quotePosition === 'open' && styles.topRightCharacter,
+                      quotePosition === 'close' && styles.topLeftCharacter
+                    ]}
+                  >
+                    {displayChar}
+                  </Text>
+                );
+              });
+            })()}
           </View>
         );
       })}
@@ -203,8 +225,12 @@ const styles = StyleSheet.create({
   rotatedCharacter: {
     transform: [{ rotate: '90deg' }],
   },
-  punctuationCharacter: {
-    // 句読点を右上に配置（縦書き用位置調整）
+  topRightCharacter: {
+    // 句読点・開き引用符を右上に配置（縦書き用位置調整）
     transform: [{ translateX: 6 }, { translateY: -6 }],
+  },
+  topLeftCharacter: {
+    // 閉じ引用符を左上に配置（縦書き用位置調整）
+    transform: [{ translateX: -6 }, { translateY: -6 }],
   },
 });
