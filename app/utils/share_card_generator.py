@@ -2,12 +2,14 @@
 """
 Share card image generator.
 Creates a vertical Japanese poem card as PNG for sharing.
+
+引用符で囲まれた部分は横書きブロックとして90度回転表示
 """
 
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Optional
+from typing import Optional, List, Tuple
 from PIL import Image, ImageDraw, ImageFont
 import glob
 import os
@@ -150,25 +152,11 @@ class ShareCardGenerator:
 
     @staticmethod
     def _needs_rotation(char: str) -> bool:
-        """縦書き時に90度回転が必要な文字を判定
-
-        注: 括弧類は回転ではなく縦書き専用文字に置換するため除外
-        """
-        # 伸ばし棒・ダッシュ類
+        """縦書き時に90度回転が必要な文字を判定"""
         dash_chars = ["ー", "―", "－", "‐", "ｰ", "—", "−", "–"]
-        # 波ダッシュ
         wave_chars = ["〜", "～", "〰"]
-        # 三点リーダー
         ellipsis_chars = ["…", "‥", "⋯"]
-        # 記号類（縦書き時に回転が必要）
-        # 注: 括弧類は VERTICAL_CHAR_MAP で縦書き専用文字に置換するため除外
-        # 注: 引用符は回転ではなく位置調整で対応するため除外
-        symbol_chars = [
-            ":", ";",                       # 半角コロン・セミコロン
-            "：", "；",                     # 全角コロン・セミコロン
-            "→", "←", "↔",                 # 矢印
-            "=", "＝",                      # イコール
-        ]
+        symbol_chars = [":", ";", "：", "；", "→", "←", "↔", "=", "＝"]
         rotation_chars = set(dash_chars + wave_chars + ellipsis_chars + symbol_chars)
         return char in rotation_chars
 
@@ -180,20 +168,72 @@ class ShareCardGenerator:
     @staticmethod
     def _needs_position_adjustment_top_right(char: str) -> bool:
         """縦書き時に右上に位置調整が必要な文字（句読点）"""
-        chars = [
-            "、", "，",                     # 読点
-            "。", "．",                     # 句点
-        ]
+        chars = ["、", "，", "。", "．"]
         return char in chars
 
     @staticmethod
-    def _is_quote_mark(char: str) -> bool:
-        """引用符かどうかを判定"""
-        quote_chars = [
-            """, """, '"',                  # ダブルクォート（開き・閉じ・ストレート）
-            "'", "'", "'",                  # シングルクォート（開き・閉じ・ストレート）
-        ]
-        return char in quote_chars
+    def _is_opening_quote(char: str) -> bool:
+        """開き引用符かどうかを判定（Unicodeコードポイントで判定）"""
+        code = ord(char)
+        return code in (0x0022, 0x0027, 0x201C, 0x2018)
+
+    @staticmethod
+    def _is_closing_quote(char: str) -> bool:
+        """閉じ引用符かどうかを判定（Unicodeコードポイントで判定）"""
+        code = ord(char)
+        return code in (0x0022, 0x0027, 0x201D, 0x2019)
+
+    @staticmethod
+    def _get_matching_close_quote(open_quote: str) -> str:
+        """開き引用符に対応する閉じ引用符を取得"""
+        code = ord(open_quote)
+        if code == 0x201C:
+            return chr(0x201D)
+        elif code == 0x0022:
+            return '"'
+        elif code == 0x2018:
+            return chr(0x2019)
+        elif code == 0x0027:
+            return "'"
+        return open_quote
+
+    @staticmethod
+    def _parse_text_with_quotes(text: str) -> List[Tuple[str, str]]:
+        """テキストを引用部分と通常部分に分割
+
+        Returns:
+            List of tuples: (type, content) where type is 'normal' or 'quoted'
+        """
+        segments = []
+        current_segment = ""
+        in_quote = False
+        quote_char = ""
+
+        for char in text:
+            if not in_quote and ShareCardGenerator._is_opening_quote(char):
+                if current_segment:
+                    segments.append(("normal", current_segment))
+                    current_segment = ""
+                in_quote = True
+                quote_char = char
+                current_segment = char
+            elif in_quote and ShareCardGenerator._is_closing_quote(char):
+                expected_close = ShareCardGenerator._get_matching_close_quote(quote_char)
+                if char == expected_close or char == quote_char:
+                    current_segment += char
+                    segments.append(("quoted", current_segment))
+                    current_segment = ""
+                    in_quote = False
+                    quote_char = ""
+                else:
+                    current_segment += char
+            else:
+                current_segment += char
+
+        if current_segment:
+            segments.append(("quoted" if in_quote else "normal", current_segment))
+
+        return segments
 
     def _draw_rotated_char(
         self,
@@ -203,7 +243,9 @@ class ShareCardGenerator:
         y: int,
         font: ImageFont.FreeTypeFont,
         fill: tuple[int, int, int] | tuple[int, int, int, int],
+        angle: int = 90,
     ) -> None:
+        """回転した文字を描画する"""
         temp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
         bbox = temp_draw.textbbox((0, 0), char, font=font)
         char_width = bbox[2] - bbox[0]
@@ -219,11 +261,46 @@ class ShareCardGenerator:
 
         fill_rgba = fill if len(fill) == 4 else (fill[0], fill[1], fill[2], 255)
         temp_draw.text((padding - bbox[0], padding - bbox[1]), char, font=font, fill=fill_rgba)
-        rotated = temp_img.rotate(90, expand=True, resample=Image.BICUBIC)
+        rotated = temp_img.rotate(angle, expand=True, resample=Image.BICUBIC)
         rotated_width, rotated_height = rotated.size
         paste_x = x - (rotated_width // 2)
         paste_y = y
         img.paste(rotated, (paste_x, paste_y), rotated)
+
+    def _draw_rotated_text(
+        self,
+        img: Image.Image,
+        text: str,
+        x: int,
+        y: int,
+        font: ImageFont.FreeTypeFont,
+        fill: tuple[int, int, int] | tuple[int, int, int, int],
+        angle: int = 90,
+    ) -> int:
+        """回転したテキストブロックを描画し、使用した高さを返す"""
+        temp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+        bbox = temp_draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        if text_width <= 0 or text_height <= 0:
+            return 0
+
+        padding = 20
+        temp_width = text_width + padding * 2
+        temp_height = text_height + padding * 2
+        temp_img = Image.new("RGBA", (temp_width, temp_height), (0, 0, 0, 0))
+        temp_draw = ImageDraw.Draw(temp_img)
+
+        fill_rgba = fill if len(fill) == 4 else (fill[0], fill[1], fill[2], 255)
+        temp_draw.text((padding - bbox[0], padding - bbox[1]), text, font=font, fill=fill_rgba)
+        rotated = temp_img.rotate(angle, expand=True, resample=Image.BICUBIC)
+        rotated_width, rotated_height = rotated.size
+        paste_x = x - (rotated_width // 2)
+        paste_y = y
+        img.paste(rotated, (paste_x, paste_y), rotated)
+
+        # 回転後の高さを返す（元のテキスト幅が高さになる）
+        return text_width
 
     def _create_gradient_background(self, img: Image.Image, colors: list[str]) -> Image.Image:
         draw = ImageDraw.Draw(img)
@@ -256,41 +333,39 @@ class ShareCardGenerator:
 
         for line in lines:
             current_y = start_y
-            quote_count = 0
-            for char in line.strip():
-                # 縦書き用の文字に変換（括弧類など）
-                display_char = self._get_vertical_char(char)
+            # 引用部分と通常部分に分割
+            segments = self._parse_text_with_quotes(line.strip())
 
-                # 引用符の場合、出現順で開き（奇数）/閉じ（偶数）を判定
-                quote_position = None
-                if self._is_quote_mark(char):
-                    quote_count += 1
-                    quote_position = "open" if quote_count % 2 == 1 else "close"
-
-                if self._needs_rotation(char):
-                    self._draw_rotated_char(img, display_char, current_x, current_y, font, fill)
-                elif self._needs_position_adjustment_top_right(char) or quote_position == "open":
-                    # 句読点・開き引用符は右上に位置調整
-                    bbox = draw.textbbox((0, 0), display_char, font=font)
-                    char_width = bbox[2] - bbox[0]
-                    offset = int(char_height * 0.25)
-                    char_x = current_x - (char_width // 2) + offset
-                    char_y = current_y - offset
-                    draw.text((char_x, char_y), display_char, font=font, fill=fill)
-                elif quote_position == "close":
-                    # 閉じ引用符は左上に位置調整
-                    bbox = draw.textbbox((0, 0), display_char, font=font)
-                    char_width = bbox[2] - bbox[0]
-                    offset = int(char_height * 0.25)
-                    char_x = current_x - (char_width // 2) - offset
-                    char_y = current_y - offset
-                    draw.text((char_x, char_y), display_char, font=font, fill=fill)
+            for segment_type, segment_content in segments:
+                if segment_type == "quoted":
+                    # 引用部分: 横書きテキストを90度回転
+                    quoted_font = self._get_font(int(font.size * 0.8))
+                    block_height = self._draw_rotated_text(
+                        img, segment_content, current_x, current_y, quoted_font, fill, angle=90
+                    )
+                    current_y += block_height + 10
                 else:
-                    bbox = draw.textbbox((0, 0), display_char, font=font)
-                    char_width = bbox[2] - bbox[0]
-                    char_x = current_x - (char_width // 2)
-                    draw.text((char_x, current_y), display_char, font=font, fill=fill)
-                current_y += char_height
+                    # 通常部分: 1文字ずつ縦に配置
+                    for char in segment_content:
+                        display_char = self._get_vertical_char(char)
+
+                        if self._needs_rotation(char):
+                            self._draw_rotated_char(img, display_char, current_x, current_y, font, fill)
+                        elif self._needs_position_adjustment_top_right(char):
+                            bbox = draw.textbbox((0, 0), display_char, font=font)
+                            char_width = bbox[2] - bbox[0]
+                            offset = int(char_height * 0.25)
+                            char_x = current_x - (char_width // 2) + offset
+                            char_y = current_y - offset
+                            draw.text((char_x, char_y), display_char, font=font, fill=fill)
+                        else:
+                            bbox = draw.textbbox((0, 0), display_char, font=font)
+                            char_width = bbox[2] - bbox[0]
+                            char_x = current_x - (char_width // 2)
+                            draw.text((char_x, current_y), display_char, font=font, fill=fill)
+
+                        current_y += char_height
+
             current_x -= column_spacing
 
     def generate(

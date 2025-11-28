@@ -1,6 +1,8 @@
 /**
  * SVG版縦書き詩コンポーネント
  * react-native-svgを使用した安定的な画像生成用
+ *
+ * 引用符で囲まれた部分は横書きブロックとして90度回転表示
  */
 
 import React from 'react';
@@ -61,7 +63,6 @@ interface VerticalPoemSVGProps {
 
 /**
  * 縦書き時に90度回転が必要な文字
- * 注: 括弧類は回転ではなく縦書き専用文字に置換するため除外
  */
 const needsRotation = (char: string): boolean => {
   const rotationChars = [
@@ -71,13 +72,10 @@ const needsRotation = (char: string): boolean => {
     '〜', '～', '〰',
     // 三点リーダー
     '…', '‥', '⋯',
-    // 記号類（縦書き時に回転が必要）
-    // 注: 括弧類は verticalCharMap で縦書き専用文字に置換するため除外
-    // 注: 引用符は回転ではなく位置調整で対応するため除外
-    ':', ';',                       // 半角コロン・セミコロン
-    '：', '；',                     // 全角コロン・セミコロン
-    '→', '←', '↔',                 // 矢印
-    '=', '＝',                      // イコール
+    // 記号類
+    ':', ';', '：', '；',
+    '→', '←', '↔',
+    '=', '＝',
   ];
   return rotationChars.includes(char);
 };
@@ -86,22 +84,93 @@ const needsRotation = (char: string): boolean => {
  * 縦書き時に右上に位置調整が必要な文字（句読点）
  */
 const needsPositionAdjustmentTopRight = (char: string): boolean => {
-  const chars = [
-    '、', '，',                     // 読点
-    '。', '．',                     // 句点
-  ];
+  const chars = ['、', '，', '。', '．'];
   return chars.includes(char);
 };
 
 /**
- * 引用符かどうかを判定
+ * 引用符かどうかを判定（Unicode コードポイントで判定）
  */
-const isQuoteMark = (char: string): boolean => {
-  const quoteChars = [
-    '"', '"', '"',                  // ダブルクォート（開き・閉じ・ストレート）
-    "'", "'", "'",                  // シングルクォート（開き・閉じ・ストレート）
-  ];
-  return quoteChars.includes(char);
+const isOpeningQuote = (char: string): boolean => {
+  const code = char.charCodeAt(0);
+  return (
+    code === 0x0022 ||  // " ストレートダブル
+    code === 0x0027 ||  // ' ストレートシングル
+    code === 0x201C ||  // " 左ダブル引用符
+    code === 0x2018     // ' 左シングル引用符
+  );
+};
+
+const isClosingQuote = (char: string): boolean => {
+  const code = char.charCodeAt(0);
+  return (
+    code === 0x0022 ||  // " ストレートダブル
+    code === 0x0027 ||  // ' ストレートシングル
+    code === 0x201D ||  // " 右ダブル引用符
+    code === 0x2019     // ' 右シングル引用符
+  );
+};
+
+/**
+ * 開き引用符に対応する閉じ引用符を取得
+ */
+const getMatchingCloseQuote = (openQuote: string): string => {
+  const code = openQuote.charCodeAt(0);
+  switch (code) {
+    case 0x201C: return String.fromCharCode(0x201D);
+    case 0x0022: return '"';
+    case 0x2018: return String.fromCharCode(0x2019);
+    case 0x0027: return "'";
+    default: return openQuote;
+  }
+};
+
+interface TextSegment {
+  type: 'normal' | 'quoted';
+  content: string;
+}
+
+/**
+ * テキストを引用部分と通常部分に分割
+ */
+const parseTextWithQuotes = (text: string): TextSegment[] => {
+  const segments: TextSegment[] = [];
+  let currentSegment = '';
+  let inQuote = false;
+  let quoteChar = '';
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (!inQuote && isOpeningQuote(char)) {
+      if (currentSegment) {
+        segments.push({ type: 'normal', content: currentSegment });
+        currentSegment = '';
+      }
+      inQuote = true;
+      quoteChar = char;
+      currentSegment = char;
+    } else if (inQuote && isClosingQuote(char)) {
+      const expectedClose = getMatchingCloseQuote(quoteChar);
+      if (char === expectedClose || char === quoteChar) {
+        currentSegment += char;
+        segments.push({ type: 'quoted', content: currentSegment });
+        currentSegment = '';
+        inQuote = false;
+        quoteChar = '';
+      } else {
+        currentSegment += char;
+      }
+    } else {
+      currentSegment += char;
+    }
+  }
+
+  if (currentSegment) {
+    segments.push({ type: inQuote ? 'quoted' : 'normal', content: currentSegment });
+  }
+
+  return segments;
 };
 
 /**
@@ -136,48 +205,75 @@ const VerticalPoemSVG: React.FC<VerticalPoemSVGProps> = ({
     isBold: boolean,
     textColor: string
   ): React.ReactElement[] => {
-    const chars = text.split('');
-    let quoteCount = 0;
-    return chars.map((char, index) => {
-      const charY = y + index * lineHeight;
-      const rotation = needsRotation(char);
-      const topRightAdjust = needsPositionAdjustmentTopRight(char);
-      const displayChar = getVerticalChar(char);
+    const segments = parseTextWithQuotes(text);
+    const elements: React.ReactElement[] = [];
+    let currentY = y;
 
-      // 引用符の場合、出現順で開き（奇数）/閉じ（偶数）を判定
-      let quotePosition: 'open' | 'close' | null = null;
-      if (isQuoteMark(char)) {
-        quoteCount++;
-        quotePosition = quoteCount % 2 === 1 ? 'open' : 'close';
+    segments.forEach((segment, segmentIndex) => {
+      if (segment.type === 'quoted') {
+        // 引用部分: 横書きテキストを90度回転
+        const charCount = segment.content.length;
+        const textWidth = charCount * fontSize * 0.6; // 横書きテキストの幅を推定
+        const blockHeight = textWidth; // 回転後の高さ
+
+        elements.push(
+          <SVGText
+            key={`quoted-${segmentIndex}`}
+            x={columnX}
+            y={currentY + blockHeight / 2}
+            fontSize={fontSize * 0.8}
+            fill={textColor}
+            fontWeight={isBold ? 'bold' : fontWeight}
+            textAnchor="middle"
+            fontFamily="Noto Serif JP"
+            transform={`rotate(90, ${columnX}, ${currentY + blockHeight / 2})`}
+          >
+            {segment.content}
+          </SVGText>
+        );
+
+        currentY += blockHeight;
+      } else {
+        // 通常部分: 1文字ずつ縦に配置
+        segment.content.split('').forEach((char, charIndex) => {
+          const charY = currentY;
+          const rotation = needsRotation(char);
+          const topRightAdjust = needsPositionAdjustmentTopRight(char);
+          const displayChar = getVerticalChar(char);
+
+          let adjustedX = columnX;
+          let adjustedY = charY;
+          let transform: string | undefined = undefined;
+
+          if (rotation) {
+            transform = `rotate(90, ${columnX}, ${charY})`;
+          } else if (topRightAdjust) {
+            adjustedX = columnX + fontSize * 0.3;
+            adjustedY = charY - fontSize * 0.3;
+          }
+
+          elements.push(
+            <SVGText
+              key={`normal-${segmentIndex}-${charIndex}`}
+              x={adjustedX}
+              y={adjustedY}
+              fontSize={fontSize}
+              fill={textColor}
+              fontWeight={isBold ? 'bold' : fontWeight}
+              textAnchor="middle"
+              fontFamily="Noto Serif JP"
+              transform={transform}
+            >
+              {displayChar}
+            </SVGText>
+          );
+
+          currentY += lineHeight;
+        });
       }
-
-      // 位置調整: 右上（句読点・開き引用符）または左上（閉じ引用符）
-      let adjustedX = columnX;
-      let adjustedY = charY;
-      if (topRightAdjust || quotePosition === 'open') {
-        adjustedX = columnX + fontSize * 0.3;
-        adjustedY = charY - fontSize * 0.3;
-      } else if (quotePosition === 'close') {
-        adjustedX = columnX - fontSize * 0.3;
-        adjustedY = charY - fontSize * 0.3;
-      }
-
-      return (
-        <SVGText
-          key={index}
-          x={adjustedX}
-          y={adjustedY}
-          fontSize={fontSize}
-          fill={textColor}
-          fontWeight={isBold ? 'bold' : fontWeight}
-          textAnchor="middle"
-          fontFamily="Noto Serif JP"
-          transform={rotation ? `rotate(90, ${adjustedX}, ${adjustedY})` : undefined}
-        >
-          {displayChar}
-        </SVGText>
-      );
     });
+
+    return elements;
   };
 
   return (

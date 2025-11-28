@@ -10,6 +10,9 @@
  *
  * 縦書き用Unicode文字に置換する文字：
  * - 括弧類: 「」『』（）【】〔〕〈〉《》［］｛｝
+ *
+ * 引用符で囲まれた部分：
+ * - 引用符も含めて全体を90度回転（横書きブロックとして表示）
  */
 
 import React from 'react';
@@ -66,6 +69,7 @@ interface VerticalTextProps {
 /**
  * 縦書き時に90度回転が必要な文字を判定
  * 注: 括弧類は回転ではなく縦書き専用文字に置換するため除外
+ * 注: 引用符は引用ブロック全体で処理するため除外
  */
 function needsRotation(char: string): boolean {
   // 伸ばし棒・ダッシュ類
@@ -78,8 +82,6 @@ function needsRotation(char: string): boolean {
   const ellipsisChars = ['…', '‥', '⋯'];
 
   // 記号類（縦書き時に回転が必要）
-  // 注: 括弧類は verticalCharMap で縦書き専用文字に置換するため除外
-  // 注: 引用符は回転ではなく位置調整で対応するため除外
   const symbolChars = [
     ':', ';',                       // 半角コロン・セミコロン
     '：', '；',                     // 全角コロン・セミコロン
@@ -105,14 +107,91 @@ function needsPositionAdjustmentTopRight(char: string): boolean {
 }
 
 /**
- * 引用符かどうかを判定
+ * 引用符かどうかを判定（Unicode コードポイントで判定）
  */
-function isQuoteMark(char: string): boolean {
-  const quoteChars = [
-    '"', '"', '"',                  // ダブルクォート（開き・閉じ・ストレート）
-    "'", "'", "'",                  // シングルクォート（開き・閉じ・ストレート）
-  ];
-  return quoteChars.includes(char);
+function isOpeningQuote(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return (
+    code === 0x0022 ||  // " ストレートダブル
+    code === 0x0027 ||  // ' ストレートシングル
+    code === 0x201C ||  // " 左ダブル引用符
+    code === 0x2018     // ' 左シングル引用符
+  );
+}
+
+function isClosingQuote(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return (
+    code === 0x0022 ||  // " ストレートダブル
+    code === 0x0027 ||  // ' ストレートシングル
+    code === 0x201D ||  // " 右ダブル引用符
+    code === 0x2019     // ' 右シングル引用符
+  );
+}
+
+/**
+ * 開き引用符に対応する閉じ引用符を取得
+ */
+function getMatchingCloseQuote(openQuote: string): string {
+  const code = openQuote.charCodeAt(0);
+  switch (code) {
+    case 0x201C: return String.fromCharCode(0x201D);  // " → "
+    case 0x0022: return '"';   // " → "
+    case 0x2018: return String.fromCharCode(0x2019);  // ' → '
+    case 0x0027: return "'";   // ' → '
+    default: return openQuote;
+  }
+}
+
+interface TextSegment {
+  type: 'normal' | 'quoted';
+  content: string;
+}
+
+/**
+ * テキストを引用部分と通常部分に分割
+ */
+function parseTextWithQuotes(text: string): TextSegment[] {
+  const segments: TextSegment[] = [];
+  let currentSegment = '';
+  let inQuote = false;
+  let quoteChar = '';
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (!inQuote && isOpeningQuote(char)) {
+      // 引用開始
+      if (currentSegment) {
+        segments.push({ type: 'normal', content: currentSegment });
+        currentSegment = '';
+      }
+      inQuote = true;
+      quoteChar = char;
+      currentSegment = char;
+    } else if (inQuote && isClosingQuote(char)) {
+      // 引用終了（対応する閉じ引用符かチェック）
+      const expectedClose = getMatchingCloseQuote(quoteChar);
+      if (char === expectedClose || char === quoteChar) {
+        currentSegment += char;
+        segments.push({ type: 'quoted', content: currentSegment });
+        currentSegment = '';
+        inQuote = false;
+        quoteChar = '';
+      } else {
+        currentSegment += char;
+      }
+    } else {
+      currentSegment += char;
+    }
+  }
+
+  // 残りのテキスト
+  if (currentSegment) {
+    segments.push({ type: inQuote ? 'quoted' : 'normal', content: currentSegment });
+  }
+
+  return segments;
 }
 
 export default function VerticalText({
@@ -157,43 +236,77 @@ export default function VerticalText({
           return null;
         }
 
+        // 引用部分と通常部分に分割
+        const segments = parseTextWithQuotes(line);
+
         return (
           <View
             key={lineIndex}
             style={styles.column}
             collapsable={false}
           >
-            {(() => {
-              let quoteCount = 0;
-              return line.split('').map((char, charIndex) => {
+            {segments.map((segment, segmentIndex) => {
+              if (segment.type === 'quoted') {
+                // 引用部分: 全体を90度回転した横書きブロック
+                // 文字数から必要なサイズを計算
+                const charCount = segment.content.length;
+                const textWidth = charCount * 18; // 横書きテキストの幅
+                const textHeight = 28; // 横書きテキストの高さ（1行分）
+
+                return (
+                  <View
+                    key={segmentIndex}
+                    style={[
+                      styles.quotedBlockOuter,
+                      {
+                        // 親レイアウト用: 回転後の見た目サイズ
+                        height: textWidth,
+                        width: textHeight,
+                      }
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.quotedBlockInner,
+                        {
+                          // 回転前の実サイズ
+                          width: textWidth,
+                          height: textHeight,
+                        }
+                      ]}
+                    >
+                      <Text
+                        style={[styles.quotedText, textStyle]}
+                        numberOfLines={1}
+                      >
+                        {segment.content}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }
+
+              // 通常部分: 1文字ずつ縦に配置
+              return segment.content.split('').map((char, charIndex) => {
                 const shouldRotate = needsRotation(char);
                 const shouldAdjustTopRight = needsPositionAdjustmentTopRight(char);
                 const displayChar = getVerticalChar(char);
 
-                // 引用符の場合、出現順で開き（奇数）/閉じ（偶数）を判定
-                let quotePosition: 'open' | 'close' | null = null;
-                if (isQuoteMark(char)) {
-                  quoteCount++;
-                  quotePosition = quoteCount % 2 === 1 ? 'open' : 'close';
-                }
-
                 return (
                   <Text
-                    key={charIndex}
+                    key={`${segmentIndex}-${charIndex}`}
                     style={[
                       styles.character,
                       textStyle,
                       shouldRotate && styles.rotatedCharacter,
-                      shouldAdjustTopRight && styles.topRightCharacter,
-                      quotePosition === 'open' && styles.topRightCharacter,
-                      quotePosition === 'close' && styles.topLeftCharacter
+                      shouldAdjustTopRight && styles.topRightCharacter
                     ]}
                   >
                     {displayChar}
                   </Text>
                 );
               });
-            })()}
+            })}
           </View>
         );
       })}
@@ -226,11 +339,27 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '90deg' }],
   },
   topRightCharacter: {
-    // 句読点・開き引用符を右上に配置（縦書き用位置調整）
+    // 句読点を右上に配置（縦書き用位置調整）
     transform: [{ translateX: 6 }, { translateY: -6 }],
   },
-  topLeftCharacter: {
-    // 閉じ引用符を左上に配置（縦書き用位置調整）
-    transform: [{ translateX: -6 }, { translateY: -6 }],
+  quotedBlockOuter: {
+    // 親レイアウト用のコンテナ（回転後のサイズを確保）
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'visible',
+  },
+  quotedBlockInner: {
+    // 実際に回転する内側のコンテナ
+    transform: [{ rotate: '90deg' }],
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+  },
+  quotedText: {
+    // 横書きのテキストスタイル（1行で表示）
+    fontSize: 18,
+    lineHeight: 24,
+    textAlign: 'center',
+    color: '#2D3748',
   },
 });
