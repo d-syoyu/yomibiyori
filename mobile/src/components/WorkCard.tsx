@@ -134,29 +134,25 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
                   <Ionicons name="share-outline" size={18} color={colors.text.primary} />
                 </TouchableOpacity>
               )}
-              {typeof likesCount === 'number' &&
-                (onLike ? (
-                  <TouchableOpacity
-                    style={[styles.likeBadge, liked && styles.likeBadgeActive]}
-                    onPress={onLike}
-                    activeOpacity={0.8}
-                    accessibilityLabel={liked ? "いいねを取り消す" : "いいね"}
-                  >
-                    <Ionicons
-                      name={liked ? "heart" : "heart-outline"}
-                      size={14}
-                      color={liked ? colors.status.error : colors.text.secondary}
-                    />
-                    <Text style={[styles.likeText, !liked && styles.likeTextInactive]}>
-                      {likesCount}
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.likeBadge}>
-                    <Ionicons name="heart" size={14} color={colors.status.error} />
-                    <Text style={styles.likeText}>{likesCount}</Text>
-                  </View>
-                ))}
+              {onLike ? (
+                <TouchableOpacity
+                  style={[styles.likeButton, liked && styles.likeButtonActive]}
+                  onPress={onLike}
+                  activeOpacity={0.8}
+                  accessibilityLabel={liked ? "いいねを取り消す" : "いいね"}
+                >
+                  <Ionicons
+                    name={liked ? "heart" : "heart-outline"}
+                    size={18}
+                    color={liked ? colors.status.error : colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              ) : typeof likesCount === 'number' && (
+                <View style={styles.likeBadge}>
+                  <Ionicons name="heart" size={14} color={colors.status.error} />
+                  <Text style={styles.likeText}>{likesCount}</Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -237,6 +233,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  likeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  likeButtonActive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
   likeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,9 +252,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.background.secondary,
-  },
-  likeBadgeActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   likeText: {
     fontSize: fontSize.bodySmall,

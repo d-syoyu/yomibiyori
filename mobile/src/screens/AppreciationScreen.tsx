@@ -167,7 +167,7 @@ export default function AppreciationScreen({ route }: Props) {
     loadWorks();
   }, [loadWorks]);
 
-  // Handle like action with optimistic update
+  // Handle like action - optimistic update for liked state only
   const handleLike = async (workId: string) => {
     // Check authentication before allowing like
     if (!isAuthenticated) {
@@ -181,38 +181,17 @@ export default function AppreciationScreen({ route }: Props) {
 
     // Get current state for rollback
     const currentLiked = likedStates.get(workId) ?? false;
-    const currentWork = works.find(w => w.id === workId);
-    const currentLikesCount = currentWork?.likes_count ?? 0;
 
-    // Optimistic update: toggle state immediately
+    // Optimistic update: toggle liked state immediately
     const newLiked = !currentLiked;
-    const newLikesCount = newLiked ? currentLikesCount + 1 : Math.max(0, currentLikesCount - 1);
-
     setLikedStates(prev => {
       const next = new Map(prev);
       next.set(workId, newLiked);
       return next;
     });
 
-    setWorks(prevWorks =>
-      prevWorks.map(work =>
-        work.id === workId
-          ? { ...work, likes_count: newLikesCount }
-          : work
-      )
-    );
-
     try {
       const response = await api.toggleLike(workId);
-
-      // Update with actual count from server
-      setWorks(prevWorks =>
-        prevWorks.map(work =>
-          work.id === workId
-            ? { ...work, likes_count: response.likes_count }
-            : work
-        )
-      );
 
       // Update liked state based on server response
       setLikedStates(prev => {
@@ -227,14 +206,6 @@ export default function AppreciationScreen({ route }: Props) {
         next.set(workId, currentLiked);
         return next;
       });
-
-      setWorks(prevWorks =>
-        prevWorks.map(work =>
-          work.id === workId
-            ? { ...work, likes_count: currentLikesCount }
-            : work
-        )
-      );
 
       handleError(error, 'like_action');
     }
@@ -326,7 +297,6 @@ export default function AppreciationScreen({ route }: Props) {
                   lowerText={work.text}
                   category={theme?.category ?? '恋愛'}
                   displayName={work.display_name}
-                  likesCount={work.likes_count}
                   liked={likedStates.get(work.id) ?? false}
                   onLike={() => handleLike(work.id)}
                   onShare={() => openShareSheet(work)}
