@@ -39,18 +39,27 @@ def _is_theme_finalized(theme_date: date) -> bool:
 
 
 def _get_sponsor_url(theme: Theme) -> str | None:
-    """Get the official URL of the sponsor if available."""
+    """Get the official URL of the sponsor if available.
+
+    Priority:
+    1. Per-theme URL (sponsor_theme.sponsor_official_url) - allows campaign/event-specific URLs
+    2. Sponsor profile URL (sponsor.official_url) - fallback to company's main URL
+    """
     if not theme.sponsored or not theme.sponsor_theme:
         return None
-    
-    # Access via relationships: Theme -> SponsorTheme -> SponsorCampaign -> Sponsor
+
+    # First, check for per-theme URL
+    if theme.sponsor_theme.sponsor_official_url:
+        return theme.sponsor_theme.sponsor_official_url
+
+    # Fallback to sponsor profile URL via relationships: Theme -> SponsorTheme -> SponsorCampaign -> Sponsor
     try:
         if theme.sponsor_theme.campaign and theme.sponsor_theme.campaign.sponsor:
             return theme.sponsor_theme.campaign.sponsor.official_url
     except Exception:
         # Handle cases where relationships might be missing or broken
         return None
-        
+
     return None
 
 

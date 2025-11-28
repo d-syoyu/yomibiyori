@@ -98,25 +98,20 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
                 accessibilityRole="link"
                 accessibilityLabel={`スポンサー: ${sponsorName}`}
                 style={[
-                  styles.sponsorChip,
-                  (!sponsorUrl && !onSponsorPress) && styles.sponsorChipDisabled,
+                  styles.sponsorLinkButton,
+                  (!sponsorUrl && !onSponsorPress) && styles.sponsorLinkButtonDisabled,
                 ]}
               >
-                <Ionicons
-                  name="ribbon-outline"
-                  size={14}
-                  color={(sponsorUrl || onSponsorPress) ? colors.text.primary : colors.text.tertiary}
-                />
                 <Text
                   style={[
-                    styles.sponsorText,
-                    (!sponsorUrl && !onSponsorPress) && styles.sponsorTextDisabled,
+                    styles.sponsorLinkButtonText,
+                    (!sponsorUrl && !onSponsorPress) && styles.sponsorLinkButtonTextDisabled,
                   ]}
                 >
                   {sponsorName}
                 </Text>
                 {(sponsorUrl || onSponsorPress) && (
-                  <Ionicons name="open-outline" size={14} color={colors.text.primary} />
+                  <Ionicons name="share-outline" size={16} color={colors.text.primary} />
                 )}
               </TouchableOpacity>
             )}
@@ -194,29 +189,31 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  sponsorText: {
+  sponsorLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.card,
+    borderWidth: 1.5,
+    borderColor: colors.text.primary,
+    alignSelf: 'flex-start',
+    ...shadow.sm,
+  },
+  sponsorLinkButtonDisabled: {
+    borderColor: colors.text.tertiary,
+    backgroundColor: colors.background.secondary,
+  },
+  sponsorLinkButtonText: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.semiBold,
     color: colors.text.primary,
     letterSpacing: 0.3,
   },
-  sponsorTextDisabled: {
+  sponsorLinkButtonTextDisabled: {
     color: colors.text.tertiary,
-  },
-  sponsorChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(26, 54, 93, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(26, 54, 93, 0.1)',
-    alignSelf: 'flex-start',
-  },
-  sponsorChipDisabled: {
-    opacity: 0.6,
   },
   actions: {
     flexDirection: 'row',

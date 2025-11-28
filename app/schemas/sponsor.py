@@ -129,7 +129,7 @@ class SponsorThemeCreate(SponsorThemeBase):
 
     campaign_id: Optional[str] = None  # Optional - will use/create default campaign if not provided
     sponsor_official_url: Optional[str] = Field(
-        None, description="Official URL for the sponsor (updates sponsor profile)"
+        None, description="Per-theme sponsor URL (e.g., campaign or event-specific URL)"
     )
 
 
@@ -139,6 +139,9 @@ class SponsorThemeUpdate(BaseModel):
     date: Optional[date] = None
     category: Optional[str] = Field(None, min_length=1, max_length=50)
     text_575: Optional[str] = Field(None, min_length=3, max_length=140)
+    sponsor_official_url: Optional[str] = Field(
+        None, description="Per-theme sponsor URL (e.g., campaign or event-specific URL)"
+    )
     priority: Optional[int] = None
 
 
@@ -147,6 +150,9 @@ class SponsorThemeResponse(SponsorThemeBase):
 
     id: str
     campaign_id: str
+    sponsor_official_url: Optional[str] = Field(
+        None, description="Per-theme sponsor URL"
+    )
     status: str
     rejection_reason: Optional[str] = None
     approved_at: Optional[datetime] = None

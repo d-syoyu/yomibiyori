@@ -167,8 +167,8 @@ export default function CompositionScreen({ route }: Props) {
                   {theme.sponsored && theme.sponsor_company_name && (
                     <TouchableOpacity
                       style={[
-                        styles.sponsorChip,
-                        !theme.sponsor_official_url && styles.sponsorChipDisabled,
+                        styles.sponsorLinkButton,
+                        !theme.sponsor_official_url && styles.sponsorLinkButtonDisabled,
                       ]}
                       onPress={() => {
                         if (theme.sponsor_official_url) {
@@ -183,21 +183,16 @@ export default function CompositionScreen({ route }: Props) {
                       disabled={!theme.sponsor_official_url}
                       activeOpacity={0.7}
                     >
-                      <Ionicons
-                        name="ribbon-outline"
-                        size={14}
-                        color={theme.sponsor_official_url ? colors.text.primary : colors.text.tertiary}
-                      />
                       <Text
                         style={[
-                          styles.sponsorChipText,
-                          !theme.sponsor_official_url && styles.sponsorChipTextDisabled,
+                          styles.sponsorLinkButtonText,
+                          !theme.sponsor_official_url && styles.sponsorLinkButtonTextDisabled,
                         ]}
                       >
                         {theme.sponsor_company_name}
                       </Text>
                       {theme.sponsor_official_url && (
-                        <Ionicons name="open-outline" size={14} color={colors.text.primary} />
+                        <Ionicons name="share-outline" size={16} color={colors.text.primary} />
                       )}
                     </TouchableOpacity>
                   )}
@@ -388,29 +383,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 2,
   },
-  sponsorChip: {
+  sponsorLinkButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(26, 54, 93, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(26, 54, 93, 0.1)',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1.5,
+    borderColor: colors.text.primary,
     marginTop: spacing.md,
+    ...shadow.sm,
   },
-  sponsorChipDisabled: {
-    opacity: 0.6,
+  sponsorLinkButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderColor: colors.text.tertiary,
   },
-  sponsorChipText: {
+  sponsorLinkButtonText: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.semiBold,
     color: colors.text.primary,
     letterSpacing: 0.3,
   },
-  sponsorChipTextDisabled: {
+  sponsorLinkButtonTextDisabled: {
     color: colors.text.tertiary,
   },
   noThemeCard: {

@@ -90,6 +90,7 @@ class SponsorTheme(Base):
     date: Mapped[date] = mapped_column(Date)
     category: Mapped[str] = mapped_column(String(50))
     text_575: Mapped[str] = mapped_column(String(140))
+    sponsor_official_url: Mapped[str | None] = mapped_column(Text)  # Per-theme sponsor URL
     priority: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     rejection_reason: Mapped[str | None] = mapped_column(Text)

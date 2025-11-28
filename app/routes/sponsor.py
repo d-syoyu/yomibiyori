@@ -384,11 +384,6 @@ def create_sponsor_theme(
             detail="Insufficient credits. Please purchase more credits to submit themes.",
         )
 
-    # Update sponsor official URL if provided
-    if payload.sponsor_official_url:
-        sponsor.official_url = payload.sponsor_official_url
-        sponsor.updated_at = now
-
     # Check for duplicate across all campaigns from the same sponsor
     # Only block if there's already a pending or approved theme (not rejected)
     existing_in_sponsor = session.scalar(
@@ -442,6 +437,7 @@ def create_sponsor_theme(
         date=payload.date,
         category=payload.category,
         text_575=payload.text_575,
+        sponsor_official_url=payload.sponsor_official_url,
         priority=payload.priority,
         created_at=now,
         updated_at=now,
@@ -626,6 +622,8 @@ def update_sponsor_theme(
         theme.category = payload.category
     if payload.text_575 is not None:
         theme.text_575 = payload.text_575
+    if payload.sponsor_official_url is not None:
+        theme.sponsor_official_url = payload.sponsor_official_url
     if payload.priority is not None:
         theme.priority = payload.priority
 

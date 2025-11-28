@@ -265,6 +265,7 @@ create table if not exists sponsor_themes (
   date date not null,
   category text not null check (length(category) between 1 and 50),
   text_575 text not null check (length(text_575) between 3 and 140),
+  sponsor_official_url text,
   priority integer not null default 0,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'published')),
   rejection_reason text,
@@ -286,6 +287,7 @@ create unique index if not exists uq_sponsor_themes_date_category_campaign on sp
 
 comment on table sponsor_themes is 'スポンサー入稿お題（審査待ち）';
 comment on column sponsor_themes.text_575 is '上の句（5-7-5）';
+comment on column sponsor_themes.sponsor_official_url is 'お題ごとのスポンサーリンクURL（キャンペーンやイベント固有のURL）';
 comment on column sponsor_themes.priority is 'スロット優先度（高いほど優先）';
 comment on column sponsor_themes.status is 'ステータス: pending（審査待ち） / approved（承認済み） / rejected（却下） / published（配信済み）';
 
