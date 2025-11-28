@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "@types/react-native": "^0.72.8",
     "dotenv": "^16.4.5",
     "eas-cli": "^16.25.1",
     "typescript": "~5.9.2"

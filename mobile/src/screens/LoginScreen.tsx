@@ -44,6 +44,7 @@ export default function LoginScreen() {
   const [displayName, setDisplayName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { signUp, login, loginWithOAuth, isLoading, error, clearError } = useAuthStore();
   const showError = useToastStore((state) => state.showError);
@@ -372,14 +373,27 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                   />
 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="パスワード"
-                    placeholderTextColor={colors.text.tertiary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={true}
-                  />
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="パスワード"
+                      placeholderTextColor={colors.text.tertiary}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword(!showPassword)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={colors.text.tertiary}
+                      />
+                    </TouchableOpacity>
+                  </View>
 
                   {isSignUp && (
                     <TextInput
@@ -509,13 +523,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    paddingVertical: spacing.xl,
   },
   content: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
   },
   decorationContainer: {
     flexDirection: 'row',
@@ -590,6 +603,26 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     color: colors.text.primary,
     marginBottom: spacing.md,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(107, 123, 79, 0.15)',
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: spacing.md,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.primary,
+  },
+  eyeButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   button: {
     borderRadius: borderRadius.md,
