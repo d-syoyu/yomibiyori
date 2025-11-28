@@ -202,14 +202,23 @@ export default function SponsorCreditsPage() {
           </div>
 
           {/* Bulk Discount Banner */}
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">🎁</div>
-              <div>
-                <p className="font-bold text-amber-800">1日分まとめ買いで1クレジット無料！</p>
-                <p className="text-sm text-amber-700">
-                  4クレジット（1日分 = 全4カテゴリー）購入ごとに1クレジット無料（25%OFF相当）
+          <div className="rounded-lg border-2 border-[var(--color-igusa)]/30 bg-[var(--color-igusa)]/5 p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-igusa)]/10">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6 text-[var(--color-igusa)]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-[var(--color-igusa)]">1日分まとめ買いで1クレジットプレゼント</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  4クレジット（全4カテゴリー）購入ごとに1クレジットプレゼント
                 </p>
+              </div>
+              <div className="hidden sm:block">
+                <span className="inline-flex items-center rounded-full bg-[var(--color-igusa)] px-3 py-1 text-sm font-bold text-white">
+                  25%OFF
+                </span>
               </div>
             </div>
           </div>
@@ -231,11 +240,40 @@ export default function SponsorCreditsPage() {
 
           {!isImpersonating && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="quantity" className="block text-sm font-medium text-[var(--color-text-primary)]">
-                  購入数量
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-[var(--color-text-primary)]">
+                  購入数量を選択
                 </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { qty: 4, days: 1, free: 1 },
+                    { qty: 8, days: 2, free: 2 },
+                    { qty: 12, days: 3, free: 3 },
+                    { qty: 20, days: 5, free: 5 },
+                  ].map(({ qty, days, free }) => (
+                    <button
+                      key={qty}
+                      type="button"
+                      onClick={() => setPurchaseQuantity(qty)}
+                      className={`relative p-3 rounded-lg border transition-all ${
+                        purchaseQuantity === qty
+                          ? 'bg-[var(--color-washi)] border-[var(--color-igusa)] ring-1 ring-[var(--color-igusa)]'
+                          : 'bg-white border-[var(--color-border)] hover:border-[var(--color-igusa)]/50'
+                      }`}
+                      disabled={purchasing}
+                    >
+                      {free > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-[var(--color-igusa)] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                          +{free}
+                        </span>
+                      )}
+                      <div className="text-xl font-bold text-[var(--color-text-primary)]">{qty}</div>
+                      <div className="text-xs text-[var(--color-text-secondary)]">{days}日分</div>
+                    </button>
+                  ))}
+                </div>
                 <div className="flex items-center gap-3">
+                  <span className="text-sm text-[var(--color-text-secondary)]">個別に指定:</span>
                   <input
                     type="number"
                     id="quantity"
@@ -243,64 +281,43 @@ export default function SponsorCreditsPage() {
                     max="100"
                     value={purchaseQuantity}
                     onChange={(e) => setPurchaseQuantity(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                    className="w-32 px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)] text-center text-lg font-bold"
+                    className="w-20 px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)] text-center font-bold"
                     disabled={purchasing}
                   />
-                  <div className="flex gap-2 flex-wrap">
-                    {[
-                      { qty: 4, label: '4 (1日分)' },
-                      { qty: 8, label: '8 (2日分)' },
-                      { qty: 12, label: '12 (3日分)' },
-                      { qty: 20, label: '20 (5日分)' },
-                    ].map(({ qty, label }) => (
-                      <button
-                        key={qty}
-                        type="button"
-                        onClick={() => setPurchaseQuantity(qty)}
-                        className={`px-3 py-2 text-sm rounded-lg border transition-all ${
-                          purchaseQuantity === qty
-                            ? 'bg-[var(--color-igusa)] text-white border-[var(--color-igusa)]'
-                            : 'bg-white text-[var(--color-text-primary)] border-[var(--color-border)] hover:border-[var(--color-igusa)]'
-                        }`}
-                        disabled={purchasing}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <span className="text-sm text-[var(--color-text-secondary)]">クレジット</span>
                 </div>
               </div>
 
               {/* Pricing Summary */}
-              <div className="bg-[var(--color-washi)] rounded-lg p-4 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[var(--color-text-secondary)]">獲得クレジット</span>
-                  <span className="font-bold text-lg">{pricing.quantity} クレジット</span>
-                </div>
-                {pricing.free_credits > 0 && (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>無料クレジット</span>
-                    <span className="font-bold">+{pricing.free_credits} 無料!</span>
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-washi)] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[var(--color-text-secondary)]">獲得クレジット</p>
+                    <p className="text-2xl font-bold text-[var(--color-text-primary)]">{pricing.quantity}<span className="text-base font-normal ml-1">クレジット</span></p>
                   </div>
-                )}
-                <div className="border-t border-[var(--color-border)] pt-3">
-                  {pricing.discount_amount > 0 ? (
-                    <>
-                      <div className="flex justify-between items-center text-[var(--color-text-secondary)] line-through">
-                        <span>定価</span>
-                        <span>¥{pricing.subtotal.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-red-500 text-sm">
-                        <span>割引 ({pricing.discount_percent}% OFF)</span>
-                        <span>-¥{pricing.discount_amount.toLocaleString()}</span>
-                      </div>
-                    </>
-                  ) : null}
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="font-bold text-lg">お支払い金額</span>
-                    <span className="font-bold text-2xl text-[var(--color-igusa)]">
-                      ¥{pricing.total.toLocaleString()}
-                    </span>
+                  {pricing.free_credits > 0 && (
+                    <div className="text-right">
+                      <span className="text-xs text-[var(--color-text-secondary)]">プレゼント分</span>
+                      <p className="text-[var(--color-igusa)] font-bold">+{pricing.free_credits}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-[var(--color-border)] pt-3 space-y-1">
+                  {pricing.discount_amount > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-[var(--color-text-secondary)]">通常価格</span>
+                      <span className="text-[var(--color-text-secondary)] line-through">¥{pricing.subtotal.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {pricing.discount_amount > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-[var(--color-igusa)]">割引額（{pricing.discount_percent}%OFF）</span>
+                      <span className="text-[var(--color-igusa)] font-bold">-¥{pricing.discount_amount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="text-[var(--color-text-primary)] font-bold">お支払い金額</span>
+                    <span className="text-2xl font-bold text-[var(--color-igusa)]">¥{pricing.total.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -331,7 +348,7 @@ export default function SponsorCreditsPage() {
             </p>
             <ul className="list-disc list-inside space-y-1 text-[var(--color-text-secondary)]">
               <li><strong>1日分 = 4クレジット：</strong>全4カテゴリーにお題を投稿できます</li>
-              <li><strong>まとめ買い割引：</strong>1日分（4クレジット）購入ごとに1クレジット無料</li>
+              <li><strong>まとめ買い特典：</strong>1日分（4クレジット）購入ごとに1クレジットプレゼント</li>
               <li>お支払いはStripeの安全な決済システムを利用します</li>
               <li>クレジットカードまたは銀行振込でのお支払いが可能です</li>
               <li>カード決済は購入後すぐにクレジットが反映されます</li>

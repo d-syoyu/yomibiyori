@@ -136,7 +136,7 @@ def create_checkout_session(
         # Build description with discount info
         if pricing["free_credits"] > 0:
             description = (
-                f"{quantity}クレジット（{pricing['free_credits']}クレジット無料！）"
+                f"{quantity}クレジット（{pricing['free_credits']}クレジットプレゼント）"
                 f" - お題の作成に利用できます"
             )
         else:
