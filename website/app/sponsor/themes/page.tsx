@@ -14,6 +14,7 @@ import {
   getThemeStatusClassName,
 } from '@/lib/constants'
 import type { SponsorTheme, ThemeStatus } from '@/types/sponsor'
+import { Loading } from '@/components/ui/Spinner'
 
 function SponsorThemesContent() {
   const searchParams = useSearchParams()
@@ -70,7 +71,7 @@ function SponsorThemesContent() {
   }, [authLoading, loadThemes])
 
   if (loading) {
-    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+    return <Loading />
   }
 
   return (
@@ -181,7 +182,7 @@ function SponsorThemesContent() {
 
 export default function SponsorThemesPage() {
   return (
-    <Suspense fallback={<div className="text-[var(--color-text-secondary)]">読み込み中...</div>}>
+    <Suspense fallback={<Loading />}>
       <SponsorThemesContent />
     </Suspense>
   )

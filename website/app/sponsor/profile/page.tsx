@@ -11,6 +11,7 @@ import {
   fetchSponsorProfile,
   updateSponsorProfile,
 } from '@/lib/sponsorApi'
+import { Loading } from '@/components/ui/Spinner'
 
 export default function SponsorProfilePage() {
   const router = useRouter()
@@ -66,7 +67,7 @@ export default function SponsorProfilePage() {
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+        <Loading />
       </div>
     )
   }

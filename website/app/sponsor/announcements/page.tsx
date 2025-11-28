@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { Loading } from '@/components/ui/Spinner'
 
 interface Announcement {
   id: string
@@ -100,7 +101,7 @@ export default function SponsorAnnouncementsPage() {
     return (
       <div className="page-wrapper">
         <div className="page-container">
-          <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+          <Loading />
         </div>
       </div>
     )

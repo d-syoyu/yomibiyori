@@ -10,6 +10,7 @@ import {
 import { startImpersonation } from '@/lib/impersonation'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/lib/hooks/useToast'
+import { Loading } from '@/components/ui/Spinner'
 
 type FilterValue = 'all' | 'verified' | 'pending'
 
@@ -179,7 +180,7 @@ export default function AdminSponsorsPage() {
       )}
 
       {loading ? (
-        <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+        <Loading />
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {sponsors.length === 0 && (

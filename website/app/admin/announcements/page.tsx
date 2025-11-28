@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { ANNOUNCEMENT_TYPE_CONFIG } from '@/lib/constants'
 import { useToast } from '@/lib/hooks/useToast'
 import type { Announcement, AnnouncementType } from '@/types/sponsor'
+import { Loading } from '@/components/ui/Spinner'
 
 export default function AnnouncementsPage() {
   const toast = useToast()
@@ -148,7 +149,7 @@ export default function AnnouncementsPage() {
   ) as Record<AnnouncementType, string>
 
   if (loading) {
-    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+    return <Loading />
   }
 
   return (

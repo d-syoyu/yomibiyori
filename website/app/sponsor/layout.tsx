@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import SupportWidget from '../../components/sponsor/SupportWidget'
 import ImpersonationBanner from '../../components/admin/ImpersonationBanner'
 import { NavLink, SPONSOR_NAV_ITEMS } from '../../components/ui/NavLink'
+import { LoadingFullScreen } from '../../components/ui/Spinner'
 import { getImpersonation, endImpersonation, ImpersonationData } from '@/lib/impersonation'
 import { useToast } from '@/lib/hooks/useToast'
 
@@ -126,11 +127,7 @@ export default function SponsorLayout({
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-washi)]">
-        <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
-      </div>
-    )
+    return <LoadingFullScreen />
   }
 
   if (!user) {

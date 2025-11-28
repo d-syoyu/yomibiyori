@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { NavLink, ADMIN_NAV_ITEMS } from '../../components/ui/NavLink'
 import { useToast } from '@/lib/hooks/useToast'
+import { LoadingFullScreen } from '@/components/ui/Spinner'
 
 interface User {
   id: string
@@ -83,11 +84,7 @@ export default function AdminLayout({
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-washi)]">
-        <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
-      </div>
-    )
+    return <LoadingFullScreen />
   }
 
   if (!user) {

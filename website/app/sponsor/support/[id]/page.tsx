@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { getImpersonation } from '@/lib/impersonation'
 import { useToast } from '@/lib/hooks/useToast'
 import { useParams, useRouter } from 'next/navigation'
+import { LoadingCenter } from '@/components/ui/Spinner'
 
 interface Message {
   id: string
@@ -125,7 +126,7 @@ export default function SponsorSupportChatPage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-[var(--color-text-muted)]">読み込み中...</div>
+    return <LoadingCenter />
   }
 
   if (!ticket) return null

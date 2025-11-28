@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { TICKET_STATUS_CONFIG_ADMIN } from '@/lib/constants'
 import { useToast } from '@/lib/hooks/useToast'
 import type { SupportTicket, SupportTicketMessage, TicketStatus } from '@/types/sponsor'
+import { LoadingCenter } from '@/components/ui/Spinner'
 
 export default function AdminSupportPage() {
   const toast = useToast()
@@ -208,7 +209,7 @@ export default function AdminSupportPage() {
           </div>
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-8 text-center text-[var(--color-text-secondary)]">読み込み中...</div>
+              <LoadingCenter />
             ) : tickets.length === 0 ? (
               <div className="p-8 text-center text-[var(--color-text-secondary)]">該当する問い合わせはありません</div>
             ) : (

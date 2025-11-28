@@ -10,6 +10,7 @@ import {
   fetchSponsorProfile,
 } from '@/lib/sponsorApi'
 import BackgroundDecoration from '@/components/BackgroundDecoration'
+import { LoadingFullScreen } from '@/components/ui/Spinner'
 
 export default function SponsorsPage() {
   const supabase = useMemo(() => getSupabase(), [])
@@ -139,11 +140,7 @@ export default function SponsorsPage() {
   }
 
   if (!sessionChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-washi)]">
-        <p className="text-[var(--color-text-secondary)]">読み込み中...</p>
-      </div>
-    )
+    return <LoadingFullScreen />
   }
 
   return (

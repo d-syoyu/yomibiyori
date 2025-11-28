@@ -9,6 +9,7 @@ import {
 } from '@/lib/adminApi'
 import { useToast } from '@/lib/hooks/useToast'
 import Link from 'next/link'
+import { Loading } from '@/components/ui/Spinner'
 
 export default function AdminSponsorDetailPage({
   params,
@@ -134,7 +135,7 @@ export default function AdminSponsorDetailPage({
   }
 
   if (loading) {
-    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+    return <Loading />
   }
 
   if (error || !sponsor) {

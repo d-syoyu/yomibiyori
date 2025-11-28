@@ -4,10 +4,11 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import BackgroundDecoration from '@/components/BackgroundDecoration'
+import { Spinner, ButtonSpinner } from '@/components/ui/Spinner'
 
 export default function SponsorLoginPage() {
   const router = useRouter()
@@ -15,6 +16,34 @@ export default function SponsorLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  // 既にログイン済みならダッシュボードへリダイレクト
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          // スポンサー権限があるか確認
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+
+          if (userData?.role === 'sponsor') {
+            router.push('/sponsor')
+            return
+          }
+        }
+      } catch (err) {
+        console.error('Session check failed:', err)
+      } finally {
+        setCheckingSession(false)
+      }
+    }
+    checkSession()
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +84,19 @@ export default function SponsorLoginPage() {
       setError(err instanceof Error ? err.message : 'ログインに失敗しました')
       setLoading(false)
     }
+  }
+
+  // セッションチェック中はローディング表示
+  if (checkingSession) {
+    return (
+      <div className="page-wrapper relative overflow-hidden">
+        <BackgroundDecoration />
+        <div className="page-container flex flex-col justify-center items-center min-h-[50vh] gap-4">
+          <Spinner size="lg" />
+          <p className="text-[var(--color-text-secondary)]">読み込み中...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -114,9 +156,16 @@ export default function SponsorLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary justify-center"
+              className="w-full btn-primary justify-center flex items-center gap-2"
             >
-              {loading ? 'ログイン中...' : 'ログイン'}
+              {loading ? (
+                <>
+                  <ButtonSpinner />
+                  <span>ログイン中...</span>
+                </>
+              ) : (
+                'ログイン'
+              )}
             </button>
           </form>
           <p className="text-center text-sm text-[var(--color-text-muted)] mt-6">

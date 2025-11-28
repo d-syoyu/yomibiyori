@@ -10,6 +10,7 @@ import { useSponsorAuth } from '@/lib/hooks/useSponsorAuth'
 import { getTicketStatusLabel, getTicketStatusClassName } from '@/lib/constants'
 import type { SupportTicket, TicketStatus } from '@/types/sponsor'
 import Link from 'next/link'
+import { LoadingCenter } from '@/components/ui/Spinner'
 
 export default function SponsorSupportPage() {
   const { sponsorId, loading: authLoading } = useSponsorAuth()
@@ -64,7 +65,7 @@ export default function SponsorSupportPage() {
 
       <div className="card p-0 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-[var(--color-text-muted)]">読み込み中...</div>
+          <LoadingCenter />
         ) : tickets.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-[var(--color-text-secondary)] mb-4">お問い合わせ履歴はありません</p>

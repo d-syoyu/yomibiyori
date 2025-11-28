@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { Loading } from '@/components/ui/Spinner'
 import { getImpersonation } from '@/lib/impersonation'
 
 interface Stats {
@@ -245,7 +246,7 @@ export default function SponsorDashboard() {
   ]
 
   if (loading) {
-    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+    return <Loading />
   }
 
   return (

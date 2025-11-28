@@ -12,6 +12,7 @@ import {
   getTransactionTypeClassName,
 } from '@/lib/constants'
 import type { CreditTransaction } from '@/types/sponsor'
+import { Loading } from '@/components/ui/Spinner'
 
 interface Pricing {
   quantity: number
@@ -144,7 +145,7 @@ export default function SponsorCreditsPage() {
   }
 
   if (loading || authLoading) {
-    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+    return <Loading />
   }
 
   return (

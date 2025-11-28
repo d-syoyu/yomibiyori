@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Loading } from '@/components/ui/Spinner'
 
 interface Stats {
     totalThemes: number
@@ -226,7 +227,7 @@ export default function AdminSponsorDashboard() {
     ]
 
     if (loading) {
-        return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+        return <Loading />
     }
 
     return (

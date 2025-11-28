@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/lib/hooks/useToast'
+import { Loading } from '@/components/ui/Spinner'
 
 type ThemeStatus = 'pending' | 'approved' | 'rejected' | 'published'
 
@@ -190,7 +191,7 @@ function ThemesContent() {
   ]
 
   if (loading) {
-    return <div className="text-[var(--color-text-secondary)]">読み込み中...</div>
+    return <Loading />
   }
 
   return (
@@ -305,7 +306,7 @@ function ThemesContent() {
 
 export default function ThemesPage() {
   return (
-    <Suspense fallback={<div className="text-[var(--color-text-secondary)]">読み込み中...</div>}>
+    <Suspense fallback={<Loading />}>
       <ThemesContent />
     </Suspense>
   )
