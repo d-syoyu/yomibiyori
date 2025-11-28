@@ -350,7 +350,7 @@ export default function LoginScreen() {
             {/* タイトルとキャッチコピー */}
             <View style={styles.headerSection}>
               <Text style={styles.title}>よみびより</Text>
-              <Text style={styles.catchCopy}>AIと詠む、今日の一首</Text>
+              <Text style={styles.catchCopy}>今日の一首を詠もう</Text>
               <View style={styles.decorativeLine}>
                 <View style={styles.lineSegment} />
                 <Text style={styles.lineDecoration}>◇</Text>

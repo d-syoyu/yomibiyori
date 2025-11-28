@@ -188,7 +188,7 @@ function RootNavigator() {
       <RootStack.Screen
         name="Login"
         component={LoginScreen}
-        options={{ presentation: 'modal' }}
+        options={{ presentation: 'fullScreenModal' }}
       />
       <RootStack.Screen
         name="PasswordReset"

@@ -41,8 +41,6 @@ export default function ActionSelectionScreen({ route }: Props) {
   const handleCompose = async () => {
     // Check authentication before allowing composition
     if (!isAuthenticated) {
-      showError('投稿するにはログインが必要です');
-      // Navigate to login screen in root navigator
       navigation.dispatch(
         CommonActions.navigate({
           name: 'Login',

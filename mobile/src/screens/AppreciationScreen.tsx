@@ -15,7 +15,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, CommonActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
 import type { SharePayload } from '../types/share';
@@ -25,6 +25,7 @@ import CategoryIcon from '../components/CategoryIcon';
 import WorkCard from '../components/WorkCard';
 import ShareSheet from '../components/ShareSheet';
 import { useThemeStore } from '../stores/useThemeStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
@@ -37,7 +38,9 @@ const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア
 const IMPRESSION_BATCH_LIMIT = 20;
 
 export default function AppreciationScreen({ route }: Props) {
+  const navigation = useNavigation();
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const { handleError } = useApiErrorHandler();
 
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>(
@@ -150,6 +153,16 @@ export default function AppreciationScreen({ route }: Props) {
 
   // Handle like action
   const handleLike = async (workId: string) => {
+    // Check authentication before allowing like
+    if (!isAuthenticated) {
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Login',
+        })
+      );
+      return;
+    }
+
     try {
       const response = await api.likeWork(workId);
 
