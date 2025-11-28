@@ -21,6 +21,7 @@ interface WorkCardProps {
   sponsorUrl?: string;
   onSponsorPress?: () => void;
   likesCount?: number;
+  liked?: boolean;
   onLike?: (event: GestureResponderEvent) => void;
   onShare?: (event: GestureResponderEvent) => void;
   extraFooterContent?: React.ReactNode;
@@ -39,6 +40,7 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
   sponsorUrl,
   onSponsorPress,
   likesCount,
+  liked,
   onLike,
   onShare,
   extraFooterContent,
@@ -135,13 +137,19 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
               {typeof likesCount === 'number' &&
                 (onLike ? (
                   <TouchableOpacity
-                    style={styles.likeBadge}
+                    style={[styles.likeBadge, liked && styles.likeBadgeActive]}
                     onPress={onLike}
                     activeOpacity={0.8}
-                    accessibilityLabel="いいね"
+                    accessibilityLabel={liked ? "いいねを取り消す" : "いいね"}
                   >
-                    <Ionicons name="heart" size={14} color={colors.status.error} />
-                    <Text style={styles.likeText}>{likesCount}</Text>
+                    <Ionicons
+                      name={liked ? "heart" : "heart-outline"}
+                      size={14}
+                      color={liked ? colors.status.error : colors.text.secondary}
+                    />
+                    <Text style={[styles.likeText, !liked && styles.likeTextInactive]}>
+                      {likesCount}
+                    </Text>
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.likeBadge}>
@@ -238,10 +246,16 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     backgroundColor: colors.background.secondary,
   },
+  likeBadgeActive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
   likeText: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.semiBold,
     color: colors.status.error,
+  },
+  likeTextInactive: {
+    color: colors.text.secondary,
   },
   badgeContainer: {
     alignSelf: 'flex-start',

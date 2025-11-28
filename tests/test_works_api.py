@@ -332,12 +332,13 @@ def test_like_work_success(
     assert redis_client.hget(f"metrics:{work_id}", "impressions") == "0"
 
 
-def test_like_work_conflict(
+def test_toggle_like_add_remove_readd(
     client: TestClient,
     db_session: Session,
     redis_client,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Test like toggle: add -> remove -> re-add."""
     user = _create_user(db_session)
     theme = _create_theme(db_session, theme_date=date(2025, 1, 20))
     settings = get_settings()
@@ -351,18 +352,137 @@ def test_like_work_conflict(
     )
     work_id = creation.json()["id"]
 
+    # First toggle: add like
     first = client.post(
         f"/api/v1/works/{work_id}/like",
         headers=_auth_headers(user.id),
     )
     assert first.status_code == 200
+    assert first.json()["status"] == "liked"
+    assert first.json()["likes_count"] == 1
+    assert db_session.query(Like).count() == 1
 
+    # Second toggle: remove like
     second = client.post(
         f"/api/v1/works/{work_id}/like",
         headers=_auth_headers(user.id),
     )
-    assert second.status_code == 409
-    assert second.json()["error"]["detail"].startswith("You have already")
+    assert second.status_code == 200
+    assert second.json()["status"] == "unliked"
+    assert second.json()["likes_count"] == 0
+    assert db_session.query(Like).count() == 0
+
+    # Third toggle: re-add like
+    third = client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(user.id),
+    )
+    assert third.status_code == 200
+    assert third.json()["status"] == "liked"
+    assert third.json()["likes_count"] == 1
+    assert db_session.query(Like).count() == 1
+
+    # Verify Redis state after final add
+    ranking_key = f"{settings.redis_ranking_prefix}{theme.id}"
+    assert redis_client.zscore(ranking_key, work_id) == 1.0
+    assert redis_client.hget(f"metrics:{work_id}", "likes") == "1"
+
+
+def test_get_like_status(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test getting like status for a single work."""
+    user = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 20))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 20, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "gentle waves whisper beneath the moon"},
+        headers=_auth_headers(user.id),
+    )
+    work_id = creation.json()["id"]
+
+    # Check status before liking
+    status_before = client.get(
+        f"/api/v1/works/{work_id}/like/status",
+        headers=_auth_headers(user.id),
+    )
+    assert status_before.status_code == 200
+    assert status_before.json()["liked"] is False
+    assert status_before.json()["likes_count"] == 0
+
+    # Like the work
+    client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(user.id),
+    )
+
+    # Check status after liking
+    status_after = client.get(
+        f"/api/v1/works/{work_id}/like/status",
+        headers=_auth_headers(user.id),
+    )
+    assert status_after.status_code == 200
+    assert status_after.json()["liked"] is True
+    assert status_after.json()["likes_count"] == 1
+
+
+def test_get_like_status_batch(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test getting like status for multiple works at once."""
+    user = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 20))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 20, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    # Create multiple works
+    work_ids = []
+    for i in range(3):
+        # Need different users for different works
+        author = _create_user(db_session)
+        monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+        creation = client.post(
+            "/api/v1/works",
+            json={"theme_id": theme.id, "text": f"poem number {i} under starlight"},
+            headers=_auth_headers(author.id),
+        )
+        work_ids.append(creation.json()["id"])
+
+    # Like only the first work
+    client.post(
+        f"/api/v1/works/{work_ids[0]}/like",
+        headers=_auth_headers(user.id),
+    )
+
+    # Batch status check
+    batch_response = client.post(
+        "/api/v1/works/like/status/batch",
+        json={"work_ids": work_ids},
+        headers=_auth_headers(user.id),
+    )
+    assert batch_response.status_code == 200
+    items = batch_response.json()["items"]
+    assert len(items) == 3
+
+    # Verify results
+    items_by_id = {item["work_id"]: item for item in items}
+    assert items_by_id[work_ids[0]]["liked"] is True
+    assert items_by_id[work_ids[0]]["likes_count"] == 1
+    assert items_by_id[work_ids[1]]["liked"] is False
+    assert items_by_id[work_ids[1]]["likes_count"] == 0
+    assert items_by_id[work_ids[2]]["liked"] is False
+    assert items_by_id[work_ids[2]]["likes_count"] == 0
 
 
 def test_record_work_impression_updates_metrics(

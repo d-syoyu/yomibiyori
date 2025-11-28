@@ -170,6 +170,7 @@ class EventNames:
 
     # Engagement
     WORK_LIKED = "work_liked"
+    WORK_UNLIKED = "work_unliked"
     WORK_VIEWED = "work_viewed"
 
     # Content consumption

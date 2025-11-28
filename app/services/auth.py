@@ -215,6 +215,34 @@ def get_current_user_id(
     return str(user_id)
 
 
+def get_optional_user_id(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> str | None:
+    """Return the authenticated user identifier if available, otherwise None.
+
+    This is useful for endpoints that work for both authenticated and anonymous users
+    but may provide different behavior when authenticated.
+    """
+    if not credentials:
+        return None
+
+    token = credentials.credentials
+    try:
+        payload: dict[str, Any] = _decode_jwt(token)
+    except JWTError:
+        return None
+
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+
+    role = payload.get("role", "authenticated")
+    if role not in {"authenticated", "service_role"}:
+        return None
+
+    return str(user_id)
+
+
 def _extract_supabase_error(response: requests.Response) -> str:
     """Return a human friendly error message from a Supabase HTTP response."""
 

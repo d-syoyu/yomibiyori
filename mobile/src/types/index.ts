@@ -148,8 +148,27 @@ export interface Work {
 export type WorkListResponse = Work[];
 
 export interface WorkLikeResponse {
-  status: 'liked';
+  status: 'liked' | 'unliked';
   likes_count: number;
+}
+
+export interface WorkLikeStatusResponse {
+  liked: boolean;
+  likes_count: number;
+}
+
+export interface WorkLikeBatchRequest {
+  work_ids: string[];
+}
+
+export interface WorkLikeBatchStatusItem {
+  work_id: string;
+  liked: boolean;
+  likes_count: number;
+}
+
+export interface WorkLikeBatchResponse {
+  items: WorkLikeBatchStatusItem[];
 }
 
 export interface WorkDateSummary {

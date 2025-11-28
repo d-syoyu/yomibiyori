@@ -10,12 +10,16 @@ from sqlalchemy.orm import Session
 
 from app.core.redis import get_redis_client
 from app.db.session import get_authenticated_db_session, get_db_session
+from app.services.auth import get_optional_user_id
 from app.schemas.work import (
     WorkCreate,
     WorkDateSummary,
     WorkImpressionRequest,
     WorkImpressionResponse,
+    WorkLikeBatchRequest,
+    WorkLikeBatchResponse,
     WorkLikeResponse,
+    WorkLikeStatusResponse,
     WorkResponse,
 )
 from app.services import likes as likes_service
@@ -53,6 +57,7 @@ def submit_work(
 def list_works(
     theme_id: Annotated[str, Query(description="Theme identifier")],
     session: Annotated[Session, Depends(get_db_session)],
+    current_user_id: Annotated[str | None, Depends(get_optional_user_id)],
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     order_by: Annotated[str, Query(description="Sort order: 'recent' or 'fair_score'")] = "recent",
 ) -> list[WorkResponse]:
@@ -61,9 +66,17 @@ def list_works(
     Sort order:
     - 'recent': Newest first (default)
     - 'fair_score': Time-normalized score (balances good older works with newer works)
+
+    If the user is authenticated, their own works are excluded from the results.
     """
 
-    return works_service.list_works(session=session, theme_id=theme_id, limit=limit, order_by=order_by)
+    return works_service.list_works(
+        session=session,
+        theme_id=theme_id,
+        limit=limit,
+        order_by=order_by,
+        exclude_user_id=current_user_id,
+    )
 
 
 @router.get(
@@ -111,21 +124,59 @@ def list_my_works(
 
 
 @router.post(
+    "/like/status/batch",
+    response_model=WorkLikeBatchResponse,
+    summary="Get like status for multiple works",
+)
+def get_like_status_batch(
+    payload: WorkLikeBatchRequest,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> WorkLikeBatchResponse:
+    """Get like status for multiple works at once."""
+
+    return likes_service.get_like_status_batch(
+        session=session,
+        user_id=user_id,
+        work_ids=payload.work_ids,
+    )
+
+
+@router.post(
     "/{work_id}/like",
     response_model=WorkLikeResponse,
-    summary="Send like (kansha) to a work",
+    summary="Toggle like (kansha) for a work",
 )
-def like_work(
+def toggle_like(
     work_id: str,
     user_id: Annotated[str, Depends(get_current_user_id)],
     session: Annotated[Session, Depends(get_authenticated_db_session)],
     redis_client: Annotated[Redis, Depends(get_redis_client)],
 ) -> WorkLikeResponse:
-    """Register a like for the target work on behalf of the authenticated user."""
+    """Toggle like status for the target work. If already liked, unlike it. Otherwise, like it."""
 
-    return likes_service.like_work(
+    return likes_service.toggle_like(
         session=session,
         redis_client=redis_client,
+        user_id=user_id,
+        work_id=work_id,
+    )
+
+
+@router.get(
+    "/{work_id}/like/status",
+    response_model=WorkLikeStatusResponse,
+    summary="Get like status for a work",
+)
+def get_like_status(
+    work_id: str,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> WorkLikeStatusResponse:
+    """Get whether the current user has liked the work and the total like count."""
+
+    return likes_service.get_like_status(
+        session=session,
         user_id=user_id,
         work_id=work_id,
     )

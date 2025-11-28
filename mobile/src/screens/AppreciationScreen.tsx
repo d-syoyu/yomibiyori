@@ -53,6 +53,7 @@ export default function AppreciationScreen({ route }: Props) {
   const [currentThemeId, setCurrentThemeId] = useState<string | null>(null);
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
+  const [likedStates, setLikedStates] = useState<Map<string, boolean>>(new Map());
   const impressionsLoggedRef = useRef<Set<string>>(new Set());
 
   useFocusEffect(
@@ -138,6 +139,21 @@ export default function AppreciationScreen({ route }: Props) {
 
       setThemesMap(newThemesMap);
       void recordImpressionsForWorks(worksData);
+
+      // Fetch like statuses for all works (only if authenticated)
+      if (isAuthenticated && worksData.length > 0) {
+        try {
+          const workIds = worksData.map(w => w.id);
+          const likeStatusResponse = await api.getLikeStatusBatch(workIds);
+          const newLikedStates = new Map<string, boolean>();
+          likeStatusResponse.items.forEach(item => {
+            newLikedStates.set(item.work_id, item.liked);
+          });
+          setLikedStates(newLikedStates);
+        } catch (error) {
+          console.warn('[AppreciationScreen] Failed to fetch like statuses:', error);
+        }
+      }
     } catch (error: any) {
       handleError(error, 'work_fetching');
     } finally {
@@ -151,7 +167,7 @@ export default function AppreciationScreen({ route }: Props) {
     loadWorks();
   }, [loadWorks]);
 
-  // Handle like action
+  // Handle like action with optimistic update
   const handleLike = async (workId: string) => {
     // Check authentication before allowing like
     if (!isAuthenticated) {
@@ -163,10 +179,33 @@ export default function AppreciationScreen({ route }: Props) {
       return;
     }
 
-    try {
-      const response = await api.likeWork(workId);
+    // Get current state for rollback
+    const currentLiked = likedStates.get(workId) ?? false;
+    const currentWork = works.find(w => w.id === workId);
+    const currentLikesCount = currentWork?.likes_count ?? 0;
 
-      // Update the likes count in the local state (visual feedback only)
+    // Optimistic update: toggle state immediately
+    const newLiked = !currentLiked;
+    const newLikesCount = newLiked ? currentLikesCount + 1 : Math.max(0, currentLikesCount - 1);
+
+    setLikedStates(prev => {
+      const next = new Map(prev);
+      next.set(workId, newLiked);
+      return next;
+    });
+
+    setWorks(prevWorks =>
+      prevWorks.map(work =>
+        work.id === workId
+          ? { ...work, likes_count: newLikesCount }
+          : work
+      )
+    );
+
+    try {
+      const response = await api.toggleLike(workId);
+
+      // Update with actual count from server
       setWorks(prevWorks =>
         prevWorks.map(work =>
           work.id === workId
@@ -175,8 +214,28 @@ export default function AppreciationScreen({ route }: Props) {
         )
       );
 
-      // No toast or haptic - just visual feedback with updated count
+      // Update liked state based on server response
+      setLikedStates(prev => {
+        const next = new Map(prev);
+        next.set(workId, response.status === 'liked');
+        return next;
+      });
     } catch (error: any) {
+      // Rollback on error
+      setLikedStates(prev => {
+        const next = new Map(prev);
+        next.set(workId, currentLiked);
+        return next;
+      });
+
+      setWorks(prevWorks =>
+        prevWorks.map(work =>
+          work.id === workId
+            ? { ...work, likes_count: currentLikesCount }
+            : work
+        )
+      );
+
       handleError(error, 'like_action');
     }
   };
@@ -268,6 +327,7 @@ export default function AppreciationScreen({ route }: Props) {
                   category={theme?.category ?? '恋愛'}
                   displayName={work.display_name}
                   likesCount={work.likes_count}
+                  liked={likedStates.get(work.id) ?? false}
                   onLike={() => handleLike(work.id)}
                   onShare={() => openShareSheet(work)}
                   sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}

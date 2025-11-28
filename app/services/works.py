@@ -233,7 +233,14 @@ def _calculate_fair_score(work_created_at: datetime, likes_count: int) -> float:
     return likes_count * normalization
 
 
-def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "recent") -> list[WorkResponse]:
+def list_works(
+    session: Session,
+    *,
+    theme_id: str,
+    limit: int,
+    order_by: str = "recent",
+    exclude_user_id: str | None = None,
+) -> list[WorkResponse]:
     """Return works for the supplied theme.
 
     Args:
@@ -241,6 +248,7 @@ def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "
         theme_id: Theme identifier
         limit: Maximum number of works to return
         order_by: Sort order - "recent" (newest first) or "fair_score" (time-normalized)
+        exclude_user_id: Optional user ID to exclude from results (typically the current user)
 
     Returns:
         List of works with likes count
@@ -258,6 +266,10 @@ def list_works(session: Session, *, theme_id: str, limit: int, order_by: str = "
         .where(Work.theme_id == theme_id)
         .group_by(Work.id, User.name, User.email)
     )
+
+    # Exclude the specified user's works (e.g., current user viewing appreciation screen)
+    if exclude_user_id:
+        stmt = stmt.where(Work.user_id != exclude_user_id)
 
     results = session.execute(stmt).all()
 

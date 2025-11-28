@@ -24,6 +24,8 @@ import type {
   Work,
   WorkListResponse,
   WorkLikeResponse,
+  WorkLikeStatusResponse,
+  WorkLikeBatchResponse,
   WorkDateSummary,
   WorkImpressionResponse,
   RankingResponse,
@@ -360,9 +362,26 @@ class ApiClient {
     return response.data;
   }
 
-  async likeWork(workId: string): Promise<WorkLikeResponse> {
+  async toggleLike(workId: string): Promise<WorkLikeResponse> {
     const response = await this.client.post<WorkLikeResponse>(`/works/${workId}/like`);
     return response.data;
+  }
+
+  async getLikeStatus(workId: string): Promise<WorkLikeStatusResponse> {
+    const response = await this.client.get<WorkLikeStatusResponse>(`/works/${workId}/like/status`);
+    return response.data;
+  }
+
+  async getLikeStatusBatch(workIds: string[]): Promise<WorkLikeBatchResponse> {
+    const response = await this.client.post<WorkLikeBatchResponse>('/works/like/status/batch', {
+      work_ids: workIds,
+    });
+    return response.data;
+  }
+
+  /** @deprecated Use toggleLike instead */
+  async likeWork(workId: string): Promise<WorkLikeResponse> {
+    return this.toggleLike(workId);
   }
 
   async getMyWorks(params?: {

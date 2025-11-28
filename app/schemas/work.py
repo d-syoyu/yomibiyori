@@ -41,8 +41,40 @@ class WorkResponse(BaseModel):
 class WorkLikeResponse(BaseModel):
     """Response payload for a work like action."""
 
-    status: Literal["liked"]
+    status: Literal["liked", "unliked"]
     likes_count: int = Field(ge=0, description="Current number of likes for the work")
+
+
+class WorkLikeStatusResponse(BaseModel):
+    """Response payload for checking like status."""
+
+    liked: bool = Field(description="Whether the current user has liked this work")
+    likes_count: int = Field(ge=0, description="Current number of likes for the work")
+
+
+class WorkLikeBatchRequest(BaseModel):
+    """Request payload for batch like status check."""
+
+    work_ids: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="List of work IDs to check like status for",
+    )
+
+
+class WorkLikeBatchStatusItem(BaseModel):
+    """Single item in batch like status response."""
+
+    work_id: str = Field(description="Work ID")
+    liked: bool = Field(description="Whether the current user has liked this work")
+    likes_count: int = Field(ge=0, description="Current number of likes for the work")
+
+
+class WorkLikeBatchResponse(BaseModel):
+    """Response payload for batch like status check."""
+
+    items: list[WorkLikeBatchStatusItem] = Field(description="List of like statuses")
 
 
 class WorkImpressionRequest(BaseModel):
