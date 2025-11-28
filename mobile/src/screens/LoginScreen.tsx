@@ -479,6 +479,16 @@ export default function LoginScreen() {
                       <Text style={styles.forgotPasswordText}>パスワードを忘れた方はこちら</Text>
                     </TouchableOpacity>
                   )}
+
+                  {/* 戻るボタン（前の画面がある場合のみ表示） */}
+                  {navigation.canGoBack() && (
+                    <TouchableOpacity
+                      style={styles.goBackButton}
+                      onPress={() => navigation.goBack()}
+                    >
+                      <Text style={styles.goBackText}>← 戻る</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>
@@ -685,5 +695,16 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginRight: spacing.sm,
+  },
+  goBackButton: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  goBackText: {
+    color: colors.text.tertiary,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    letterSpacing: 0.5,
   },
 });
