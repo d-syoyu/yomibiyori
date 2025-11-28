@@ -452,7 +452,7 @@ export default function LoginScreen() {
                       activeOpacity={0.7}
                     >
                       <Ionicons
-                        name={showPassword ? 'eye-off' : 'eye'}
+                        name={showPassword ? 'eye' : 'eye-off'}
                         size={20}
                         color={colors.text.tertiary}
                       />
@@ -700,11 +700,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0,
     padding: spacing.md,
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
-    color: colors.text.primary,
+    color: 'transparent',
   },
   eyeButton: {
     paddingHorizontal: spacing.md,
