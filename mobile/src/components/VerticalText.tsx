@@ -7,11 +7,51 @@
  * - 波ダッシュ: 〜、～
  * - 三点リーダー: …、‥
  * - ハイフン・ダッシュ: −、－、–、—
- * - 括弧（一部）: 「」『』（）など
+ *
+ * 縦書き用Unicode文字に置換する文字：
+ * - 括弧類: 「」『』（）【】〔〕〈〉《》［］｛｝
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle, type TextStyle, type StyleProp } from 'react-native';
+
+/**
+ * 縦書き用Unicode文字への置換マップ
+ * 括弧類は回転ではなく縦書き専用文字に置換
+ */
+const verticalCharMap: { [key: string]: string } = {
+  '「': '﹁',
+  '」': '﹂',
+  '『': '﹃',
+  '』': '﹄',
+  '（': '︵',
+  '）': '︶',
+  '(': '︵',
+  ')': '︶',
+  '【': '︻',
+  '】': '︼',
+  '〔': '︹',
+  '〕': '︺',
+  '〈': '︿',
+  '〉': '﹀',
+  '《': '︽',
+  '》': '︾',
+  '［': '﹇',
+  '］': '﹈',
+  '[': '﹇',
+  ']': '﹈',
+  '｛': '︷',
+  '｝': '︸',
+  '{': '︷',
+  '}': '︸',
+};
+
+/**
+ * 縦書き用の文字に変換（置換が必要な文字のみ）
+ */
+function getVerticalChar(char: string): string {
+  return verticalCharMap[char] ?? char;
+}
 
 interface VerticalTextProps {
   text: string;
@@ -25,6 +65,7 @@ interface VerticalTextProps {
 
 /**
  * 縦書き時に90度回転が必要な文字を判定
+ * 注: 括弧類は回転ではなく縦書き専用文字に置換するため除外
  */
 function needsRotation(char: string): boolean {
   // 伸ばし棒・ダッシュ類
@@ -36,14 +77,9 @@ function needsRotation(char: string): boolean {
   // 三点リーダー
   const ellipsisChars = ['…', '‥', '⋯'];
 
-  // 括弧・記号類（縦書き時に回転が必要）
-  const bracketChars = [
-    '（', '）', '(', ')',           // 丸括弧
-    '「', '」', '『', '』',         // 鉤括弧・二重鉤括弧
-    '【', '】', '〔', '〕',         // 隅付き括弧・亀甲括弧
-    '［', '］', '[', ']',           // 角括弧
-    '〈', '〉', '《', '》',         // 山括弧・二重山括弧
-    '｛', '｝', '{', '}',           // 波括弧
+  // 記号類（縦書き時に回転が必要）
+  // 注: 括弧類は verticalCharMap で縦書き専用文字に置換するため除外
+  const symbolChars = [
     '"', '"', "'", "'",             // 全角引用符
     '"', "'",                       // 半角引用符
     ':', ';',                       // 半角コロン・セミコロン
@@ -53,7 +89,7 @@ function needsRotation(char: string): boolean {
   ];
 
   // 全ての回転対象文字
-  const rotationChars = [...dashChars, ...waveChars, ...ellipsisChars, ...bracketChars];
+  const rotationChars = [...dashChars, ...waveChars, ...ellipsisChars, ...symbolChars];
 
   return rotationChars.includes(char);
 }
@@ -120,6 +156,7 @@ export default function VerticalText({
             {line.split('').map((char, charIndex) => {
               const shouldRotate = needsRotation(char);
               const shouldAdjustPosition = needsPositionAdjustment(char);
+              const displayChar = getVerticalChar(char);
 
               return (
                 <Text
@@ -131,7 +168,7 @@ export default function VerticalText({
                     shouldAdjustPosition && styles.punctuationCharacter
                   ]}
                 >
-                  {char}
+                  {displayChar}
                 </Text>
               );
             })}

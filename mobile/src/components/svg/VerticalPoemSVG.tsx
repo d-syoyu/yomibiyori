@@ -6,6 +6,44 @@
 import React from 'react';
 import { G, Text as SVGText } from 'react-native-svg';
 
+/**
+ * 縦書き用Unicode文字への置換マップ
+ * 括弧類は回転ではなく縦書き専用文字に置換
+ */
+const verticalCharMap: { [key: string]: string } = {
+  '「': '﹁',
+  '」': '﹂',
+  '『': '﹃',
+  '』': '﹄',
+  '（': '︵',
+  '）': '︶',
+  '(': '︵',
+  ')': '︶',
+  '【': '︻',
+  '】': '︼',
+  '〔': '︹',
+  '〕': '︺',
+  '〈': '︿',
+  '〉': '﹀',
+  '《': '︽',
+  '》': '︾',
+  '［': '﹇',
+  '］': '﹈',
+  '[': '﹇',
+  ']': '﹈',
+  '｛': '︷',
+  '｝': '︸',
+  '{': '︷',
+  '}': '︸',
+};
+
+/**
+ * 縦書き用の文字に変換（置換が必要な文字のみ）
+ */
+const getVerticalChar = (char: string): string => {
+  return verticalCharMap[char] ?? char;
+};
+
 interface VerticalPoemSVGProps {
   upperText?: string;
   lowerText: string;
@@ -23,6 +61,7 @@ interface VerticalPoemSVGProps {
 
 /**
  * 縦書き時に90度回転が必要な文字
+ * 注: 括弧類は回転ではなく縦書き専用文字に置換するため除外
  */
 const needsRotation = (char: string): boolean => {
   const rotationChars = [
@@ -32,13 +71,8 @@ const needsRotation = (char: string): boolean => {
     '〜', '～', '〰',
     // 三点リーダー
     '…', '‥', '⋯',
-    // 括弧類（向きを変える必要がある）
-    '（', '）', '(', ')',           // 丸括弧
-    '「', '」', '『', '』',         // 鉤括弧・二重鉤括弧
-    '【', '】', '〔', '〕',         // 隅付き括弧・亀甲括弧
-    '［', '］', '[', ']',           // 角括弧
-    '〈', '〉', '《', '》',         // 山括弧・二重山括弧
-    '｛', '｝', '{', '}',           // 波括弧
+    // 記号類（縦書き時に回転が必要）
+    // 注: 括弧類は verticalCharMap で縦書き専用文字に置換するため除外
     '"', '"', "'", "'",             // 全角引用符
     '"', "'",                       // 半角引用符
     ':', ';',                       // 半角コロン・セミコロン
@@ -94,6 +128,7 @@ const VerticalPoemSVG: React.FC<VerticalPoemSVGProps> = ({
       const charY = y + index * lineHeight;
       const rotation = needsRotation(char);
       const positionAdjust = needsPositionAdjustment(char);
+      const displayChar = getVerticalChar(char);
 
       // 句読点は右上に位置調整
       const adjustedX = positionAdjust ? columnX + fontSize * 0.3 : columnX;
@@ -111,7 +146,7 @@ const VerticalPoemSVG: React.FC<VerticalPoemSVGProps> = ({
           fontFamily="Noto Serif JP"
           transform={rotation ? `rotate(90, ${adjustedX}, ${adjustedY})` : undefined}
         >
-          {char}
+          {displayChar}
         </SVGText>
       );
     });
