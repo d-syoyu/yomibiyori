@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getImpersonation } from '@/lib/impersonation'
-import { Loading } from '@/components/ui/Spinner'
+import { LoadingFullScreen } from '@/components/ui/Spinner'
 
 function formatDateForCsv(value: string) {
     const date = new Date(value)
@@ -518,7 +518,7 @@ export default function SponsorInsightsPage() {
     }
 
     if (loading) {
-        return <Loading text="データを読み込み中..." />
+        return <LoadingFullScreen text="データを読み込み中..." />
     }
 
     return (
