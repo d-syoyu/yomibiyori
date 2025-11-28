@@ -330,12 +330,14 @@ export default function LoginScreen() {
     >
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
           <View style={styles.content}>
             {/* 装飾的なカテゴリアイコン */}
@@ -523,7 +525,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingVertical: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xl * 3,
   },
   content: {
     justifyContent: 'center',
