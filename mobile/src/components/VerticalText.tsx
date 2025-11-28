@@ -36,7 +36,7 @@ function needsRotation(char: string): boolean {
   // 三点リーダー
   const ellipsisChars = ['…', '‥', '⋯'];
 
-  // 括弧類（縦書き時に回転が必要）
+  // 括弧・記号類（縦書き時に回転が必要）
   const bracketChars = [
     '（', '）', '(', ')',           // 丸括弧
     '「', '」', '『', '』',         // 鉤括弧・二重鉤括弧
@@ -44,22 +44,29 @@ function needsRotation(char: string): boolean {
     '［', '］', '[', ']',           // 角括弧
     '〈', '〉', '《', '》',         // 山括弧・二重山括弧
     '｛', '｝', '{', '}',           // 波括弧
-  ];
-
-  // 句読点類（縦書き時に位置調整が必要）
-  const punctuationChars = [
-    '、', '，', ',',               // 読点
-    '。', '．', '.',               // 句点
-    '！', '!',                     // 感嘆符
-    '？', '?',                     // 疑問符
-    '：', ':',                     // コロン
-    '；', ';',                     // セミコロン
+    '"', '"', ''', ''',             // 全角引用符
+    '"', "'",                       // 半角引用符
+    ':', ';',                       // 半角コロン・セミコロン
+    '：', '；',                     // 全角コロン・セミコロン
+    '→', '←', '↔',                 // 矢印
+    '=', '＝',                      // イコール
   ];
 
   // 全ての回転対象文字
-  const rotationChars = [...dashChars, ...waveChars, ...ellipsisChars, ...bracketChars, ...punctuationChars];
+  const rotationChars = [...dashChars, ...waveChars, ...ellipsisChars, ...bracketChars];
 
   return rotationChars.includes(char);
+}
+
+/**
+ * 縦書き時に右上に位置調整が必要な文字を判定（句読点類）
+ */
+function needsPositionAdjustment(char: string): boolean {
+  const punctuationChars = [
+    '、', '，',                     // 読点
+    '。', '．',                     // 句点
+  ];
+  return punctuationChars.includes(char);
 }
 
 export default function VerticalText({
@@ -112,6 +119,7 @@ export default function VerticalText({
           >
             {line.split('').map((char, charIndex) => {
               const shouldRotate = needsRotation(char);
+              const shouldAdjustPosition = needsPositionAdjustment(char);
 
               return (
                 <Text
@@ -119,7 +127,8 @@ export default function VerticalText({
                   style={[
                     styles.character,
                     textStyle,
-                    shouldRotate && styles.rotatedCharacter
+                    shouldRotate && styles.rotatedCharacter,
+                    shouldAdjustPosition && styles.punctuationCharacter
                   ]}
                 >
                   {char}
@@ -156,5 +165,9 @@ const styles = StyleSheet.create({
   },
   rotatedCharacter: {
     transform: [{ rotate: '90deg' }],
+  },
+  punctuationCharacter: {
+    // 句読点を右上に配置（縦書き用位置調整）
+    transform: [{ translateX: 6 }, { translateY: -6 }],
   },
 });

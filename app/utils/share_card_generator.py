@@ -120,13 +120,14 @@ class ShareCardGenerator:
 
     @staticmethod
     def _needs_rotation(char: str) -> bool:
+        """縦書き時に90度回転が必要な文字を判定"""
         # 伸ばし棒・ダッシュ類
         dash_chars = ["ー", "―", "－", "‐", "ｰ", "—", "−", "–"]
         # 波ダッシュ
         wave_chars = ["〜", "～", "〰"]
         # 三点リーダー
         ellipsis_chars = ["…", "‥", "⋯"]
-        # 括弧類
+        # 括弧類（向きを変える必要がある）
         bracket_chars = [
             "（", "）", "(", ")",           # 丸括弧
             "「", "」", "『", "』",         # 鉤括弧・二重鉤括弧
@@ -134,18 +135,21 @@ class ShareCardGenerator:
             "［", "］", "[", "]",           # 角括弧
             "〈", "〉", "《", "》",         # 山括弧・二重山括弧
             "｛", "｝", "{", "}",           # 波括弧
+            """, """, "'", "'",             # 全角引用符
+            '"', "'",                       # 半角引用符
+            ":", ";",                       # 半角コロン・セミコロン
+            "：", "；",                     # 全角コロン・セミコロン
+            "→", "←", "↔",                 # 矢印
+            "=", "＝",                      # イコール
         ]
-        # 句読点類
-        punctuation_chars = [
-            "、", "，", ",",               # 読点
-            "。", "．", ".",               # 句点
-            "！", "!",                     # 感嘆符
-            "？", "?",                     # 疑問符
-            "：", ":",                     # コロン
-            "；", ";",                     # セミコロン
-        ]
-        rotation_chars = set(dash_chars + wave_chars + ellipsis_chars + bracket_chars + punctuation_chars)
+        rotation_chars = set(dash_chars + wave_chars + ellipsis_chars + bracket_chars)
         return char in rotation_chars
+
+    @staticmethod
+    def _needs_position_adjustment(char: str) -> bool:
+        """縦書き時に右上に位置調整が必要な文字（句読点類）"""
+        punctuation_chars = ["、", "，", "。", "．"]
+        return char in punctuation_chars
 
     def _draw_rotated_char(
         self,
@@ -211,6 +215,14 @@ class ShareCardGenerator:
             for char in line.strip():
                 if self._needs_rotation(char):
                     self._draw_rotated_char(img, char, current_x, current_y, font, fill)
+                elif self._needs_position_adjustment(char):
+                    # 句読点は右上に位置調整
+                    bbox = draw.textbbox((0, 0), char, font=font)
+                    char_width = bbox[2] - bbox[0]
+                    offset = int(char_height * 0.25)  # 右上へのオフセット
+                    char_x = current_x - (char_width // 2) + offset
+                    char_y = current_y - offset
+                    draw.text((char_x, char_y), char, font=font, fill=fill)
                 else:
                     bbox = draw.textbbox((0, 0), char, font=font)
                     char_width = bbox[2] - bbox[0]

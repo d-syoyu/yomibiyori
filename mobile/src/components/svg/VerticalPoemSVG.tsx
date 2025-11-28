@@ -32,22 +32,29 @@ const needsRotation = (char: string): boolean => {
     '〜', '～', '〰',
     // 三点リーダー
     '…', '‥', '⋯',
-    // 括弧類
+    // 括弧類（向きを変える必要がある）
     '（', '）', '(', ')',           // 丸括弧
     '「', '」', '『', '』',         // 鉤括弧・二重鉤括弧
     '【', '】', '〔', '〕',         // 隅付き括弧・亀甲括弧
     '［', '］', '[', ']',           // 角括弧
     '〈', '〉', '《', '》',         // 山括弧・二重山括弧
     '｛', '｝', '{', '}',           // 波括弧
-    // 句読点類
-    '、', '，', ',',               // 読点
-    '。', '．', '.',               // 句点
-    '！', '!',                     // 感嘆符
-    '？', '?',                     // 疑問符
-    '：', ':',                     // コロン
-    '；', ';',                     // セミコロン
+    '"', '"', ''', ''',             // 全角引用符
+    '"', "'",                       // 半角引用符
+    ':', ';',                       // 半角コロン・セミコロン
+    '：', '；',                     // 全角コロン・セミコロン
+    '→', '←', '↔',                 // 矢印
+    '=', '＝',                      // イコール
   ];
   return rotationChars.includes(char);
+};
+
+/**
+ * 縦書き時に右上に位置調整が必要な文字（句読点類）
+ */
+const needsPositionAdjustment = (char: string): boolean => {
+  const punctuationChars = ['、', '，', '。', '．'];
+  return punctuationChars.includes(char);
 };
 
 /**
@@ -86,18 +93,23 @@ const VerticalPoemSVG: React.FC<VerticalPoemSVGProps> = ({
     return chars.map((char, index) => {
       const charY = y + index * lineHeight;
       const rotation = needsRotation(char);
+      const positionAdjust = needsPositionAdjustment(char);
+
+      // 句読点は右上に位置調整
+      const adjustedX = positionAdjust ? columnX + fontSize * 0.3 : columnX;
+      const adjustedY = positionAdjust ? charY - fontSize * 0.3 : charY;
 
       return (
         <SVGText
           key={index}
-          x={columnX}
-          y={charY}
+          x={adjustedX}
+          y={adjustedY}
           fontSize={fontSize}
           fill={textColor}
           fontWeight={isBold ? 'bold' : fontWeight}
           textAnchor="middle"
           fontFamily="Noto Serif JP"
-          transform={rotation ? `rotate(90, ${columnX}, ${charY})` : undefined}
+          transform={rotation ? `rotate(90, ${adjustedX}, ${adjustedY})` : undefined}
         >
           {char}
         </SVGText>
