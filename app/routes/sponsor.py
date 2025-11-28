@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 from app.core.auth_helpers import get_current_sponsor, get_current_user
 from app.db.session import get_authenticated_db_session
 from app.models import Sponsor, SponsorCampaign, SponsorTheme, User
+from app.services.auth import get_current_user_id
 from app.schemas.sponsor import (
     SponsorCreate,
     SponsorResponse,
@@ -61,12 +62,16 @@ def get_sponsor_profile(
 @router.post("/profile", response_model=SponsorResponse, status_code=status.HTTP_201_CREATED)
 def create_sponsor_profile(
     payload: SponsorCreate,
-    current_user: Annotated[User, Depends(get_current_user)],  # Use get_current_user instead of get_current_sponsor
+    user_id: Annotated[str, Depends(get_current_user_id)],
     session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> SponsorResponse:
-    """Create a sponsor profile bound to the authenticated sponsor's user ID."""
+    """Create a sponsor profile bound to the authenticated sponsor's user ID.
 
-    existing = _get_sponsor_record(session, current_user.id)
+    If the user doesn't exist in the users table (e.g., newly signed up via Supabase Auth),
+    a user record will be automatically created.
+    """
+
+    existing = _get_sponsor_record(session, user_id)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -74,10 +79,31 @@ def create_sponsor_profile(
         )
 
     now = datetime.now(timezone.utc)
+
+    # Get or create user record
+    user = session.get(User, user_id)
+    if not user:
+        # User doesn't exist in users table - create one
+        # This happens when user signs up directly via Supabase Auth (e.g., sponsor registration page)
+        user = User(
+            id=user_id,
+            name=payload.company_name,  # Use company name as display name
+            email=payload.contact_email or f"{user_id}@unknown.local",
+            role="sponsor",
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(user)
+        logger.info(f"Created new user record for sponsor: {user_id}")
+    else:
+        # Update existing user role to sponsor
+        user.role = "sponsor"
+        user.updated_at = now
+
     sponsor = Sponsor(
-        id=current_user.id,
+        id=user_id,
         company_name=payload.company_name,
-        contact_email=payload.contact_email or current_user.email,
+        contact_email=payload.contact_email or user.email,
         official_url=payload.official_url,
         logo_url=payload.logo_url,
         credits=0,
@@ -85,10 +111,6 @@ def create_sponsor_profile(
         created_at=now,
         updated_at=now,
     )
-
-    # Update user role to sponsor
-    current_user.role = "sponsor"
-    current_user.updated_at = now
 
     session.add(sponsor)
     session.flush()  # Flush to get sponsor.id before creating campaign

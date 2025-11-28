@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.work import Work
 from app.models.sponsor import Sponsor, SponsorCampaign, SponsorTheme
 from app.models.sponsor_credit_transaction import SponsorCreditTransaction
+from app.models.sponsor_notification import SponsorNotification
 from app.models.notification import NotificationToken
 from app.models.api_token import ApiToken
 
@@ -22,6 +23,7 @@ __all__ = [
     "SponsorCampaign",
     "SponsorTheme",
     "SponsorCreditTransaction",
+    "SponsorNotification",
     "NotificationToken",
     "ApiToken",
 ]

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import {
   SponsorProfile,
@@ -12,6 +13,7 @@ import BackgroundDecoration from '@/components/BackgroundDecoration'
 
 export default function SponsorsPage() {
   const supabase = useMemo(() => getSupabase(), [])
+  const router = useRouter()
   const [sessionChecked, setSessionChecked] = useState(false)
   const [hasSession, setHasSession] = useState(false)
   const [profile, setProfile] = useState<SponsorProfile | null>(null)
@@ -19,18 +21,16 @@ export default function SponsorsPage() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  // Form fields
   const [companyName, setCompanyName] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [officialUrl, setOfficialUrl] = useState('')
-  const [logoUrl, setLogoUrl] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
     async function initSession() {
       const { data: { session } } = await supabase.auth.getSession()
       setHasSession(Boolean(session))
-      if (session?.user?.email) {
-        setContactEmail(session.user.email)
-      }
       setSessionChecked(true)
     }
     void initSession()
@@ -43,9 +43,6 @@ export default function SponsorsPage() {
       const data = await fetchSponsorProfile()
       setProfile(data)
       setCompanyName(data.company_name)
-      setContactEmail(data.contact_email ?? '')
-      setOfficialUrl(data.official_url ?? '')
-      setLogoUrl(data.logo_url ?? '')
     } catch (err) {
       if (err instanceof Error && err.message.toLowerCase().includes('not found')) {
         setProfile(null)
@@ -63,7 +60,65 @@ export default function SponsorsPage() {
     }
   }, [hasSession, loadProfile])
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSignUpAndRegister(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setSuccessMessage(null)
+
+    // Validate password
+    if (password.length < 6) {
+      setError('パスワードは6文字以上で入力してください')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('パスワードが一致しません')
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      // 1. Sign up with Supabase
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      })
+
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          throw new Error('このメールアドレスは既に登録されています。ログインページからログインしてください。')
+        }
+        throw signUpError
+      }
+
+      if (!signUpData.user) {
+        throw new Error('アカウント作成に失敗しました')
+      }
+
+      // 2. Create sponsor profile
+      const payload = await createSponsorProfile({
+        company_name: companyName.trim(),
+        contact_email: email.trim(),
+        plan_tier: 'standard',
+      })
+
+      setProfile(payload)
+      setHasSession(true)
+      setSuccessMessage('スポンサー登録が完了しました。審査完了後にお題投稿が可能になります。')
+
+      // Redirect to sponsor dashboard after a short delay
+      setTimeout(() => {
+        router.push('/sponsor')
+      }, 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '登録に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleExistingUserRegister(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setSuccessMessage(null)
@@ -72,9 +127,6 @@ export default function SponsorsPage() {
       setLoading(true)
       const payload = await createSponsorProfile({
         company_name: companyName.trim(),
-        contact_email: contactEmail.trim() || undefined,
-        official_url: officialUrl.trim() || undefined,
-        logo_url: logoUrl.trim() || undefined,
         plan_tier: 'standard',
       })
       setProfile(payload)
@@ -177,112 +229,137 @@ export default function SponsorsPage() {
               </p>
             </div>
 
-            {!hasSession ? (
-              <div className="text-center space-y-6 py-8">
-                <p className="text-[var(--color-text-secondary)]">
-                  登録・管理にはログインが必要です。
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Link
-                    href="/sponsor-login"
-                    className="btn-primary"
-                  >
-                    スポンサーログイン
-                  </Link>
-                  <Link
-                    href="/support"
-                    className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-ai)] underline underline-offset-4"
-                  >
-                    お問い合わせ
-                  </Link>
-                </div>
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
+                {error}
               </div>
-            ) : (
-              <>
-                {profile && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 text-sm">
-                    <p>
-                      すでにスポンサー登録済みです。状況: <span className="font-bold">{profile.verified ? '承認済み' : '審査中'}</span>
-                    </p>
-                    <p className="mt-1">
-                      <Link href="/sponsor" className="underline font-semibold hover:text-emerald-900">ダッシュボードへ移動</Link>
-                    </p>
-                  </div>
-                )}
+            )}
 
-                {error && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
-                    {error}
-                  </div>
-                )}
+            {successMessage && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 text-sm">
+                {successMessage}
+              </div>
+            )}
 
-                {successMessage && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 text-sm">
-                    {successMessage}
-                  </div>
-                )}
+            {profile && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 text-sm">
+                <p>
+                  すでにスポンサー登録済みです。状況: <span className="font-bold">{profile.verified ? '承認済み' : '審査中'}</span>
+                </p>
+                <p className="mt-1">
+                  <Link href="/sponsor" className="underline font-semibold hover:text-emerald-900">ダッシュボードへ移動</Link>
+                </p>
+              </div>
+            )}
 
-                {!profile && (
-                  <form className="space-y-6" onSubmit={handleSubmit}>
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                        企業名 <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        required
-                        className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
-                        placeholder="例: 株式会社よみびより"
-                      />
-                    </div>
+            {!profile && !hasSession && (
+              <form className="space-y-6" onSubmit={handleSignUpAndRegister}>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                    企業名 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
+                    placeholder="例: 株式会社よみびより"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                        連絡先メールアドレス
-                      </label>
-                      <input
-                        type="email"
-                        value={contactEmail}
-                        onChange={(e) => setContactEmail(e.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
-                        placeholder="sponsor@example.com"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                    メールアドレス <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
+                    placeholder="sponsor@example.com"
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                    ログインや審査結果の通知に使用します
+                  </p>
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">公式サイトURL</label>
-                      <input
-                        type="url"
-                        value={officialUrl}
-                        onChange={(e) => setOfficialUrl(e.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
-                        placeholder="https://example.com"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                    パスワード <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
+                    placeholder="6文字以上"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">ロゴ画像URL</label>
-                      <input
-                        type="url"
-                        value={logoUrl}
-                        onChange={(e) => setLogoUrl(e.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
-                        placeholder="https://.../logo.png"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                    パスワード（確認） <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
+                    placeholder="パスワードを再入力"
+                  />
+                </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full btn-primary"
-                    >
-                      {loading ? '送信中...' : 'スポンサー登録を申し込む'}
-                    </button>
-                  </form>
-                )}
-              </>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full btn-primary"
+                >
+                  {loading ? '登録中...' : 'スポンサー登録を申し込む'}
+                </button>
+
+                <p className="text-center text-sm text-[var(--color-text-muted)]">
+                  すでにアカウントをお持ちですか？{' '}
+                  <Link href="/sponsor-login" className="text-[var(--color-igusa)] hover:underline">
+                    ログイン
+                  </Link>
+                </p>
+              </form>
+            )}
+
+            {!profile && hasSession && (
+              <form className="space-y-6" onSubmit={handleExistingUserRegister}>
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800 text-sm">
+                  ログイン済みのアカウントでスポンサー登録を行います。
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                    企業名 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 focus:ring-2 focus:ring-[var(--color-ai)] focus:outline-none bg-white"
+                    placeholder="例: 株式会社よみびより"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full btn-primary"
+                >
+                  {loading ? '登録中...' : 'スポンサー登録を申し込む'}
+                </button>
+              </form>
             )}
           </div>
         </section>

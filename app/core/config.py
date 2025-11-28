@@ -237,6 +237,16 @@ class Settings(BaseSettings):
         ge=1,
         le=100,
     )
+    resend_api_key: str | None = Field(
+        default=None,
+        alias="RESEND_API_KEY",
+        description="Resend API key for transactional emails.",
+    )
+    resend_from_email: str = Field(
+        default="よみびより <noreply@yomibiyori.com>",
+        alias="RESEND_FROM_EMAIL",
+        description="Sender email address for Resend emails.",
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

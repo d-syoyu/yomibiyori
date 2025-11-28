@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 from app.core.auth_helpers import get_current_admin
 from app.core.logging import logger
 from app.db.session import get_authenticated_db_session
-from app.models import Sponsor, SponsorCampaign, SponsorTheme, Theme, User
+from app.models import Sponsor, SponsorCampaign, SponsorTheme, SponsorNotification, Theme, User
+from app.services.email import send_sponsor_verification_email
 from app.schemas.sponsor import (
     SponsorListResponse,
     SponsorResponse,
@@ -100,8 +101,30 @@ def update_sponsor_verification(
             detail="Sponsor not found",
         )
 
+    # Check if status actually changed
+    status_changed = sponsor.verified != payload.verified
+
+    now = datetime.now(timezone.utc)
     sponsor.verified = payload.verified
-    sponsor.updated_at = datetime.now(timezone.utc)
+    sponsor.updated_at = now
+
+    # Create notification if status changed
+    if status_changed:
+        notification_type = "account_verified" if payload.verified else "account_rejected"
+        if payload.verified:
+            title = "スポンサーアカウントが承認されました"
+            message = "おめでとうございます！スポンサーアカウントが承認されました。お題の投稿が可能になりました。"
+        else:
+            title = "スポンサーアカウントの承認が取り消されました"
+            message = "スポンサーアカウントの承認が取り消されました。詳細はサポートまでお問い合わせください。"
+
+        notification = SponsorNotification(
+            sponsor_id=sponsor_id,
+            type=notification_type,
+            title=title,
+            message=message,
+        )
+        session.add(notification)
 
     session.commit()
     session.refresh(sponsor)
@@ -112,6 +135,18 @@ def update_sponsor_verification(
         payload.verified,
         current_admin.id,
     )
+
+    # Send email notification (async, don't block response)
+    if status_changed and sponsor.contact_email:
+        try:
+            send_sponsor_verification_email(
+                to_email=sponsor.contact_email,
+                company_name=sponsor.company_name,
+                verified=payload.verified,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send verification email to {sponsor.contact_email}: {e}")
+            # Don't fail the request if email fails
 
     return SponsorResponse.model_validate(sponsor)
 

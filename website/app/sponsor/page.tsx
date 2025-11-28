@@ -27,13 +27,13 @@ interface Announcement {
   created_at: string
 }
 
-interface ThemeNotification {
+interface SponsorNotification {
   id: string
-  sponsor_theme_id: string
-  status: 'approved' | 'rejected' | 'published'
+  type: 'account_verified' | 'account_rejected' | 'theme_approved' | 'theme_rejected' | 'theme_published' | 'credit_added' | 'credit_used' | 'system'
   title: string
   message: string
   is_read: boolean
+  sponsor_theme_id: string | null
   created_at: string
 }
 
@@ -47,7 +47,7 @@ export default function SponsorDashboard() {
     credits: 0,
   })
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [themeNotifications, setThemeNotifications] = useState<ThemeNotification[]>([])
+  const [notifications, setNotifications] = useState<SponsorNotification[]>([])
   const [readMap, setReadMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
@@ -65,7 +65,7 @@ export default function SponsorDashboard() {
 
     loadStats()
     loadAnnouncements()
-    loadThemeNotifications()
+    loadNotifications()
   }, [])
 
   async function loadStats() {
@@ -162,7 +162,7 @@ export default function SponsorDashboard() {
     }
   }
 
-  async function loadThemeNotifications() {
+  async function loadNotifications() {
     try {
       // Check for impersonation
       const impersonation = getImpersonation()
@@ -180,30 +180,30 @@ export default function SponsorDashboard() {
       }
 
       const { data, error } = await supabase
-        .from('sponsor_theme_notifications')
+        .from('sponsor_notifications')
         .select('*')
         .eq('sponsor_id', sponsorId)
         .order('created_at', { ascending: false })
         .limit(10)
 
       if (error) throw error
-      setThemeNotifications(data || [])
+      setNotifications(data || [])
     } catch (error) {
-      console.error('Failed to load theme notifications:', error)
+      console.error('Failed to load notifications:', error)
     }
   }
 
   async function markAsRead(notificationId: string) {
     try {
       const { error } = await supabase
-        .from('sponsor_theme_notifications')
+        .from('sponsor_notifications')
         .update({ is_read: true })
         .eq('id', notificationId)
 
       if (error) throw error
 
       // Update local state
-      setThemeNotifications(prev =>
+      setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       )
     } catch (error) {
@@ -348,69 +348,102 @@ export default function SponsorDashboard() {
           </div>
 
           <div className="space-y-6">
-            {/* お題の通知 */}
-            {themeNotifications.length > 0 && (
+            {/* 通知 */}
+            {notifications.length > 0 && (
               <>
                 <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 mr-2 text-[var(--color-igusa)]">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                  </svg> お題の通知
-                  {themeNotifications.filter(n => !n.is_read).length > 0 && (
+                  </svg> 通知
+                  {notifications.filter(n => !n.is_read).length > 0 && (
                     <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-                      {themeNotifications.filter(n => !n.is_read).length}
+                      {notifications.filter(n => !n.is_read).length}
                     </span>
                   )}
                 </h2>
                 <div className="card space-y-3 bg-[var(--color-washi)]/50 max-h-96 overflow-y-auto">
-                  {themeNotifications.map((notification, index) => (
-                    <div key={notification.id}>
-                      {index > 0 && <hr className="border-[var(--color-border)]" />}
-                      <a
-                        href={`/sponsor/themes?status=${notification.status}`}
-                        className={`block space-y-2 hover:opacity-75 transition-opacity ${notification.is_read ? 'opacity-60' : ''}`}
-                        onClick={() => !notification.is_read && markAsRead(notification.id)}
-                      >
-                        <div className="flex items-center gap-2">
-                          {!notification.is_read && (
-                            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                          )}
-                          {notification.status === 'approved' && (
-                            <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-                              </svg>
-                              承認
-                            </span>
-                          )}
-                          {notification.status === 'rejected' && (
-                            <span className="text-xs font-medium text-red-600 border border-red-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                              </svg>
-                              却下
-                            </span>
-                          )}
-                          {notification.status === 'published' && (
-                            <span className="text-xs font-medium text-blue-600 border border-blue-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clipRule="evenodd" />
-                              </svg>
-                              配信
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                          {notification.title}
-                        </h3>
-                        <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)]">
-                          {new Date(notification.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </a>
-                    </div>
-                  ))}
+                  {notifications.map((notification, index) => {
+                    // Determine link based on notification type
+                    const getNotificationLink = () => {
+                      if (notification.type.startsWith('theme_')) {
+                        const status = notification.type.replace('theme_', '')
+                        return `/sponsor/themes?status=${status}`
+                      }
+                      if (notification.type === 'account_verified' || notification.type === 'account_rejected') {
+                        return '/sponsor/profile'
+                      }
+                      if (notification.type === 'credit_added' || notification.type === 'credit_used') {
+                        return '/sponsor/credits'
+                      }
+                      return '/sponsor'
+                    }
+
+                    return (
+                      <div key={notification.id}>
+                        {index > 0 && <hr className="border-[var(--color-border)]" />}
+                        <a
+                          href={getNotificationLink()}
+                          className={`block space-y-2 hover:opacity-75 transition-opacity ${notification.is_read ? 'opacity-60' : ''}`}
+                          onClick={() => !notification.is_read && markAsRead(notification.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            {!notification.is_read && (
+                              <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                            )}
+                            {(notification.type === 'theme_approved' || notification.type === 'account_verified') && (
+                              <span className="text-xs font-medium text-green-600 border border-green-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                                </svg>
+                                {notification.type === 'account_verified' ? 'アカウント承認' : 'お題承認'}
+                              </span>
+                            )}
+                            {(notification.type === 'theme_rejected' || notification.type === 'account_rejected') && (
+                              <span className="text-xs font-medium text-red-600 border border-red-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                                </svg>
+                                却下
+                              </span>
+                            )}
+                            {notification.type === 'theme_published' && (
+                              <span className="text-xs font-medium text-blue-600 border border-blue-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clipRule="evenodd" />
+                                </svg>
+                                配信
+                              </span>
+                            )}
+                            {notification.type === 'credit_added' && (
+                              <span className="text-xs font-medium text-purple-600 border border-purple-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clipRule="evenodd" />
+                                </svg>
+                                クレジット追加
+                              </span>
+                            )}
+                            {notification.type === 'system' && (
+                              <span className="text-xs font-medium text-gray-600 border border-gray-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+                                </svg>
+                                システム
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
+                            {notification.title}
+                          </h3>
+                          <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            {new Date(notification.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </a>
+                      </div>
+                    )
+                  })}
                 </div>
               </>
             )}
