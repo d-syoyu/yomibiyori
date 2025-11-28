@@ -251,7 +251,8 @@ def get_like_status_batch(
         Like.user_id == user_id,
         Like.work_id.in_(work_ids),
     )
-    user_liked_work_ids = set(session.execute(user_likes_stmt).scalars().all())
+    # Convert UUIDs to strings for comparison
+    user_liked_work_ids = {str(wid) for wid in session.execute(user_likes_stmt).scalars().all()}
     logger.info(f"[Likes] User liked work IDs: {user_liked_work_ids}")
 
     # Get like counts for all works
@@ -260,7 +261,8 @@ def get_like_status_batch(
         .where(Like.work_id.in_(work_ids))
         .group_by(Like.work_id)
     )
-    likes_counts = {row.work_id: row.count for row in session.execute(likes_count_stmt).all()}
+    # Convert UUID keys to strings for comparison
+    likes_counts = {str(row.work_id): row.count for row in session.execute(likes_count_stmt).all()}
     logger.info(f"[Likes] Likes counts: {likes_counts}")
 
     items = [
