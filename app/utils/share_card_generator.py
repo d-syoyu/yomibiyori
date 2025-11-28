@@ -120,10 +120,31 @@ class ShareCardGenerator:
 
     @staticmethod
     def _needs_rotation(char: str) -> bool:
-        dash_chars = ["ー", "―", "－", "‐", "ｰ", "—"]
-        wave_chars = ["〜", "～"]
-        ellipsis_chars = ["…", "‥"]
-        rotation_chars = set(dash_chars + wave_chars + ellipsis_chars)
+        # 伸ばし棒・ダッシュ類
+        dash_chars = ["ー", "―", "－", "‐", "ｰ", "—", "−", "–"]
+        # 波ダッシュ
+        wave_chars = ["〜", "～", "〰"]
+        # 三点リーダー
+        ellipsis_chars = ["…", "‥", "⋯"]
+        # 括弧類
+        bracket_chars = [
+            "（", "）", "(", ")",           # 丸括弧
+            "「", "」", "『", "』",         # 鉤括弧・二重鉤括弧
+            "【", "】", "〔", "〕",         # 隅付き括弧・亀甲括弧
+            "［", "］", "[", "]",           # 角括弧
+            "〈", "〉", "《", "》",         # 山括弧・二重山括弧
+            "｛", "｝", "{", "}",           # 波括弧
+        ]
+        # 句読点類
+        punctuation_chars = [
+            "、", "，", ",",               # 読点
+            "。", "．", ".",               # 句点
+            "！", "!",                     # 感嘆符
+            "？", "?",                     # 疑問符
+            "：", ":",                     # コロン
+            "；", ";",                     # セミコロン
+        ]
+        rotation_chars = set(dash_chars + wave_chars + ellipsis_chars + bracket_chars + punctuation_chars)
         return char in rotation_chars
 
     def _draw_rotated_char(

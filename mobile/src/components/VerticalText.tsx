@@ -36,8 +36,28 @@ function needsRotation(char: string): boolean {
   // 三点リーダー
   const ellipsisChars = ['…', '‥', '⋯'];
 
+  // 括弧類（縦書き時に回転が必要）
+  const bracketChars = [
+    '（', '）', '(', ')',           // 丸括弧
+    '「', '」', '『', '』',         // 鉤括弧・二重鉤括弧
+    '【', '】', '〔', '〕',         // 隅付き括弧・亀甲括弧
+    '［', '］', '[', ']',           // 角括弧
+    '〈', '〉', '《', '》',         // 山括弧・二重山括弧
+    '｛', '｝', '{', '}',           // 波括弧
+  ];
+
+  // 句読点類（縦書き時に位置調整が必要）
+  const punctuationChars = [
+    '、', '，', ',',               // 読点
+    '。', '．', '.',               // 句点
+    '！', '!',                     // 感嘆符
+    '？', '?',                     // 疑問符
+    '：', ':',                     // コロン
+    '；', ';',                     // セミコロン
+  ];
+
   // 全ての回転対象文字
-  const rotationChars = [...dashChars, ...waveChars, ...ellipsisChars];
+  const rotationChars = [...dashChars, ...waveChars, ...ellipsisChars, ...bracketChars, ...punctuationChars];
 
   return rotationChars.includes(char);
 }
