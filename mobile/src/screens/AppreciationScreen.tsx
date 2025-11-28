@@ -142,18 +142,25 @@ export default function AppreciationScreen({ route }: Props) {
       void recordImpressionsForWorks(worksData);
 
       // Fetch like statuses for all works (only if authenticated)
+      console.log('[AppreciationScreen] isAuthenticated:', isAuthenticated, 'worksData.length:', worksData.length);
       if (isAuthenticated && worksData.length > 0) {
         try {
           const workIds = worksData.map(w => w.id);
+          console.log('[AppreciationScreen] Fetching like statuses for', workIds.length, 'works');
           const likeStatusResponse = await api.getLikeStatusBatch(workIds);
+          console.log('[AppreciationScreen] Like status response:', likeStatusResponse);
           const newLikedStates = new Map<string, boolean>();
           likeStatusResponse.items.forEach(item => {
             newLikedStates.set(item.work_id, item.liked);
           });
+          const likedCount = Array.from(newLikedStates.values()).filter(v => v).length;
+          console.log('[AppreciationScreen] Setting likedStates:', newLikedStates.size, 'entries,', likedCount, 'liked');
           setLikedStates(newLikedStates);
         } catch (error) {
           console.warn('[AppreciationScreen] Failed to fetch like statuses:', error);
         }
+      } else {
+        console.log('[AppreciationScreen] Skipping like status fetch: isAuthenticated=', isAuthenticated);
       }
     } catch (error: any) {
       handleError(error, 'work_fetching');
@@ -161,7 +168,7 @@ export default function AppreciationScreen({ route }: Props) {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedCategory, getTodayTheme, handleError, recordImpressionsForWorks]);
+  }, [selectedCategory, getTodayTheme, handleError, recordImpressionsForWorks, isAuthenticated]);
 
   // Load works when category changes
   useEffect(() => {
