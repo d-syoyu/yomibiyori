@@ -3,7 +3,7 @@
  * ログイン・サインアップ画面（詩的デザイン）
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
@@ -45,58 +46,10 @@ export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [maskedPassword, setMaskedPassword] = useState('');
-  const maskTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { signUp, login, loginWithOAuth, isLoading, error, clearError } = useAuthStore();
   const showError = useToastStore((state) => state.showError);
   const { handleError } = useApiErrorHandler();
-
-  // パスワード入力時に最後の文字を1秒間表示
-  const handlePasswordChange = (text: string) => {
-    setPassword(text);
-
-    if (showPassword) {
-      setMaskedPassword(text);
-      return;
-    }
-
-    if (maskTimeoutRef.current) {
-      clearTimeout(maskTimeoutRef.current);
-    }
-
-    if (text.length === 0) {
-      setMaskedPassword('');
-      return;
-    }
-
-    // 最後の文字以外をマスクし、最後の文字を表示
-    const masked = '•'.repeat(Math.max(0, text.length - 1)) + text.slice(-1);
-    setMaskedPassword(masked);
-
-    // 1秒後に全文字をマスク
-    maskTimeoutRef.current = setTimeout(() => {
-      setMaskedPassword('•'.repeat(text.length));
-    }, 1000);
-  };
-
-  // showPasswordが変更されたらmaskedPasswordを更新
-  useEffect(() => {
-    if (showPassword) {
-      setMaskedPassword(password);
-    } else {
-      setMaskedPassword('•'.repeat(password.length));
-    }
-  }, [showPassword, password]);
-
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      if (maskTimeoutRef.current) {
-        clearTimeout(maskTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const identifyCurrentUser = async () => {
     const user = useAuthStore.getState().user;
@@ -424,37 +377,27 @@ export default function LoginScreen() {
                   />
 
                   <View style={styles.passwordContainer}>
-                    <View style={styles.passwordInputWrapper}>
-                      {/* 表示用のテキスト */}
-                      <Text
-                        style={[
-                          styles.passwordDisplay,
-                          !maskedPassword && styles.passwordPlaceholder,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {maskedPassword || 'パスワード'}
-                      </Text>
-                      {/* 入力用の透明フィールド */}
-                      <TextInput
-                        style={styles.passwordInputHidden}
-                        value={password}
-                        onChangeText={handlePasswordChange}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                    </View>
-                    <TouchableOpacity
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="パスワード"
+                      placeholderTextColor={colors.text.tertiary}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <Pressable
                       style={styles.eyeButton}
-                      onPress={() => setShowPassword(!showPassword)}
-                      activeOpacity={0.7}
+                      onPressIn={() => setShowPassword(true)}
+                      onPressOut={() => setShowPassword(false)}
                     >
                       <Ionicons
                         name={showPassword ? 'eye' : 'eye-off'}
                         size={20}
                         color={colors.text.tertiary}
                       />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
 
                   {isSignUp && (
@@ -676,31 +619,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     marginBottom: spacing.md,
   },
-  passwordInputWrapper: {
+  passwordInput: {
     flex: 1,
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  passwordDisplay: {
     padding: spacing.md,
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
     color: colors.text.primary,
-    letterSpacing: 2,
-  },
-  passwordPlaceholder: {
-    color: colors.text.tertiary,
-    letterSpacing: 0,
-  },
-  passwordInputHidden: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: spacing.md,
-    fontSize: 1,
-    color: 'transparent',
   },
   eyeButton: {
     paddingHorizontal: spacing.md,
