@@ -110,7 +110,6 @@ export default function AppreciationScreen({ route }: Props) {
 
   // Load works for the selected category
   const loadWorks = useCallback(async (isRefresh = false) => {
-    console.log('[AppreciationScreen] Loading works for category:', selectedCategory);
     if (isRefresh) {
       setIsRefreshing(true);
     } else {
@@ -121,9 +120,7 @@ export default function AppreciationScreen({ route }: Props) {
       const newThemesMap = new Map<string, Theme>();
 
       // Get theme and works for selected category (using cached store)
-      console.log('[AppreciationScreen] Fetching theme for category:', selectedCategory);
       const theme = await getTodayTheme(selectedCategory);
-      console.log('[AppreciationScreen] Theme received:', theme);
       setCurrentThemeId(theme.id);
       newThemesMap.set(theme.id, theme);
 
@@ -133,34 +130,25 @@ export default function AppreciationScreen({ route }: Props) {
         category: theme.category,
       });
 
-      console.log('[AppreciationScreen] Fetching works for theme:', theme.id);
       const worksData = await api.getWorksByTheme(theme.id, { limit: 50, order_by: 'fair_score' });
-      console.log('[AppreciationScreen] Works received:', worksData.length, 'works');
       setWorks(worksData);
 
       setThemesMap(newThemesMap);
       void recordImpressionsForWorks(worksData);
 
       // Fetch like statuses for all works (only if authenticated)
-      console.log('[AppreciationScreen] isAuthenticated:', isAuthenticated, 'worksData.length:', worksData.length);
       if (isAuthenticated && worksData.length > 0) {
         try {
           const workIds = worksData.map(w => w.id);
-          console.log('[AppreciationScreen] Fetching like statuses for', workIds.length, 'works');
           const likeStatusResponse = await api.getLikeStatusBatch(workIds);
-          console.log('[AppreciationScreen] Like status response:', likeStatusResponse);
           const newLikedStates = new Map<string, boolean>();
           likeStatusResponse.items.forEach(item => {
             newLikedStates.set(item.work_id, item.liked);
           });
-          const likedCount = Array.from(newLikedStates.values()).filter(v => v).length;
-          console.log('[AppreciationScreen] Setting likedStates:', newLikedStates.size, 'entries,', likedCount, 'liked');
           setLikedStates(newLikedStates);
         } catch (error) {
           console.warn('[AppreciationScreen] Failed to fetch like statuses:', error);
         }
-      } else {
-        console.log('[AppreciationScreen] Skipping like status fetch: isAuthenticated=', isAuthenticated);
       }
     } catch (error: any) {
       handleError(error, 'work_fetching');

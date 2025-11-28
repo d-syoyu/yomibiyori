@@ -131,20 +131,20 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
                   activeOpacity={0.8}
                   accessibilityLabel="共有"
                 >
-                  <Ionicons name="share-outline" size={18} color={colors.text.primary} />
+                  <Ionicons name="share-outline" size={20} color={colors.text.primary} />
                 </TouchableOpacity>
               )}
               {onLike ? (
                 <TouchableOpacity
-                  style={[styles.likeButton, liked && styles.likeButtonActive]}
+                  style={[styles.roundButton, liked && styles.likeButtonActive]}
                   onPress={onLike}
                   activeOpacity={0.8}
                   accessibilityLabel={liked ? "いいねを取り消す" : "いいね"}
                 >
                   <Ionicons
                     name={liked ? "heart" : "heart-outline"}
-                    size={18}
-                    color={liked ? colors.status.error : colors.text.secondary}
+                    size={20}
+                    color={liked ? colors.status.error : colors.text.primary}
                   />
                 </TouchableOpacity>
               ) : typeof likesCount === 'number' && (
@@ -233,16 +233,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  likeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.background.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   likeButtonActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: colors.status.error,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
   },
   likeBadge: {
     flexDirection: 'row',

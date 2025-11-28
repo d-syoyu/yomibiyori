@@ -241,8 +241,6 @@ def get_like_status_batch(
 ) -> WorkLikeBatchResponse:
     """Get like status for multiple works."""
 
-    logger.info(f"[Likes] get_like_status_batch called: user_id={user_id}, work_ids={work_ids}")
-
     if not work_ids:
         return WorkLikeBatchResponse(items=[])
 
@@ -253,7 +251,6 @@ def get_like_status_batch(
     )
     # Convert UUIDs to strings for comparison
     user_liked_work_ids = {str(wid) for wid in session.execute(user_likes_stmt).scalars().all()}
-    logger.info(f"[Likes] User liked work IDs: {user_liked_work_ids}")
 
     # Get like counts for all works
     likes_count_stmt = (
@@ -263,7 +260,6 @@ def get_like_status_batch(
     )
     # Convert UUID keys to strings for comparison
     likes_counts = {str(row.work_id): row.count for row in session.execute(likes_count_stmt).all()}
-    logger.info(f"[Likes] Likes counts: {likes_counts}")
 
     items = [
         WorkLikeBatchStatusItem(
