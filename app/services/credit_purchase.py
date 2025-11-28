@@ -13,6 +13,44 @@ from app.models.sponsor_credit_transaction import SponsorCreditTransaction
 settings = get_settings()
 
 
+def calculate_bulk_discount(quantity: int, unit_price: int = 11000) -> dict:
+    """Calculate bulk discount pricing (Buy 3, Get 1 Free).
+
+    Every 4 credits, 1 is free (25% discount per 4-pack).
+
+    Args:
+        quantity: Number of credits to purchase
+        unit_price: Base price per credit in JPY
+
+    Returns:
+        Dictionary with pricing details:
+        - quantity: Total credits received
+        - free_credits: Number of free credits
+        - paid_credits: Number of credits actually paid for
+        - unit_price: Base price per credit
+        - subtotal: Price without discount
+        - total: Final price after discount
+        - discount_amount: Total savings
+        - discount_percent: Discount percentage
+    """
+    free_credits = quantity // 4
+    paid_credits = quantity - free_credits
+    subtotal = quantity * unit_price
+    total = paid_credits * unit_price
+    discount_amount = subtotal - total
+
+    return {
+        "quantity": quantity,
+        "free_credits": free_credits,
+        "paid_credits": paid_credits,
+        "unit_price": unit_price,
+        "subtotal": subtotal,
+        "total": total,
+        "discount_amount": discount_amount,
+        "discount_percent": round((discount_amount / subtotal) * 100) if subtotal > 0 else 0,
+    }
+
+
 class StripeMissingAPIKeyError(Exception):
     """Raised when Stripe API key is not configured."""
 
@@ -91,8 +129,18 @@ def create_checkout_session(
         # Get or create Stripe Customer (required for bank transfer)
         customer_id = get_or_create_stripe_customer(db_session, sponsor)
 
-        # Calculate total amount
+        # Calculate bulk discount pricing (Buy 3, Get 1 Free)
         unit_price = settings.sponsor_credit_price_jpy
+        pricing = calculate_bulk_discount(quantity, unit_price)
+
+        # Build description with discount info
+        if pricing["free_credits"] > 0:
+            description = (
+                f"{quantity}クレジット（{pricing['free_credits']}クレジット無料！）"
+                f" - お題の作成に利用できます"
+            )
+        else:
+            description = f"{quantity}クレジット - お題の作成に利用できます"
 
         # Create Checkout Session with multiple payment methods
         # User can choose payment method on Stripe's UI
@@ -113,11 +161,12 @@ def create_checkout_session(
                         "currency": "jpy",
                         "product_data": {
                             "name": "よみびより スポンサークレジット",
-                            "description": f"{quantity}クレジット - お題の作成に利用できます（1クレジット=税込11,000円）",
+                            "description": description,
                         },
                         "unit_amount": unit_price,
                     },
-                    "quantity": quantity,
+                    # Charge only for paid credits (free credits are not charged)
+                    "quantity": pricing["paid_credits"],
                 }
             ],
             mode="payment",

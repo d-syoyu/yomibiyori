@@ -13,12 +13,34 @@ from app.models.user import User
 from app.schemas.credit_purchase import (
     CreditPurchaseCreate,
     CreditPurchaseSessionResponse,
+    CreditPricingResponse,
     CreditTransactionResponse,
 )
 from app.services import credit_purchase as credit_service
 
 settings = get_settings()
 router = APIRouter(tags=["Sponsor Credits"])
+
+
+@router.get("/pricing", response_model=CreditPricingResponse)
+def get_pricing(quantity: int = 1):
+    """Get bulk discount pricing for a given quantity.
+
+    Bulk discount: Every 4 credits, 1 is free (25% discount per 4-pack).
+
+    Examples:
+    - 4 credits: Pay for 3, get 1 free (25% off)
+    - 8 credits: Pay for 6, get 2 free (25% off)
+    - 10 credits: Pay for 8, get 2 free (20% off)
+    """
+    if quantity < 1 or quantity > 100:
+        raise HTTPException(status_code=400, detail="Quantity must be between 1 and 100")
+
+    pricing = credit_service.calculate_bulk_discount(
+        quantity=quantity,
+        unit_price=settings.sponsor_credit_price_jpy,
+    )
+    return CreditPricingResponse(**pricing)
 
 
 @router.post("/purchase", response_model=CreditPurchaseSessionResponse, status_code=201)

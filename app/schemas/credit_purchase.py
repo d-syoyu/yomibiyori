@@ -34,3 +34,16 @@ class CreditTransactionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CreditPricingResponse(BaseModel):
+    """Response containing bulk discount pricing information."""
+
+    quantity: int = Field(..., description="Total credits to receive")
+    free_credits: int = Field(..., description="Number of free credits included")
+    paid_credits: int = Field(..., description="Number of credits actually paid for")
+    unit_price: int = Field(..., description="Base price per credit in JPY")
+    subtotal: int = Field(..., description="Price without discount in JPY")
+    total: int = Field(..., description="Final price after discount in JPY")
+    discount_amount: int = Field(..., description="Total savings in JPY")
+    discount_percent: int = Field(..., description="Discount percentage")

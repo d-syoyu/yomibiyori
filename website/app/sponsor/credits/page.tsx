@@ -13,14 +13,45 @@ import {
 } from '@/lib/constants'
 import type { CreditTransaction } from '@/types/sponsor'
 
+interface Pricing {
+  quantity: number
+  free_credits: number
+  paid_credits: number
+  unit_price: number
+  subtotal: number
+  total: number
+  discount_amount: number
+  discount_percent: number
+}
+
+// Calculate bulk discount locally (same logic as backend)
+function calculateBulkDiscount(quantity: number, unitPrice: number = 11000): Pricing {
+  const freeCredits = Math.floor(quantity / 4)
+  const paidCredits = quantity - freeCredits
+  const subtotal = quantity * unitPrice
+  const total = paidCredits * unitPrice
+  const discountAmount = subtotal - total
+  return {
+    quantity,
+    free_credits: freeCredits,
+    paid_credits: paidCredits,
+    unit_price: unitPrice,
+    subtotal,
+    total,
+    discount_amount: discountAmount,
+    discount_percent: subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0,
+  }
+}
+
 export default function SponsorCreditsPage() {
   const { sponsorId, isImpersonating, accessToken, loading: authLoading } = useSponsorAuth()
   const [credits, setCredits] = useState<number>(0)
   const [transactions, setTransactions] = useState<CreditTransaction[]>([])
   const [loading, setLoading] = useState(true)
-  const [purchaseQuantity, setPurchaseQuantity] = useState(1)
+  const [purchaseQuantity, setPurchaseQuantity] = useState(4) // Default to 4 to show discount
   const [purchasing, setPurchasing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const pricing = calculateBulkDiscount(purchaseQuantity)
 
   const loadCreditsAndTransactions = useCallback(async () => {
     if (!sponsorId) {
@@ -170,6 +201,19 @@ export default function SponsorCreditsPage() {
             </p>
           </div>
 
+          {/* Bulk Discount Banner */}
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">🎁</div>
+              <div>
+                <p className="font-bold text-amber-800">1日分まとめ買いで1クレジット無料！</p>
+                <p className="text-sm text-amber-700">
+                  4クレジット（1日分 = 全4カテゴリー）購入ごとに1クレジット無料（25%OFF相当）
+                </p>
+              </div>
+            </div>
+          </div>
+
           {isImpersonating && (
             <div className="bg-purple-50 border border-purple-300 text-purple-800 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -191,19 +235,74 @@ export default function SponsorCreditsPage() {
                 <label htmlFor="quantity" className="block text-sm font-medium text-[var(--color-text-primary)]">
                   購入数量
                 </label>
-                <input
-                  type="number"
-                  id="quantity"
-                  min="1"
-                  max="100"
-                  value={purchaseQuantity}
-                  onChange={(e) => setPurchaseQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)]"
-                  disabled={purchasing}
-                />
-                <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                  合計: ¥{(purchaseQuantity * 11000).toLocaleString()}
-                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    id="quantity"
+                    min="1"
+                    max="100"
+                    value={purchaseQuantity}
+                    onChange={(e) => setPurchaseQuantity(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                    className="w-32 px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-igusa)] text-center text-lg font-bold"
+                    disabled={purchasing}
+                  />
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { qty: 4, label: '4 (1日分)' },
+                      { qty: 8, label: '8 (2日分)' },
+                      { qty: 12, label: '12 (3日分)' },
+                      { qty: 20, label: '20 (5日分)' },
+                    ].map(({ qty, label }) => (
+                      <button
+                        key={qty}
+                        type="button"
+                        onClick={() => setPurchaseQuantity(qty)}
+                        className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                          purchaseQuantity === qty
+                            ? 'bg-[var(--color-igusa)] text-white border-[var(--color-igusa)]'
+                            : 'bg-white text-[var(--color-text-primary)] border-[var(--color-border)] hover:border-[var(--color-igusa)]'
+                        }`}
+                        disabled={purchasing}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing Summary */}
+              <div className="bg-[var(--color-washi)] rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[var(--color-text-secondary)]">獲得クレジット</span>
+                  <span className="font-bold text-lg">{pricing.quantity} クレジット</span>
+                </div>
+                {pricing.free_credits > 0 && (
+                  <div className="flex justify-between items-center text-green-600">
+                    <span>無料クレジット</span>
+                    <span className="font-bold">+{pricing.free_credits} 無料!</span>
+                  </div>
+                )}
+                <div className="border-t border-[var(--color-border)] pt-3">
+                  {pricing.discount_amount > 0 ? (
+                    <>
+                      <div className="flex justify-between items-center text-[var(--color-text-secondary)] line-through">
+                        <span>定価</span>
+                        <span>¥{pricing.subtotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-red-500 text-sm">
+                        <span>割引 ({pricing.discount_percent}% OFF)</span>
+                        <span>-¥{pricing.discount_amount.toLocaleString()}</span>
+                      </div>
+                    </>
+                  ) : null}
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="font-bold text-lg">お支払い金額</span>
+                    <span className="font-bold text-2xl text-[var(--color-igusa)]">
+                      ¥{pricing.total.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <button
@@ -231,6 +330,8 @@ export default function SponsorCreditsPage() {
               購入について
             </p>
             <ul className="list-disc list-inside space-y-1 text-[var(--color-text-secondary)]">
+              <li><strong>1日分 = 4クレジット：</strong>全4カテゴリーにお題を投稿できます</li>
+              <li><strong>まとめ買い割引：</strong>1日分（4クレジット）購入ごとに1クレジット無料</li>
               <li>お支払いはStripeの安全な決済システムを利用します</li>
               <li>クレジットカードまたは銀行振込でのお支払いが可能です</li>
               <li>カード決済は購入後すぐにクレジットが反映されます</li>
