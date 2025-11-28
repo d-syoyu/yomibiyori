@@ -54,6 +54,7 @@ export default function AppreciationScreen({ route }: Props) {
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const [likedStates, setLikedStates] = useState<Map<string, boolean>>(new Map());
+  const [likingInProgress, setLikingInProgress] = useState<Set<string>>(new Set());
   const impressionsLoggedRef = useRef<Set<string>>(new Set());
 
   useFocusEffect(
@@ -169,6 +170,11 @@ export default function AppreciationScreen({ route }: Props) {
 
   // Handle like action - optimistic update for liked state only
   const handleLike = async (workId: string) => {
+    // Prevent double-tap while request is in progress
+    if (likingInProgress.has(workId)) {
+      return;
+    }
+
     // Check authentication before allowing like
     if (!isAuthenticated) {
       navigation.dispatch(
@@ -178,6 +184,9 @@ export default function AppreciationScreen({ route }: Props) {
       );
       return;
     }
+
+    // Mark as in progress
+    setLikingInProgress(prev => new Set(prev).add(workId));
 
     // Get current state for rollback
     const currentLiked = likedStates.get(workId) ?? false;
@@ -208,6 +217,13 @@ export default function AppreciationScreen({ route }: Props) {
       });
 
       handleError(error, 'like_action');
+    } finally {
+      // Clear in progress flag
+      setLikingInProgress(prev => {
+        const next = new Set(prev);
+        next.delete(workId);
+        return next;
+      });
     }
   };
 
