@@ -183,14 +183,14 @@ export default function Home() {
                 スポンサーとして上の句を投稿し、全国の詠み人と一緒に一首を完成させませんか。
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <Link href="/sponsors" className="btn-primary">
-                  スポンサー登録
+                <Link href="/sponsor-guide" className="btn-primary">
+                  スポンサーについて詳しく見る
                 </Link>
-                <Link href="/support" className="btn-secondary">
-                  ご支援はこちら
+                <Link href="/sponsors" className="btn-secondary">
+                  新規登録
                 </Link>
                 <Link href="/sponsor-login" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-ai)] underline underline-offset-4">
-                  ログインはこちら
+                  スポンサーログイン
                 </Link>
               </div>
             </div>
