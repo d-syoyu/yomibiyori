@@ -27,7 +27,7 @@ def generate_share_card(
     row = result.first()
 
     if not row:
-        raise HTTPException(status_code=404, detail="Work not found")
+        raise HTTPException(status_code=404, detail="作品が見つかりませんでした")
 
     work, user, theme = row
 

@@ -163,7 +163,7 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
 
     theme = session.execute(stmt).scalars().first()
     if not theme:
-        detail = f"No theme found for today in category '{category}'" if category else "No theme found for today"
+        detail = f"本日の「{category}」カテゴリのお題がまだ届いていません" if category else "本日のお題がまだ届いていません"
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=detail
@@ -207,7 +207,7 @@ def get_theme_by_id(session: Session, theme_id: str) -> ThemeResponse:
     if not theme:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Theme with id '{theme_id}' not found"
+            detail="お題が見つかりませんでした"
         )
 
     return ThemeResponse(

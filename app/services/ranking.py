@@ -306,7 +306,7 @@ def get_ranking(
 
     theme = session.get(Theme, theme_id)
     if not theme:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="お題が見つかりませんでした")
 
     candidates = _build_candidates(redis_client, theme_id, limit)
     logger.info(f"[Ranking] _build_candidates returned {len(candidates)} candidates for theme {theme_id}")

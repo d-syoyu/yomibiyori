@@ -34,20 +34,20 @@ def like_work(
 
     work = session.get(Work, work_id)
     if not work:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="作品が見つかりませんでした")
 
     # Cannot like your own work
     if work.user_id == user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You cannot like your own work",
+            detail="自分の作品にはいいねできません",
         )
 
     existing_stmt = select(Like).where(Like.user_id == user_id, Like.work_id == work_id)
     if session.execute(existing_stmt).scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You have already liked this work",
+            detail="すでにいいね済みです",
         )
 
     like = Like(
@@ -64,7 +64,7 @@ def like_work(
         session.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You have already liked this work",
+            detail="すでにいいね済みです",
         ) from exc
 
     likes_count_stmt: Select[int] = select(func.count(Like.id)).where(Like.work_id == work_id)
@@ -127,14 +127,14 @@ def unlike_work(
 
     work = session.get(Work, work_id)
     if not work:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="作品が見つかりませんでした")
 
     existing_stmt = select(Like).where(Like.user_id == user_id, Like.work_id == work_id)
     existing_like = session.execute(existing_stmt).scalar_one_or_none()
     if not existing_like:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="You have not liked this work",
+            detail="まだいいねしていません",
         )
 
     session.delete(existing_like)
@@ -194,13 +194,13 @@ def toggle_like(
 
     work = session.get(Work, work_id)
     if not work:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="作品が見つかりませんでした")
 
     # Cannot like your own work
     if work.user_id == user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You cannot like your own work",
+            detail="自分の作品にはいいねできません",
         )
 
     existing_stmt = select(Like).where(Like.user_id == user_id, Like.work_id == work_id)
@@ -222,7 +222,7 @@ def get_like_status(
 
     work = session.get(Work, work_id)
     if not work:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="作品が見つかりませんでした")
 
     existing_stmt = select(Like).where(Like.user_id == user_id, Like.work_id == work_id)
     liked = session.execute(existing_stmt).scalar_one_or_none() is not None

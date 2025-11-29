@@ -130,7 +130,7 @@ export default function SponsorGuide() {
                   </li>
                   <li className="flex items-center gap-3 text-[var(--color-text-primary)]">
                     <span className="w-2 h-2 rounded-full bg-[var(--color-igusa)]"></span>
-                    <span>企業名・ロゴの表示が可能</span>
+                    <span>企業名の表示が可能</span>
                   </li>
                   <li className="flex items-center gap-3 text-[var(--color-text-primary)]">
                     <span className="w-2 h-2 rounded-full bg-[var(--color-igusa)]"></span>

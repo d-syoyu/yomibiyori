@@ -139,7 +139,7 @@ def _decode_jwt(token: str) -> dict[str, Any]:
             # Token has expired - client should refresh token or re-login
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has expired. Please refresh your token or login again.",
+                detail="セッションが切れました。再度ログインしてください",
             )
         except JWTError:
             # Other JWT errors - try JWKS fallback
@@ -201,13 +201,13 @@ def get_current_user_id(
         return dev_user_id
 
     if not credentials:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="認証が必要です")
 
     token = credentials.credentials
     try:
         payload: dict[str, Any] = _decode_jwt(token)
     except JWTError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="認証情報が無効です") from exc
 
     user_id = payload.get("sub")
     if not user_id:
@@ -311,7 +311,7 @@ def _upsert_user_record(
         session.commit()
     except IntegrityError as exc:
         session.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered") from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="このメールアドレスは既に登録されています") from exc
 
     session.refresh(user)
     return user, is_new
@@ -524,7 +524,7 @@ def get_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
 
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザー情報が見つかりませんでした")
 
     return _build_user_profile_response(user)
 
@@ -556,7 +556,7 @@ def sync_user_profile(session: Session, *, user_id: str) -> UserProfileResponse:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Supabase profile sync failed") from exc
 
     if response.status_code == 404:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found in Supabase")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザー情報が見つかりませんでした")
 
     if response.status_code >= 400:
         detail = _extract_supabase_error(response)
@@ -904,7 +904,7 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Supabase user fetch failed") from exc
 
     if response.status_code == 404:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found in Supabase")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザー情報が見つかりませんでした")
 
     if response.status_code >= 400:
         detail = _extract_supabase_error(response)
@@ -998,7 +998,7 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
 
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザー情報が見つかりませんでした")
 
     # Update fields if provided
     if payload.display_name is not None:

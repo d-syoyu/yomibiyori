@@ -36,7 +36,7 @@ def _current_theme_for_submission(session: Session) -> Theme:
     if not (SUBMISSION_START <= now_jst.time() < SUBMISSION_END):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Submissions are closed between 22:00 and 06:00 JST",
+            detail="投稿は6:00〜22:00の間のみ可能です",
         )
 
     stmt: Select[Theme] = (
@@ -47,7 +47,7 @@ def _current_theme_for_submission(session: Session) -> Theme:
     )
     theme = session.execute(stmt).scalars().first()
     if not theme:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found for today")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="今日のお題がまだ届いていません")
 
     return theme
 
@@ -60,7 +60,7 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
     if not theme:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Theme with id '{payload.theme_id}' not found",
+            detail="お題が見つかりませんでした",
         )
 
     # Check submission window (06:00-22:00 JST)
@@ -69,14 +69,14 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
     if not (SUBMISSION_START <= now_jst.time() < SUBMISSION_END):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Submissions are closed between 22:00 and 06:00 JST",
+            detail="投稿は6:00〜22:00の間のみ可能です",
         )
 
     # Check theme is for today
     if theme.date != now_jst.date():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Theme is not for today (theme date: {theme.date}, today: {now_jst.date()})",
+            detail="このお題は本日のものではありません",
         )
 
     # Check user hasn't already submitted for this category today
@@ -93,16 +93,16 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
     if session.execute(existing_today_stmt).scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You have already submitted a work today for this category",
+            detail="このカテゴリには本日すでに投稿済みです",
         )
 
     text = payload.text.strip()
     if not text:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Text cannot be empty")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="下の句を入力してください")
     if len(text) > 40:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Text must be 40 characters or fewer",
+            detail="下の句は40文字以内で入力してください",
         )
 
     now_utc = datetime.now(timezone.utc)
@@ -121,7 +121,7 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
         session.commit()
     except IntegrityError as exc:
         session.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate submission detected") from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="すでに投稿済みです") from exc
 
     session.refresh(work)
 
@@ -256,7 +256,7 @@ def list_works(
 
     theme = session.get(Theme, theme_id)
     if not theme:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="お題が見つかりませんでした")
 
     # Fetch all works with likes count and user name (without ordering, we'll sort in Python)
     stmt = (
@@ -422,7 +422,7 @@ def record_impression(
 
     work = session.get(Work, work_id)
     if not work:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="作品が見つかりませんでした")
 
     settings = get_settings()
     metrics_key = f"metrics:{work_id}"
@@ -434,7 +434,7 @@ def record_impression(
         if redis_client.exists(rate_limit_key):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many impressions from this viewer. Please wait before viewing again.",
+                detail="しばらく時間をおいてからご覧ください",
             )
         # Set rate limit: 1 impression per viewer per work every 10 seconds
         redis_client.setex(rate_limit_key, 10, "1")
