@@ -3,6 +3,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# 日本語フォントをインストール（シェアカード画像生成用）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fonts-noto-cjk \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
+
 # 依存関係をインストール
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

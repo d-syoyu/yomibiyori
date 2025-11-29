@@ -53,25 +53,29 @@ class ShareCardGenerator:
     WIDTH = 1080
     HEIGHT = 1350
 
-    # Gradient palette keyed by category label
+    # Category accent colors (primary only for tanzaku style)
     COLORS = {
         "恋愛": {"primary": "#FFB7C5"},  # sakura
         "季節": {"primary": "#88B04B"},  # matcha
         "日常": {"primary": "#A7D8DE"},  # sora
-        "ユーモア": {"primary": "#F0E68C"}, # kin
+        "ユーモア": {"primary": "#F0E68C"},  # kin
     }
     DEFAULT_COLOR = "#FFB7C5"
 
     # Layout constants
-    OUTER_PADDING = 60
-    
-    # Colors
-    BG_COLOR_WASHI = (245, 243, 237)  # #F5F3ED
-    CARD_COLOR = (255, 255, 255)      # #FFFFFF
-    TEXT_PRIMARY = (107, 123, 79)     # igusa
-    TEXT_SECONDARY = (123, 138, 88)   # igusa medium
-    TEXT_TERTIARY = (147, 163, 108)   # igusa light
-    TEXT_ACCENT = (26, 54, 93)        # ai
+    OUTER_PADDING = 48
+    INNER_PADDING = 40
+    ACCENT_BORDER_HEIGHT = 12
+
+    # Background colors
+    BG_WASHI = (245, 243, 237)    # 和紙色 #F5F3ED
+    CARD_WHITE = (255, 255, 255)  # カード背景
+
+    # Text colors (RGB)
+    TEXT_PRIMARY = (107, 123, 79)       # igusa
+    TEXT_SECONDARY = (123, 138, 88)     # igusa medium
+    TEXT_TERTIARY = (147, 163, 108)     # igusa light
+    TEXT_ACCENT = (26, 54, 93)          # ai
 
     def __init__(self) -> None:
         self.font_path = self._find_font()
@@ -300,6 +304,20 @@ class ShareCardGenerator:
         # 回転後の高さを返す（元のテキスト幅が高さになる）
         return text_width
 
+    def _create_gradient_background(self, img: Image.Image, colors: list[str]) -> Image.Image:
+        draw = ImageDraw.Draw(img)
+        start_color = self._hex_to_rgb(colors[0])
+        end_color = self._hex_to_rgb(colors[1])
+
+        for y in range(self.HEIGHT):
+            for x in range(self.WIDTH):
+                ratio = ((x / self.WIDTH) + (y / self.HEIGHT)) / 2
+                r = int(start_color[0] + (end_color[0] - start_color[0]) * ratio)
+                g = int(start_color[1] + (end_color[1] - start_color[1]) * ratio)
+                b = int(start_color[2] + (end_color[2] - start_color[2]) * ratio)
+                draw.point((x, y), fill=(r, g, b))
+        return img
+
     def _draw_vertical_text_multiline(
         self,
         img: Image.Image,
@@ -366,148 +384,55 @@ class ShareCardGenerator:
         score_label: Optional[str] = None,
         sponsor_name: Optional[str] = None,
     ) -> BytesIO:
-        """Generate a share card image."""
-        # Determine category color
-        primary_color_hex = self.COLORS.get(category_label, {}).get("primary", self.DEFAULT_COLOR)
-        accent_color = self._hex_to_rgb(primary_color_hex)
+        """Generate a share card image in tanzaku style."""
+        # カテゴリのアクセントカラーを取得
+        accent_color_hex = self.COLORS.get(category_label, {}).get("primary", self.DEFAULT_COLOR)
+        accent_color = self._hex_to_rgb(accent_color_hex)
 
-        # Create background (Washi)
-        img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=self.BG_COLOR_WASHI)
+        # 和紙色の背景
+        img = Image.new("RGB", (self.WIDTH, self.HEIGHT), color=self.BG_WASHI)
         draw = ImageDraw.Draw(img)
 
-        # Calculate card dimensions
+        # カードの座標
         card_x1 = self.OUTER_PADDING
         card_y1 = self.OUTER_PADDING
         card_x2 = self.WIDTH - self.OUTER_PADDING
         card_y2 = self.HEIGHT - self.OUTER_PADDING
 
-        # Draw Card (White)
+        # 白いカード本体
         draw.rounded_rectangle(
             [card_x1, card_y1, card_x2, card_y2],
-            radius=24,
-            fill=self.CARD_COLOR,
+            radius=20,
+            fill=self.CARD_WHITE,
         )
 
-        # Draw Top Accent Border
-        # Since rounded_rectangle doesn't support top-only borders easily with fill,
-        # we draw a rect and then re-draw the top rounded corners if needed,
-        # or just draw a thin rect at the top.
-        # Here we will draw a simple rect for the bar.
-        border_height = 16
+        # 上部のアクセントボーダー（短冊風）
+        # 角丸の上部だけ色を付けるため、まず角丸矩形を描いてから下部を白で上書き
         draw.rounded_rectangle(
-            [card_x1, card_y1, card_x2, card_y1 + border_height * 2], # extend down slightly
-            radius=24,
+            [card_x1, card_y1, card_x2, card_y1 + 40],
+            radius=20,
             fill=accent_color,
-            corners=(True, True, False, False) # PIL 10.0+ supports corners? No, it supports `radius`.
         )
-        # Clean up the bottom part of the border to make it a strip
+        # 下半分を白で上書きして直線にする
         draw.rectangle(
-            [card_x1, card_y1 + border_height, card_x2, card_y1 + border_height * 2],
-            fill=accent_color
-        )
-        # Cover the bottom part with white to make it sharp? 
-        # No, let's just draw a simple rectangle inside the rounded card if we can't clip perfectly.
-        # Actually, drawing a filled rounded rect first, then drawing content is fine.
-        # Let's just draw a rect that fits the top.
-        
-        # Redraw the top part correctly:
-        # 1. White Card (Done)
-        # 2. Top Strip: Draw a rounded rect of color, then a white rect over the bottom of it?
-        # Better: Draw the accent color rounded rect at the top
-        draw.rounded_rectangle(
-            [card_x1, card_y1, card_x2, card_y1 + 30],
-            radius=24,
-            fill=accent_color
-        )
-        # Cover the bottom half of that rounded rect to make it straight
-        draw.rectangle(
-            [card_x1, card_y1 + 16, card_x2, card_y1 + 30],
-            fill=accent_color
-        )
-        # Now the card body is white, but we just painted over the top.
-        # The card body needs to be drawn AFTER the top strip if we want the body to be on bottom?
-        # No, the strip is ON TOP of the card.
-        
-        # Let's restart the drawing layers for clarity:
-        # 1. Background (Washi)
-        # 2. Card Shadow (skipped for simplicity in PIL, or draw a gray rect offset)
-        # 3. Card Body (White Rounded Rect)
-        # 4. Top Strip (Colored, Rounded Top corners, straight bottom)
-        
-        # 2. Shadow
-        shadow_offset = 8
-        draw.rounded_rectangle(
-            [card_x1 + 4, card_y1 + 8, card_x2 + 4, card_y2 + 8],
-            radius=24,
-            fill=(0, 0, 0, 15) # Very light shadow
-        )
-        
-        # 3. Body
-        draw.rounded_rectangle(
-            [card_x1, card_y1, card_x2, card_y2],
-            radius=24,
-            fill=self.CARD_COLOR,
+            [card_x1, card_y1 + self.ACCENT_BORDER_HEIGHT, card_x2, card_y1 + 40],
+            fill=self.CARD_WHITE,
         )
 
-        # 4. Top Strip
-        # Draw a rounded rect for the top part
-        draw.rounded_rectangle(
-            [card_x1, card_y1, card_x2, card_y1 + 32], # taller than needed
-            radius=24,
-            fill=accent_color
-        )
-        # Cover the bottom part of that rect with white (effectively cropping it to a strip)
-        # Wait, we want the strip to be visible.
-        # If we want a 16px strip:
-        # Draw rounded rect (height 32), then cover y=16 to 32 with white?
-        # No, the strip is ON the card.
-        # Just draw the bottom part of the strip as a rect to fill the rounded corners at the bottom of the strip?
-        # No, we want the TOP corners to be rounded (matching the card), and the BOTTOM of the strip to be straight.
-        draw.rectangle(
-            [card_x1, card_y1 + 16, card_x2, card_y1 + 32],
-            fill=self.CARD_COLOR
-        )
-        # Re-fill the strip area that might have been covered?
-        # Let's try this:
-        # Draw rounded rect for the top area (height 32).
-        # Draw a rectangle for the bottom half of that area (y+16 to y+32) with WHITE.
-        # This leaves the top 16px colored (with top rounded corners).
-        # This works.
-
-        # Fonts
+        # フォント
         font_poem = self._get_font(58)
         font_author = self._get_font(35)
         font_meta = self._get_font(35)
-        font_badge = self._get_font(30)
-        font_caption = self._get_font(30)
+        font_small = self._get_font(24)
 
-        # Content Area
-        content_x = card_x1 + 50 # Inner padding
-        content_y = card_y1 + 50
+        # コンテンツエリア
+        content_x = card_x1 + self.INNER_PADDING
+        content_y = card_y1 + self.INNER_PADDING + self.ACCENT_BORDER_HEIGHT
 
-        # Badge
-        if badge_label:
-            # Draw badge background
-            badge_w = 400
-            badge_h = 60
-            draw.rounded_rectangle(
-                [content_x, content_y, content_x + badge_w, content_y + badge_h],
-                radius=8,
-                fill=self.BADGE_BG
-            )
-            draw.text((content_x + 20, content_y + 10), badge_label, font=font_badge, fill=self.TEXT_SECONDARY)
-            # Update content_y if badge exists
-            # content_y += 80
-
-        # Caption
-        if caption:
-            caption_y = content_y + 80 if badge_label else content_y
-            draw.text((content_x, caption_y), caption, font=font_caption, fill=self.TEXT_SECONDARY)
-
-        # Poem Layout
+        # 詩のレイアウト計算
         char_height = 109
         column_spacing = 90
-        
+
         upper_lines = upper_text.split("\n") if upper_text else []
         lower_lines = lower_text.split("\n")
         max_upper_chars = max((len(line.strip()) for line in upper_lines), default=0)
@@ -515,10 +440,12 @@ class ShareCardGenerator:
         max_chars = max(max_upper_chars, max_lower_chars)
         poem_height = max_chars * char_height
 
-        footer_height = 200
-        available_height = card_y2 - card_y1 - footer_height
-        poem_start_y = card_y1 + (available_height - poem_height) // 2 + 50
+        # フッターの高さを計算
+        footer_height = 180
+        available_height = card_y2 - card_y1 - self.INNER_PADDING - self.ACCENT_BORDER_HEIGHT - footer_height
+        poem_start_y = content_y + (available_height - poem_height) // 2
 
+        # カードの中心
         card_center_x = (card_x1 + card_x2) // 2
         upper_lower_gap = 150
         upper_columns = len(upper_lines)
@@ -526,6 +453,7 @@ class ShareCardGenerator:
         upper_width = (upper_columns - 1) * column_spacing if upper_columns > 0 else 0
         lower_width = (lower_columns - 1) * column_spacing if lower_columns > 0 else 0
 
+        # 上の句を描画
         if upper_text:
             upper_center_target = card_center_x + upper_lower_gap
             upper_start_x = upper_center_target + (upper_width // 2)
@@ -533,47 +461,41 @@ class ShareCardGenerator:
                 img, draw, upper_text, upper_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
             )
 
+        # 下の句を描画
         lower_center_target = card_center_x - upper_lower_gap
         lower_start_x = lower_center_target + (lower_width // 2)
         self._draw_vertical_text_multiline(
             img, draw, lower_text, lower_start_x, poem_start_y, font_poem, self.TEXT_PRIMARY, char_height, column_spacing
         )
 
-        # Author
-        author_y = card_y2 - 250
+        # 作者名
+        author_y = card_y2 - footer_height
         author_text = f"@{author_name}"
         draw.text((content_x, author_y), author_text, font=font_author, fill=self.TEXT_SECONDARY)
 
-        # Divider
-        divider_y = author_y + 60
+        # 区切り線
+        divider_y = author_y + 50
         draw.line(
-            [(content_x, divider_y), (card_x2 - 50, divider_y)],
-            fill=(220, 220, 220),
-            width=2,
+            [(content_x, divider_y), (card_x2 - self.INNER_PADDING, divider_y)],
+            fill=(230, 230, 230),
+            width=1,
         )
 
-        # Footer
-        footer_y = divider_y + 40
+        # フッター
+        footer_y = divider_y + 30
         if sponsor_name:
-            # "提供" label
-            draw.text((content_x, footer_y + 5), "提供", font=self._get_font(24), fill=self.TEXT_TERTIARY)
-            # Sponsor Name
-            draw.text((content_x + 60, footer_y), sponsor_name, font=font_meta, fill=self.TEXT_SECONDARY)
+            # 提供ラベル
+            draw.text((content_x, footer_y + 8), "提供", font=font_small, fill=self.TEXT_TERTIARY)
+            draw.text((content_x + 50, footer_y), sponsor_name, font=font_meta, fill=self.TEXT_SECONDARY)
 
-        # App Name (Right aligned)
+        # アプリ名（右寄せ）
         app_name = "よみびより"
-        app_url = "yomibiyori.com"
-        
+
         bbox_name = draw.textbbox((0, 0), app_name, font=font_meta)
-        name_w = bbox_name[2] - bbox_name[0]
-        
-        bbox_url = draw.textbbox((0, 0), app_url, font=self._get_font(24))
-        url_w = bbox_url[2] - bbox_url[0]
-        
-        right_margin = card_x2 - 50
-        
-        draw.text((right_margin - name_w, footer_y - 10), app_name, font=font_meta, fill=self.TEXT_PRIMARY)
-        draw.text((right_margin - url_w, footer_y + 35), app_url, font=self._get_font(24), fill=self.TEXT_TERTIARY)
+        name_width = bbox_name[2] - bbox_name[0]
+
+        right_margin = card_x2 - self.INNER_PADDING
+        draw.text((right_margin - name_width, footer_y + 8), app_name, font=font_meta, fill=self.TEXT_PRIMARY)
 
         output = BytesIO()
         img.save(output, format="PNG", quality=85, optimize=True)

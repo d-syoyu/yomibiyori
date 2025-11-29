@@ -27,7 +27,10 @@ CREATE TABLE IF NOT EXISTS users (
   role text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'sponsor', 'admin')),
   birth_year integer CHECK (birth_year IS NULL OR (birth_year BETWEEN 1900 AND 2025)),
   prefecture text CHECK (prefecture IS NULL OR length(prefecture) BETWEEN 1 AND 50),
+  device_info text,
   analytics_opt_out boolean NOT NULL DEFAULT false,
+  notify_theme_release boolean NOT NULL DEFAULT true,
+  notify_ranking_result boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );

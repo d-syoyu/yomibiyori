@@ -24,6 +24,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../types';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
+import WorkCard from '../components/WorkCard';
+import { useAuthStore } from '../stores/useAuthStore';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
@@ -38,6 +40,7 @@ export default function CompositionScreen({ route }: Props) {
   const showSuccess = useToastStore((state) => state.showSuccess);
   const showError = useToastStore((state) => state.showError);
   const { handleError } = useApiErrorHandler();
+  const displayName = useAuthStore((state) => state.user?.display_name ?? 'あなた');
 
   const [line1, setLine1] = useState('');
   const [line2, setLine2] = useState('');
@@ -137,67 +140,59 @@ export default function CompositionScreen({ route }: Props) {
             <Text style={styles.title}>詠む</Text>
 
             {theme ? (
-              <LinearGradient
-                colors={[
-                  colors.category[theme.category].gradient[0],
-                  colors.category[theme.category].gradient[1],
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+              <View
                 style={[
                   styles.themeCard,
-                  { shadowColor: colors.category[theme.category].shadow },
+                  { borderTopColor: colors.category[theme.category].primary },
                 ]}
               >
-                <View style={styles.glassOverlay}>
-                  {theme.sponsored && theme.sponsor_company_name && (
-                    <View style={styles.sponsorBadge}>
-                      <Text style={styles.sponsorBadgeText}>スポンサー提供</Text>
-                    </View>
-                  )}
-                  <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
-                  <View style={styles.verticalTextContainer}>
-                    <VerticalText
-                      text={theme.text}
-                      textStyle={styles.themeVerticalText}
-                      direction="rtl"
-                    />
+                {theme.sponsored && theme.sponsor_company_name && (
+                  <View style={styles.sponsorBadge}>
+                    <Text style={styles.sponsorBadgeText}>スポンサー提供</Text>
                   </View>
-                  <Text style={styles.themeCategory}>{theme.category}</Text>
-                  {theme.sponsored && theme.sponsor_company_name && (
-                    <TouchableOpacity
-                      style={[
-                        styles.sponsorLinkButton,
-                        !theme.sponsor_official_url && styles.sponsorLinkButtonDisabled,
-                      ]}
-                      onPress={() => {
-                        if (theme.sponsor_official_url) {
-                          trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
-                            theme_id: theme.id,
-                            sponsor_name: theme.sponsor_company_name,
-                            url: theme.sponsor_official_url,
-                          });
-                          Linking.openURL(theme.sponsor_official_url);
-                        }
-                      }}
-                      disabled={!theme.sponsor_official_url}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.sponsorLinkButtonText,
-                          !theme.sponsor_official_url && styles.sponsorLinkButtonTextDisabled,
-                        ]}
-                      >
-                        {theme.sponsor_company_name}
-                      </Text>
-                      {theme.sponsor_official_url && (
-                        <Ionicons name="open-outline" size={16} color={colors.text.primary} />
-                      )}
-                    </TouchableOpacity>
-                  )}
+                )}
+                <Text style={styles.themeLabel}>今日のお題（上の句）</Text>
+                <View style={styles.verticalTextContainer}>
+                  <VerticalText
+                    text={theme.text}
+                    textStyle={styles.themeVerticalText}
+                    direction="rtl"
+                  />
                 </View>
-              </LinearGradient>
+                <Text style={styles.themeCategory}>{theme.category}</Text>
+                {theme.sponsored && theme.sponsor_company_name && (
+                  <TouchableOpacity
+                    style={[
+                      styles.sponsorLinkButton,
+                      !theme.sponsor_official_url && styles.sponsorLinkButtonDisabled,
+                    ]}
+                    onPress={() => {
+                      if (theme.sponsor_official_url) {
+                        trackEvent(EventNames.SPONSOR_LINK_CLICKED, {
+                          theme_id: theme.id,
+                          sponsor_name: theme.sponsor_company_name,
+                          url: theme.sponsor_official_url,
+                        });
+                        Linking.openURL(theme.sponsor_official_url);
+                      }
+                    }}
+                    disabled={!theme.sponsor_official_url}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.sponsorLinkButtonText,
+                        !theme.sponsor_official_url && styles.sponsorLinkButtonTextDisabled,
+                      ]}
+                    >
+                      {theme.sponsor_company_name}
+                    </Text>
+                    {theme.sponsor_official_url && (
+                      <Ionicons name="open-outline" size={16} color={colors.text.primary} />
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
             ) : (
               <View style={styles.noThemeCard}>
                 <Text style={styles.noThemeText}>
@@ -235,43 +230,18 @@ export default function CompositionScreen({ route }: Props) {
             </View>
 
             {/* プレビュー表示 */}
-            {(line1.trim() || line2.trim()) && (
+            {(line1.trim() || line2.trim()) && theme && (
               <View style={styles.previewSection}>
                 <Text style={styles.previewLabel}>プレビュー</Text>
-                <LinearGradient
-                  colors={['#FFFFFF', colors.background.secondary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={styles.previewCard}
-                >
-                  {/* お題（上の句） */}
-                  {theme && (
-                    <View style={styles.previewTheme}>
-                      <Text style={styles.previewThemeLabel}>お題</Text>
-                      <View style={styles.verticalTextContainer}>
-                        <VerticalText
-                          text={theme.text}
-                          textStyle={styles.previewThemeText}
-                          direction="rtl"
-                        />
-                      </View>
-                    </View>
-                  )}
-
-                  {/* 下の句 */}
-                  {(line1.trim() || line2.trim()) && (
-                    <View style={styles.previewWork}>
-                      <Text style={styles.previewWorkLabel}>下の句</Text>
-                      <View style={styles.verticalTextContainer}>
-                        <VerticalText
-                          text={`${line1} \n${line2} `}
-                          textStyle={styles.previewWorkText}
-                          direction="rtl"
-                        />
-                      </View>
-                    </View>
-                  )}
-                </LinearGradient>
+                <WorkCard
+                  upperText={theme.text}
+                  lowerText={`${line1.trim()}\n${line2.trim()}`}
+                  category={theme.category}
+                  displayName={displayName}
+                  sponsorName={theme.sponsored ? theme.sponsor_company_name : undefined}
+                  sponsorUrl={theme.sponsored ? theme.sponsor_official_url : undefined}
+                  customActions={<View />}
+                />
               </View>
             )}
 
@@ -332,34 +302,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   themeCard: {
+    backgroundColor: colors.background.card,
     borderRadius: borderRadius.lg,
-    marginBottom: spacing.xl,
-    ...shadow.lg,
-    overflow: 'hidden',
-  },
-  glassOverlay: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     padding: spacing.lg,
+    marginBottom: spacing.xl,
+    borderTopWidth: 4,
+    // WorkCardと同じ影のスタイル
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sponsorBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: colors.background.secondary,
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderRadius: borderRadius.sm,
     marginBottom: spacing.sm,
-    ...shadow.sm,
   },
   sponsorBadgeText: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.semiBold,
-    color: colors.text.primary,
+    fontSize: 11,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
     letterSpacing: 0.5,
   },
   themeLabel: {
     fontSize: fontSize.caption,
     fontFamily: fontFamily.medium,
-    color: colors.text.secondary,
+    color: colors.text.tertiary,
     marginBottom: spacing.md,
     letterSpacing: 1,
     textAlign: 'center',
@@ -391,14 +363,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: colors.background.secondary,
     borderWidth: 1.5,
     borderColor: colors.text.primary,
     marginTop: spacing.md,
-    ...shadow.sm,
   },
   sponsorLinkButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: colors.background.secondary,
     borderColor: colors.text.tertiary,
   },
   sponsorLinkButtonText: {
@@ -482,46 +453,5 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.md,
     letterSpacing: 0.5,
-  },
-  previewCard: {
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    ...shadow.md,
-    overflow: 'hidden',
-  },
-  previewTheme: {
-    marginBottom: spacing.md,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(107, 123, 79, 0.2)',
-  },
-  previewThemeLabel: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.medium,
-    color: colors.text.tertiary,
-    marginBottom: spacing.sm,
-    letterSpacing: 0.5,
-  },
-  previewThemeText: {
-    fontSize: fontSize.body,
-    lineHeight: 28,
-    color: colors.text.secondary,
-    fontFamily: fontFamily.regular,
-  },
-  previewWork: {
-    marginBottom: spacing.sm,
-  },
-  previewWorkLabel: {
-    fontSize: fontSize.caption,
-    fontFamily: fontFamily.medium,
-    color: colors.text.tertiary,
-    marginBottom: spacing.sm,
-    letterSpacing: 0.5,
-  },
-  previewWorkText: {
-    fontSize: fontSize.body,
-    lineHeight: 28,
-    color: colors.text.primary,
-    fontFamily: fontFamily.regular,
   },
 });
