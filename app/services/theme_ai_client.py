@@ -14,6 +14,62 @@ from pykakasi import kakasi
 from app.core.config import get_settings
 
 
+def get_season_info(target_date: date) -> str:
+    """Get Japanese season name and description based on date."""
+    month = target_date.month
+    day = target_date.day
+
+    # 二十四節気を考慮した季節判定
+    if month == 1:
+        return "冬（睦月・1月）。新年の冷たい空気、初詣、雪景色など"
+    elif month == 2:
+        if day < 4:
+            return "冬（如月・2月初旬）。まだ寒さ厳しく、節分の頃"
+        else:
+            return "晩冬〜早春（如月・2月）。立春を迎え、梅のつぼみが膨らむ頃"
+    elif month == 3:
+        if day < 21:
+            return "早春（弥生・3月）。桃の節句、春の訪れを感じる頃"
+        else:
+            return "春（弥生・3月下旬）。春分を過ぎ、桜の便りが届く頃"
+    elif month == 4:
+        return "春（卯月・4月）。桜満開、新生活、花見の季節"
+    elif month == 5:
+        if day < 6:
+            return "晩春（皐月・5月初旬）。ゴールデンウィーク、新緑が眩しい頃"
+        else:
+            return "初夏（皐月・5月）。立夏を過ぎ、若葉が茂る頃"
+    elif month == 6:
+        return "梅雨・初夏（水無月・6月）。紫陽花、雨の日、蒸し暑さ"
+    elif month == 7:
+        if day < 23:
+            return "夏（文月・7月）。七夕、蝉の声、梅雨明け間近"
+        else:
+            return "盛夏（文月・7月下旬）。大暑、本格的な夏の暑さ"
+    elif month == 8:
+        if day < 23:
+            return "盛夏（葉月・8月）。お盆、花火、入道雲、蝉しぐれ"
+        else:
+            return "晩夏（葉月・8月下旬）。処暑を過ぎ、夏の終わりの気配"
+    elif month == 9:
+        if day < 23:
+            return "初秋（長月・9月）。まだ残暑もあるが、虫の声、秋の空"
+        else:
+            return "秋（長月・9月下旬）。秋分を過ぎ、彼岸花、秋の夜長"
+    elif month == 10:
+        return "秋（神無月・10月）。紅葉、秋晴れ、金木犀の香り"
+    elif month == 11:
+        if day < 8:
+            return "晩秋（霜月・11月初旬）。紅葉が深まり、朝晩の冷え込み"
+        else:
+            return "晩秋〜初冬（霜月・11月）。立冬を迎え、木枯らし、枯葉の季節"
+    else:  # month == 12
+        if day < 22:
+            return "冬（師走・12月）。年の瀬、忘年会、冬至に向かう頃"
+        else:
+            return "冬（師走・12月下旬）。冬至を過ぎ、クリスマス、年末の賑わい"
+
+
 class ThemeAIClientError(RuntimeError):
     """Raised when an AI client cannot produce a valid theme."""
 
@@ -112,7 +168,8 @@ class OpenAIThemeClient(ThemeAIClient):
         "季節": (
             "季節感、天気、自然の移り変わりを表現してください。"
             "単なる風景描写だけでなく、「その季節ならではの匂い・温度・感情」を"
-            "呼び起こすような、五感に訴える表現を目指してください。"
+            "呼び起こすような、五感に訴える表現を目指してください。\n"
+            "【重要】現在の季節: {season_info}"
         ),
         "日常": (
             "通勤・通学、食事、仕事、家事などの日常シーンを切り取ってください。"
@@ -142,6 +199,9 @@ class OpenAIThemeClient(ThemeAIClient):
             category,
             f"「{category}」というテーマで現代的な表現を使ってください。"
         )
+        # 季節情報をプロンプトに挿入
+        season_info = get_season_info(target_date)
+        category_instruction = category_instruction.format(season_info=season_info)
 
         payload = {
             "model": self.model,
@@ -296,7 +356,8 @@ class XAIThemeClient(ThemeAIClient):
         "季節": (
             "季節感、天気、自然の移り変わりを表現してください。"
             "単なる風景描写だけでなく、「その季節ならではの匂い・温度・感情」を"
-            "呼び起こすような、五感に訴える表現を目指してください。"
+            "呼び起こすような、五感に訴える表現を目指してください。\n"
+            "【重要】現在の季節: {season_info}"
         ),
         "日常": (
             "通勤・通学、食事、仕事、家事などの日常シーンを切り取ってください。"
@@ -326,6 +387,9 @@ class XAIThemeClient(ThemeAIClient):
             category,
             f"「{category}」というテーマで現代的な表現を使ってください。"
         )
+        # 季節情報をプロンプトに挿入
+        season_info = get_season_info(target_date)
+        category_instruction = category_instruction.format(season_info=season_info)
 
         payload = {
             "model": self.model,
@@ -471,7 +535,8 @@ class ClaudeThemeClient(ThemeAIClient):
         "季節": (
             "季節感、天気、自然の移り変わりを表現してください。"
             "単なる風景描写だけでなく、「その季節ならではの匂い・温度・感情」を"
-            "呼び起こすような、五感に訴える表現を目指してください。"
+            "呼び起こすような、五感に訴える表現を目指してください。\n"
+            "【重要】現在の季節: {season_info}"
         ),
         "日常": (
             "通勤・通学、食事、仕事、家事などの日常シーンを切り取ってください。"
@@ -501,6 +566,9 @@ class ClaudeThemeClient(ThemeAIClient):
             category,
             f"「{category}」というテーマで現代的な表現を使ってください。"
         )
+        # 季節情報をプロンプトに挿入
+        season_info = get_season_info(target_date)
+        category_instruction = category_instruction.format(season_info=season_info)
 
         # システムプロンプト
         system_prompt = (
