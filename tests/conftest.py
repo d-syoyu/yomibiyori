@@ -35,6 +35,7 @@ def configure_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure required Supabase settings are populated for tests."""
 
     settings = get_settings()
+    monkeypatch.setattr(settings, "app_env", "test")  # Disable dev mode bypass
     monkeypatch.setattr(settings, "database_url", TEST_DATABASE_URL)
     monkeypatch.setattr(settings, "supabase_anon_key", "test-anon-key")
     monkeypatch.setattr(settings, "service_role_key", "test-service-role")
@@ -70,11 +71,10 @@ def redis_client() -> Generator[fakeredis.FakeRedis, None, None]:
 def client(db_session: Session, redis_client: fakeredis.FakeRedis) -> Generator[TestClient, None, None]:
     """FastAPI test client with dependency overrides."""
 
-    def _get_test_session() -> Generator[Session, None, None]:
-        yield db_session
-
-    app.dependency_overrides[get_db_session] = _get_test_session
-    app.dependency_overrides[get_authenticated_db_session] = _get_test_session
+    # Use a simple function that returns the session directly (not a generator)
+    # FastAPI's Depends() will handle this correctly
+    app.dependency_overrides[get_db_session] = lambda: db_session
+    app.dependency_overrides[get_authenticated_db_session] = lambda: db_session
     app.dependency_overrides[get_redis_client] = lambda: redis_client
     try:
         with TestClient(app) as test_client:
