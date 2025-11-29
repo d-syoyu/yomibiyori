@@ -68,105 +68,97 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
   };
 
   return (
-    <View style={[styles.outerContainer, { backgroundColor: themeColors.primary }]}>
-      <View style={styles.innerCard}>
-        {badgeLabel && (
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>{badgeLabel}</Text>
-          </View>
-        )}
+    <View style={[styles.card, { borderTopColor: themeColors.primary }]}>
+      {badgeLabel && (
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeText}>{badgeLabel}</Text>
+        </View>
+      )}
 
-        <VerticalPoem
-          upperText={upperText}
-          lowerText={lowerText}
-          lowerBold
-          maxWidth={320}
-          columnMinHeight={200}
-        />
+      <VerticalPoem
+        upperText={upperText}
+        lowerText={lowerText}
+        lowerBold
+        maxWidth={320}
+        columnMinHeight={200}
+      />
 
-        <Text style={styles.authorText}>@{displayName}</Text>
+      <Text style={styles.authorText}>@{displayName}</Text>
 
-        <View style={styles.divider} />
+      <View style={styles.divider} />
 
-        <View style={styles.footer}>
-          <View style={styles.footerLeft}>
-            {sponsorName && (
+      <View style={styles.footer}>
+        <View style={styles.footerLeft}>
+          {sponsorName && (
+            <TouchableOpacity
+              onPress={handleSponsorPress}
+              disabled={!sponsorUrl && !onSponsorPress}
+              activeOpacity={0.7}
+              accessibilityRole="link"
+              accessibilityLabel={`スポンサー: ${sponsorName}`}
+              style={styles.sponsorContainer}
+            >
+              <Text style={styles.sponsorLabel}>提供</Text>
+              <Text style={[
+                styles.sponsorName,
+                (sponsorUrl || onSponsorPress) && styles.sponsorNameLink
+              ]}>
+                {sponsorName}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {extraFooterContent}
+        </View>
+        {customActions ?? (
+          <View style={styles.actions}>
+            {onShare && (
               <TouchableOpacity
-                onPress={handleSponsorPress}
-                disabled={!sponsorUrl && !onSponsorPress}
-                activeOpacity={0.7}
-                accessibilityRole="link"
-                accessibilityLabel={`スポンサー: ${sponsorName}`}
-                style={[
-                  styles.sponsorLinkButton,
-                  (!sponsorUrl && !onSponsorPress) && styles.sponsorLinkButtonDisabled,
-                ]}
+                style={styles.iconButton}
+                onPress={onShare}
+                activeOpacity={0.6}
+                accessibilityLabel="共有"
               >
-                <Text
-                  style={[
-                    styles.sponsorLinkButtonText,
-                    (!sponsorUrl && !onSponsorPress) && styles.sponsorLinkButtonTextDisabled,
-                  ]}
-                >
-                  {sponsorName}
-                </Text>
-                {(sponsorUrl || onSponsorPress) && (
-                  <Ionicons name="open-outline" size={16} color={colors.text.primary} />
-                )}
+                <Ionicons name="share-outline" size={20} color={colors.text.secondary} />
               </TouchableOpacity>
             )}
-            {extraFooterContent}
+            {onLike ? (
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={onLike}
+                activeOpacity={0.6}
+                accessibilityLabel={liked ? "いいねを取り消す" : "いいね"}
+              >
+                <Ionicons
+                  name={liked ? "heart" : "heart-outline"}
+                  size={20}
+                  color={liked ? colors.status.error : colors.text.secondary}
+                />
+              </TouchableOpacity>
+            ) : typeof likesCount === 'number' && (
+              <View style={styles.likeBadge}>
+                <Ionicons name="heart" size={14} color={colors.status.error} />
+                <Text style={styles.likeText}>{likesCount}</Text>
+              </View>
+            )}
           </View>
-          {customActions ?? (
-            <View style={styles.actions}>
-              {onShare && (
-                <TouchableOpacity
-                  style={styles.roundButton}
-                  onPress={onShare}
-                  activeOpacity={0.8}
-                  accessibilityLabel="共有"
-                >
-                  <Ionicons name="share-outline" size={20} color={colors.text.primary} />
-                </TouchableOpacity>
-              )}
-              {onLike ? (
-                <TouchableOpacity
-                  style={[styles.roundButton, liked && styles.likeButtonActive]}
-                  onPress={onLike}
-                  activeOpacity={0.8}
-                  accessibilityLabel={liked ? "いいねを取り消す" : "いいね"}
-                >
-                  <Ionicons
-                    name={liked ? "heart" : "heart-outline"}
-                    size={20}
-                    color={liked ? colors.status.error : colors.text.primary}
-                  />
-                </TouchableOpacity>
-              ) : typeof likesCount === 'number' && (
-                <View style={styles.likeBadge}>
-                  <Ionicons name="heart" size={14} color={colors.status.error} />
-                  <Text style={styles.likeText}>{likesCount}</Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
+        )}
       </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  outerContainer: {
-    borderRadius: borderRadius.xl,
-    padding: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  innerCard: {
+  card: {
     backgroundColor: colors.background.card,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
     padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderTopWidth: 4,
     ...shadow.sm,
+    // 紙の質感を出すための微細な影調整
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   authorText: {
     marginTop: spacing.md,
@@ -178,6 +170,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.background.secondary,
     marginVertical: spacing.md,
+    opacity: 0.6,
   },
   footer: {
     flexDirection: 'row',
@@ -189,31 +182,24 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  sponsorLinkButton: {
+  sponsorContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background.card,
-    borderWidth: 1.5,
-    borderColor: colors.text.primary,
-    alignSelf: 'flex-start',
-    ...shadow.sm,
+    alignItems: 'baseline',
+    gap: spacing.xs,
   },
-  sponsorLinkButtonDisabled: {
-    borderColor: colors.text.tertiary,
-    backgroundColor: colors.background.secondary,
-  },
-  sponsorLinkButtonText: {
-    fontSize: fontSize.bodySmall,
-    fontFamily: fontFamily.semiBold,
-    color: colors.text.primary,
-    letterSpacing: 0.3,
-  },
-  sponsorLinkButtonTextDisabled: {
+  sponsorLabel: {
+    fontSize: 10,
     color: colors.text.tertiary,
+    fontFamily: fontFamily.regular,
+  },
+  sponsorName: {
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
+  },
+  sponsorNameLink: {
+    textDecorationLine: 'underline',
+    textDecorationColor: colors.text.tertiary,
   },
   actions: {
     flexDirection: 'row',
@@ -221,18 +207,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: spacing.sm,
   },
-  roundButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.text.primary,
+  iconButton: {
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  likeButtonActive: {
-    borderColor: colors.status.error,
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    opacity: 0.8,
   },
   likeBadge: {
     flexDirection: 'row',
@@ -248,21 +228,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     color: colors.status.error,
   },
-  likeTextInactive: {
-    color: colors.text.secondary,
-  },
   badgeContainer: {
     alignSelf: 'flex-start',
     backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 2,
     marginBottom: spacing.sm,
   },
   badgeText: {
-    fontSize: fontSize.bodySmall,
-    fontFamily: fontFamily.semiBold,
-    color: colors.text.primary,
+    fontSize: 11,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
     letterSpacing: 0.5,
   },
 });

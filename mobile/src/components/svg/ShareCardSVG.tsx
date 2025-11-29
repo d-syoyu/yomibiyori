@@ -24,193 +24,199 @@ const ShareCardSVG: React.FC<ShareCardSVGProps> = ({
   height = 1920,
 }) => {
   const categoryTheme = colors.category[content.category];
-  const gradientColors = categoryTheme?.gradient ?? DEFAULT_GRADIENT;
+  const themeColor = categoryTheme?.primary ?? colors.category['恋愛'].primary;
 
   // サイズに応じたスケーリング(基準: 1080x1920)
   const scale = width / 1080;
-  const padding = 40 * scale;
-  const innerPadding = 32 * scale;
+  const padding = 60 * scale; // 余白を少し広めに
+  const cardWidth = width - padding * 2;
+  const cardHeight = height - padding * 2;
   const cornerRadius = 24 * scale;
-  const innerRadius = 16 * scale;
 
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-      <Defs>
-        <SVGLinearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor={gradientColors[0]} stopOpacity="1" />
-          <Stop offset="100%" stopColor={gradientColors[1]} stopOpacity="1" />
-        </SVGLinearGradient>
-      </Defs>
-
-      {/* グラデーション背景 */}
+      {/* 背景（和紙色） */}
       <Rect
-        x={padding}
-        y={padding}
-        width={width - padding * 2}
-        height={height - padding * 2}
-        fill="url(#bgGradient)"
-        rx={cornerRadius}
-        ry={cornerRadius}
+        x={0}
+        y={0}
+        width={width}
+        height={height}
+        fill="#F5F3ED" // colors.japaneseColors.washi
       />
 
-      {/* 白背景オーバーレイ */}
-      <Rect
-        x={padding + innerPadding}
-        y={padding + innerPadding}
-        width={width - (padding + innerPadding) * 2}
-        height={height - (padding + innerPadding) * 2}
-        fill="rgba(255, 255, 255, 0.92)"
-        rx={innerRadius}
-        ry={innerRadius}
-      />
-
+      {/* カード本体（白） */}
       <G>
-        {/* バッジ */}
-        {content.badgeLabel && (
-          <G>
-            <Rect
-              x={padding + innerPadding + 24 * scale}
-              y={padding + innerPadding + 24 * scale}
-              width={280 * scale}
-              height={48 * scale}
-              fill="rgba(26, 54, 93, 0.08)"
-              rx={8 * scale}
-              ry={8 * scale}
-            />
-            <SVGText
-              x={padding + innerPadding + 164 * scale}
-              y={padding + innerPadding + 48 * scale}
-              fontSize={20 * scale}
-              fill={colors.text.accent}
-              fontWeight="600"
-              textAnchor="middle"
-              fontFamily="Noto Serif JP"
-            >
-              {content.badgeLabel}
-            </SVGText>
-          </G>
-        )}
-
-        {/* キャプション */}
-        {content.caption && (
-          <SVGText
-            x={padding + innerPadding + 24 * scale}
-            y={padding + innerPadding + 100 * scale}
-            fontSize={18 * scale}
-            fill={colors.text.secondary}
-            fontWeight="500"
-            fontFamily="Noto Serif JP"
-          >
-            {content.caption}
-          </SVGText>
-        )}
-
-        {/* 縦書き詩 */}
-        <VerticalPoemSVG
-          upperText={content.upperText}
-          lowerText={content.lowerText}
-          x={width / 2 + 80 * scale}
-          y={padding + innerPadding + 180 * scale}
-          fontSize={36 * scale}
-          lineHeight={42 * scale}
-          spacing={70 * scale}
-          color={colors.text.primary}
-          lowerBold
+        {/* 影（擬似的なドロップシャドウ） */}
+        <Rect
+          x={padding + 4 * scale}
+          y={padding + 8 * scale}
+          width={cardWidth}
+          height={cardHeight}
+          fill="rgba(0,0,0,0.06)"
+          rx={cornerRadius}
+          ry={cornerRadius}
+        />
+        
+        {/* カードベース */}
+        <Rect
+          x={padding}
+          y={padding}
+          width={cardWidth}
+          height={cardHeight}
+          fill="#FFFFFF"
+          rx={cornerRadius}
+          ry={cornerRadius}
         />
 
-        {/* メタ情報エリア */}
+        {/* アクセントボーダー（上部） */}
+        <Rect
+          x={padding}
+          y={padding}
+          width={cardWidth}
+          height={16 * scale} // 4px * 4 scale roughly
+          fill={themeColor}
+          rx={cornerRadius} // 上部だけ角丸にするクリッピングは複雑なので、全体に適用しつつ上から重ねる
+        />
+        {/* 角丸補正用の矩形（ボーダーの下側を直線にするため） */}
+        <Rect
+          x={padding}
+          y={padding + 8 * scale}
+          width={cardWidth}
+          height={8 * scale}
+          fill={themeColor}
+        />
+        
+        {/* コンテンツエリア */}
         <G>
-          {/* 作者名 */}
-          <SVGText
-            x={padding + innerPadding + 24 * scale}
-            y={height - padding - innerPadding - 200 * scale}
-            fontSize={22 * scale}
-            fill={colors.text.primary}
-            fontWeight="600"
-            fontFamily="Noto Serif JP"
-          >
-            {content.displayName}
-          </SVGText>
-
-          {/* カテゴリと日付 */}
-          <SVGText
-            x={padding + innerPadding + 24 * scale}
-            y={height - padding - innerPadding - 160 * scale}
-            fontSize={16 * scale}
-            fill={colors.text.tertiary}
-            fontWeight="500"
-            fontFamily="Noto Serif JP"
-          >
-            {content.categoryLabel} / {content.dateLabel}
-          </SVGText>
-
-          {/* いいね数 */}
-          {content.likesLabel && (
-            <SVGText
-              x={width - padding - innerPadding - 24 * scale}
-              y={height - padding - innerPadding - 200 * scale}
-              fontSize={16 * scale}
-              fill={colors.text.accent}
-              fontWeight="600"
-              textAnchor="end"
-              fontFamily="Noto Serif JP"
-            >
-              {content.likesLabel}
-            </SVGText>
+          {/* バッジ */}
+          {content.badgeLabel && (
+            <G>
+              <Rect
+                x={padding + 32 * scale}
+                y={padding + 40 * scale}
+                width={240 * scale}
+                height={44 * scale}
+                fill="rgba(0, 0, 0, 0.04)"
+                rx={4 * scale}
+                ry={4 * scale}
+              />
+              <SVGText
+                x={padding + 32 * scale + 120 * scale}
+                y={padding + 40 * scale + 30 * scale}
+                fontSize={18 * scale}
+                fill={colors.text.secondary}
+                fontWeight="500"
+                textAnchor="middle"
+                fontFamily="Noto Serif JP"
+              >
+                {content.badgeLabel}
+              </SVGText>
+            </G>
           )}
 
-          {/* スコア */}
-          {content.scoreLabel && (
+          {/* キャプション */}
+          {content.caption && (
             <SVGText
-              x={width - padding - innerPadding - 24 * scale}
-              y={height - padding - innerPadding - 160 * scale}
-              fontSize={16 * scale}
-              fill={colors.status.info}
-              fontWeight="600"
-              textAnchor="end"
-              fontFamily="Noto Serif JP"
-            >
-              {content.scoreLabel}
-            </SVGText>
-          )}
-        </G>
-
-        {/* フッター */}
-        <G>
-          {content.sponsorName && (
-            <SVGText
-              x={padding + innerPadding + 24 * scale}
-              y={height - padding - innerPadding - 30 * scale}
+              x={padding + 32 * scale}
+              y={padding + 120 * scale}
               fontSize={18 * scale}
-              fill={colors.text.primary}
-              fontWeight="600"
+              fill={colors.text.secondary}
+              fontWeight="500"
               fontFamily="Noto Serif JP"
             >
-              {content.sponsorName}
+              {content.caption}
             </SVGText>
           )}
-          <SVGText
-            x={width - padding - innerPadding - 24 * scale}
-            y={height - padding - innerPadding - 54 * scale}
-            fontSize={18 * scale}
-            fill={colors.text.primary}
-            fontWeight="600"
-            textAnchor="end"
-            fontFamily="Noto Serif JP"
-          >
-            {APP_NAME}
-          </SVGText>
-          <SVGText
-            x={width - padding - innerPadding - 24 * scale}
-            y={height - padding - innerPadding - 30 * scale}
-            fontSize={14 * scale}
-            fill={colors.text.primary}
-            fontWeight="600"
-            textAnchor="end"
-            fontFamily="Noto Serif JP"
-          >
-            {content.footerUrl ?? 'yomibiyori.com'}
-          </SVGText>
+
+          {/* 縦書き詩 */}
+          <VerticalPoemSVG
+            upperText={content.upperText}
+            lowerText={content.lowerText}
+            x={width / 2 + 80 * scale}
+            y={padding + 240 * scale}
+            fontSize={38 * scale}
+            lineHeight={48 * scale}
+            spacing={80 * scale}
+            color={colors.text.primary}
+            lowerBold
+          />
+
+          {/* メタ情報エリア */}
+          <G>
+            {/* 作者名 */}
+            <SVGText
+              x={padding + 32 * scale}
+              y={height - padding - 200 * scale}
+              fontSize={22 * scale}
+              fill={colors.text.secondary}
+              fontWeight="500"
+              fontFamily="Noto Serif JP"
+            >
+              @{content.displayName}
+            </SVGText>
+
+            {/* 区切り線 */}
+            <Rect
+              x={padding + 32 * scale}
+              y={height - padding - 160 * scale}
+              width={cardWidth - 64 * scale}
+              height={2 * scale}
+              fill="rgba(0, 0, 0, 0.1)"
+            />
+
+            {/* フッター情報 */}
+            <G>
+              {/* スポンサー提供 */}
+              {content.sponsorName && (
+                <G>
+                  <SVGText
+                    x={padding + 32 * scale}
+                    y={height - padding - 80 * scale}
+                    fontSize={16 * scale}
+                    fill={colors.text.tertiary}
+                    fontWeight="400"
+                    fontFamily="Noto Serif JP"
+                  >
+                    提供
+                  </SVGText>
+                  <SVGText
+                    x={padding + 80 * scale}
+                    y={height - padding - 80 * scale}
+                    fontSize={20 * scale}
+                    fill={colors.text.secondary}
+                    fontWeight="500"
+                    fontFamily="Noto Serif JP"
+                  >
+                    {content.sponsorName}
+                  </SVGText>
+                </G>
+              )}
+
+              {/* アプリ名とURL */}
+              <SVGText
+                x={width - padding - 32 * scale}
+                y={height - padding - 90 * scale}
+                fontSize={24 * scale}
+                fill={colors.text.primary}
+                fontWeight="600"
+                textAnchor="end"
+                fontFamily="Noto Serif JP"
+              >
+                {APP_NAME}
+              </SVGText>
+              <SVGText
+                x={width - padding - 32 * scale}
+                y={height - padding - 50 * scale}
+                fontSize={14 * scale}
+                fill={colors.text.tertiary}
+                fontWeight="400"
+                textAnchor="end"
+                fontFamily="Noto Serif JP"
+              >
+                yomibiyori.com
+              </SVGText>
+            </G>
+          </G>
         </G>
       </G>
     </Svg>
