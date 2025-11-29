@@ -192,7 +192,7 @@ export default function CompositionScreen({ route }: Props) {
                         {theme.sponsor_company_name}
                       </Text>
                       {theme.sponsor_official_url && (
-                        <Ionicons name="share-outline" size={16} color={colors.text.primary} />
+                        <Ionicons name="open-outline" size={16} color={colors.text.primary} />
                       )}
                     </TouchableOpacity>
                   )}

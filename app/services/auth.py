@@ -192,6 +192,14 @@ def get_current_user_id(
     This function also sets the request user context for Row Level Security (RLS)
     to work correctly in PostgreSQL.
     """
+    settings = get_settings()
+
+    # 開発モード: 認証をバイパスしてテストユーザーを使用
+    if settings.app_env == "development":
+        dev_user_id = "00000000-0000-0000-0000-000000000001"
+        set_request_user_context(dev_user_id, "authenticated")
+        return dev_user_id
+
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 

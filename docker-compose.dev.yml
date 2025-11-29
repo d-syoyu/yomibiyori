@@ -1,0 +1,59 @@
+# 開発用Docker Compose設定
+# 使用方法: docker compose -f docker-compose.dev.yml up -d
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: yomibiyori-db
+    environment:
+      POSTGRES_USER: yomibiyori
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: yomibiyori_dev
+    ports:
+      - "5433:5432"  # ローカルの5433でアクセス（本番と競合しないよう）
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/create_auth_stub.sql:/docker-entrypoint-initdb.d/01_auth_stub.sql
+      - ./scripts/init_schema.sql:/docker-entrypoint-initdb.d/02_init_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yomibiyori -d yomibiyori_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: yomibiyori-redis
+    ports:
+      - "6380:6379"  # ローカルの6380でアクセス
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: yomibiyori-backend
+    ports:
+      - "8000:8000"  # ローカルの8000でアクセス
+    environment:
+      DATABASE_URL: postgresql://yomibiyori:devpassword@db:5432/yomibiyori_dev
+      REDIS_URL: redis://redis:6379
+      APP_ENV: development
+      DEBUG: "true"
+      # Supabase認証（ローカルでは無効化 or 本番を使用）
+      SUPABASE_URL: https://avpymookdzjovwxirkpq.supabase.co
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHltb29rZHpqb3Z3eGlya3BxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk0NDM0OTMsImV4cCI6MjA0NTAxOTQ5M30.T1jzyN-P5APGqFKWcaQ6A7fJbMp7iQY56RXuMjMtQGE
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHltb29rZHpqb3Z3eGlya3BxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyOTQ0MzQ5MywiZXhwIjoyMDQ1MDE5NDkzfQ.dqQcfNzAy0EjrA6PB82vCFO-fVU2bshcGJ2hgWNjT5U
+      SUPABASE_JWT_SECRET: D3lrh5VQglwXeYDO/rlNWIQWQ2vxH22e5Bvuk9Jqh1vIvuX70Uxet8ifNsEzA/hs3oQNf+4kMmFNCqMuA5yN/g==
+    volumes:
+      - ./app:/app/app:ro  # ホットリロード用
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -111,7 +111,7 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
                   {sponsorName}
                 </Text>
                 {(sponsorUrl || onSponsorPress) && (
-                  <Ionicons name="share-outline" size={16} color={colors.text.primary} />
+                  <Ionicons name="open-outline" size={16} color={colors.text.primary} />
                 )}
               </TouchableOpacity>
             )}

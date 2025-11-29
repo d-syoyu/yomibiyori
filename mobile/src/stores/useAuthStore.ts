@@ -14,6 +14,20 @@ import {
 import type { SignUpRequest, LoginRequest, UserProfile, OAuthCallbackRequest, UpdateProfileRequest, ApiError } from '../types';
 import { resetAnalytics, setAnalyticsUserContext, identifyUser } from '../utils/analytics';
 import { logger } from '../utils/logger';
+import { IS_DEV } from '../config';
+
+// ============================================================================
+// Development Test User (Expo Go用)
+// ============================================================================
+
+const DEV_TEST_USER: UserProfile = {
+  user_id: '00000000-0000-0000-0000-000000000001',
+  email: 'test@example.com',
+  display_name: 'テストユーザー',
+  analytics_opt_out: true,
+  notify_theme_release: false,
+  notify_ranking_result: false,
+};
 
 // ============================================================================
 // Constants
@@ -257,6 +271,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loadStoredSession: async () => {
     logger.debug('[Auth] Loading stored session...');
     set({ isLoading: true });
+
+    // 開発モード (Expo Go) ではテストユーザーで自動ログイン
+    if (IS_DEV) {
+      logger.debug('[Auth] Development mode: Using test user');
+      set({
+        isAuthenticated: true,
+        user: DEV_TEST_USER,
+        isLoading: false,
+        error: null,
+      });
+      return;
+    }
+
     try {
       const items = await getSecureItems([
         ACCESS_TOKEN_KEY,
