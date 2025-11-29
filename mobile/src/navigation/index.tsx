@@ -214,16 +214,16 @@ export default function Navigation() {
     loadTutorialStatus();
   }, [loadTutorialStatus]);
 
-  // Show tutorial when authenticated and not completed
+  // Show tutorial on first app launch (regardless of auth status)
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !tutorialCompleted) {
-      // Small delay to ensure smooth transition after login
+    if (!isLoading && !tutorialCompleted) {
+      // Small delay to ensure smooth transition
       const timer = setTimeout(() => {
         setShowTutorial(true);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, isAuthenticated, tutorialCompleted]);
+  }, [isLoading, tutorialCompleted]);
 
   // Handle tutorial close
   const handleTutorialClose = () => {
