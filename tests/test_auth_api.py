@@ -138,7 +138,7 @@ def test_get_profile_success(client: TestClient, db_session: Session) -> None:
 def test_get_profile_missing(client: TestClient) -> None:
     response = client.get("/api/v1/auth/profile", headers=_bearer(str(uuid4())))
     assert response.status_code == 404
-    assert response.json()["error"]["detail"] == "User profile not found"
+    assert response.json()["error"]["detail"] == "ユーザー情報が見つかりませんでした"
 
 
 def test_sync_profile_updates_local_record(

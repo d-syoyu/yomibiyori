@@ -26,6 +26,8 @@ def _create_user(session: Session, *, email: str = "push@example.com") -> User:
         id=str(uuid4()),
         name="Push User",
         email=email,
+        notify_theme_release=True,
+        notify_ranking_result=True,
         created_at=now,
         updated_at=now,
     )

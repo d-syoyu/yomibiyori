@@ -17,7 +17,7 @@ def test_get_today_theme_success(client: TestClient, db_session: Session) -> Non
     theme = Theme(
         id=str(uuid4()),
         text="春の風 桜舞い散る",
-        category="season",
+        category="季節",
         date=today,
         sponsored=False,
         created_at=datetime.now(timezone.utc),
@@ -31,7 +31,7 @@ def test_get_today_theme_success(client: TestClient, db_session: Session) -> Non
     data = response.json()
     assert data["id"] == theme.id
     assert data["text"] == "春の風 桜舞い散る"
-    assert data["category"] == "season"
+    assert data["category"] == "季節"
     assert data["sponsored"] is False
 
 
@@ -39,7 +39,7 @@ def test_get_today_theme_not_found(client: TestClient) -> None:
     """Test theme not found for today."""
     response = client.get("/api/v1/themes/today")
     assert response.status_code == 404
-    assert response.json()["error"]["detail"] == "No theme found for today"
+    assert response.json()["error"]["detail"] == "本日のお題がまだ届いていません"
 
 
 def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Session) -> None:
@@ -50,7 +50,7 @@ def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Ses
     older_theme = Theme(
         id=str(uuid4()),
         text="古いお題",
-        category="general",
+        category="日常",
         date=today,
         sponsored=False,
         created_at=datetime(2025, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
@@ -58,7 +58,7 @@ def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Ses
     newer_theme = Theme(
         id=str(uuid4()),
         text="新しいお題",
-        category="nature",
+        category="恋愛",
         date=today,
         sponsored=True,
         created_at=datetime(2025, 1, 1, 10, 0, 0, tzinfo=timezone.utc),
@@ -74,7 +74,7 @@ def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Ses
     data = response.json()
     assert data["id"] == newer_theme.id
     assert data["text"] == "新しいお題"
-    assert data["category"] == "nature"
+    assert data["category"] == "恋愛"
     assert data["sponsored"] is True
 
 
@@ -133,4 +133,4 @@ def test_get_today_theme_category_not_found(client: TestClient, db_session: Sess
     # Request different category
     response = client.get("/api/v1/themes/today?category=恋愛")
     assert response.status_code == 404
-    assert "No theme found for today in category '恋愛'" in response.json()["error"]["detail"]
+    assert "本日の「恋愛」カテゴリのお題がまだ届いていません" in response.json()["error"]["detail"]

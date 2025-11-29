@@ -44,6 +44,8 @@ def _create_user(session: Session) -> User:
         id=str(uuid4()),
         name="Test User",
         email=f"tester-{uuid4()}@example.com",
+        notify_theme_release=True,
+        notify_ranking_result=True,
         created_at=now,
         updated_at=now,
     )
@@ -52,7 +54,7 @@ def _create_user(session: Session) -> User:
     return user
 
 
-def _create_theme(session: Session, theme_date: date, *, category: str = "general") -> Theme:
+def _create_theme(session: Session, theme_date: date, *, category: str = "日常") -> Theme:
     theme = Theme(
         id=str(uuid4()),
         text="Spring breeze carries gentle echoes",
@@ -128,7 +130,7 @@ def test_submit_work_conflict(
         headers=headers,
     )
     assert second.status_code == 409
-    assert second.json()["error"]["detail"] == "You have already submitted a work today for this category"
+    assert second.json()["error"]["detail"] == "このカテゴリには本日すでに投稿済みです"
 
 
 def test_submit_work_conflict_same_day_same_category(
@@ -139,7 +141,7 @@ def test_submit_work_conflict_same_day_same_category(
     user = _create_user(db_session)
     shared_date = date(2025, 1, 17)
     primary_theme = _create_theme(db_session, theme_date=shared_date)
-    secondary_theme = _create_theme(db_session, theme_date=shared_date, category="general")
+    secondary_theme = _create_theme(db_session, theme_date=shared_date, category="日常")
 
     headers = _auth_headers(user.id)
     settings = get_settings()
@@ -160,7 +162,7 @@ def test_submit_work_conflict_same_day_same_category(
         headers=headers,
     )
     assert second.status_code == 409
-    assert second.json()["error"]["detail"] == "You have already submitted a work today for this category"
+    assert second.json()["error"]["detail"] == "このカテゴリには本日すでに投稿済みです"
 
 
 def test_submit_work_allowed_same_day_different_category(
@@ -170,8 +172,8 @@ def test_submit_work_allowed_same_day_different_category(
 ) -> None:
     user = _create_user(db_session)
     shared_date = date(2025, 1, 17)
-    nature_theme = _create_theme(db_session, theme_date=shared_date, category="nature")
-    travel_theme = _create_theme(db_session, theme_date=shared_date, category="travel")
+    nature_theme = _create_theme(db_session, theme_date=shared_date, category="恋愛")
+    travel_theme = _create_theme(db_session, theme_date=shared_date, category="季節")
 
     headers = _auth_headers(user.id)
     settings = get_settings()
@@ -213,7 +215,7 @@ def test_submit_work_rejected_outside_submission_window(
     )
 
     assert response.status_code == 403
-    assert response.json()["error"]["detail"] == "Submissions are closed between 22:00 and 06:00 JST"
+    assert response.json()["error"]["detail"] == "投稿は6:00〜22:00の間のみ可能です"
 
 
 def test_submit_work_allowed_next_day_same_category(
@@ -265,8 +267,7 @@ def test_submit_work_too_long(
 
     assert response.status_code == 422
     error = response.json()["error"]
-    assert "text" in error["detail"]
-    assert "40" in error["detail"]
+    assert "下の句は40文字以内で入力してください" in error["detail"]
 
 
 def test_list_works_returns_likes_count(
@@ -581,7 +582,7 @@ def test_record_work_impression_rate_limit(
         json={"viewer_hash": viewer_hash, "count": 1},
     )
     assert second.status_code == 429
-    assert "Too many impressions" in second.json()["error"]["detail"]
+    assert "しばらく時間をおいてからご覧ください" in second.json()["error"]["detail"]
 
 
 def test_record_work_impression_missing_work(client: TestClient) -> None:
@@ -590,4 +591,4 @@ def test_record_work_impression_missing_work(client: TestClient) -> None:
         json={},
     )
     assert response.status_code == 404
-    assert response.json()["error"]["detail"] == "Work not found"
+    assert response.json()["error"]["detail"] == "作品が見つかりませんでした"

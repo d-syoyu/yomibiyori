@@ -18,6 +18,8 @@ def _create_user(db_session, *, role: str = "sponsor", email_prefix: str = "spon
         name="Sponsor User",
         email=f"{email_prefix}-{uuid4()}@example.com",
         role=role,
+        notify_theme_release=True,
+        notify_ranking_result=True,
         created_at=now,
         updated_at=now,
     )

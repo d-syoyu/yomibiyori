@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Integer, String, text
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -25,8 +25,8 @@ class User(Base):
     prefecture: Mapped[str | None] = mapped_column(String(50), nullable=True)
     device_info: Mapped[dict[str, Any] | None] = mapped_column(JSONBType, nullable=True)
     analytics_opt_out: Mapped[bool] = mapped_column(Boolean, default=False)
-    notify_theme_release: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
-    notify_ranking_result: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    notify_theme_release: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    notify_ranking_result: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
