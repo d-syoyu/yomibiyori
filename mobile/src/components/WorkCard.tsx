@@ -96,15 +96,20 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
               activeOpacity={0.7}
               accessibilityRole="link"
               accessibilityLabel={`スポンサー: ${sponsorName}`}
-              style={styles.sponsorContainer}
+              style={[
+                styles.sponsorButton,
+                (!sponsorUrl && !onSponsorPress) && styles.sponsorButtonDisabled,
+              ]}
             >
-              <Text style={styles.sponsorLabel}>提供</Text>
               <Text style={[
-                styles.sponsorName,
-                (sponsorUrl || onSponsorPress) && styles.sponsorNameLink
+                styles.sponsorButtonText,
+                (!sponsorUrl && !onSponsorPress) && styles.sponsorButtonTextDisabled,
               ]}>
                 {sponsorName}
               </Text>
+              {(sponsorUrl || onSponsorPress) && (
+                <Ionicons name="open-outline" size={14} color={colors.text.primary} />
+              )}
             </TouchableOpacity>
           )}
           {extraFooterContent}
@@ -182,24 +187,30 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  sponsorContainer: {
+  sponsorButton: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.text.primary,
   },
-  sponsorLabel: {
-    fontSize: 10,
-    color: colors.text.tertiary,
-    fontFamily: fontFamily.regular,
+  sponsorButtonDisabled: {
+    backgroundColor: colors.background.secondary,
+    borderColor: colors.text.tertiary,
   },
-  sponsorName: {
+  sponsorButtonText: {
     fontSize: fontSize.bodySmall,
-    fontFamily: fontFamily.medium,
-    color: colors.text.secondary,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    letterSpacing: 0.3,
   },
-  sponsorNameLink: {
-    textDecorationLine: 'underline',
-    textDecorationColor: colors.text.tertiary,
+  sponsorButtonTextDisabled: {
+    color: colors.text.tertiary,
   },
   actions: {
     flexDirection: 'row',
