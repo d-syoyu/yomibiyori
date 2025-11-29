@@ -14,4 +14,4 @@ Allow: /sponsor-guide
 Allow: /sponsors
 
 # Sitemap
-Sitemap: https://yomibiyori.app/sitemap.xml
+Sitemap: https://yomibiyori.com/sitemap.xml

@@ -9,7 +9,7 @@ const notoSerifJP = Noto_Serif_JP({
   weight: ["400", "500", "600", "700"],
 });
 
-const siteUrl = 'https://yomibiyori.app';
+const siteUrl = 'https://yomibiyori.com';
 const siteName = 'よみびより';
 const siteDescription = '上の句に、あなたの下の句で応える。毎日新しいお題で、言葉を紡ぐ喜びを。';
 
