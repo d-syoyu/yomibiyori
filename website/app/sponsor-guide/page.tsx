@@ -1,6 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import BackgroundDecoration from "@/components/BackgroundDecoration";
+
+export const metadata: Metadata = {
+  title: "スポンサーガイド",
+  description: "よみびよりの上の句スポンサーになって、貴社のメッセージを短歌の世界に届けましょう。企業・団体様向けパートナーシップのご案内。",
+  openGraph: {
+    title: "スポンサーガイド | よみびより",
+    description: "よみびよりの上の句スポンサーになって、貴社のメッセージを短歌の世界に届けましょう。",
+  },
+};
 
 export default function SponsorGuide() {
   return (
