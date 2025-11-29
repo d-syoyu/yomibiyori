@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.models import Theme
+
+
+def _get_today_date():
+    """Get today's date using the same timezone as the API."""
+    settings = get_settings()
+    return datetime.now(settings.timezone).date()
 
 
 def test_get_today_theme_success(client: TestClient, db_session: Session) -> None:
     """Test successfully retrieving today's theme."""
-    today = date.today()
+    today = _get_today_date()
     theme = Theme(
         id=str(uuid4()),
         text="春の風 桜舞い散る",
@@ -44,7 +51,7 @@ def test_get_today_theme_not_found(client: TestClient) -> None:
 
 def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Session) -> None:
     """Test that when multiple themes exist for today, the most recent is returned."""
-    today = date.today()
+    today = _get_today_date()
 
     # Create two themes for today
     older_theme = Theme(
@@ -80,7 +87,7 @@ def test_get_today_theme_returns_most_recent(client: TestClient, db_session: Ses
 
 def test_get_today_theme_with_category_filter(client: TestClient, db_session: Session) -> None:
     """Test retrieving today's theme with category filter."""
-    today = date.today()
+    today = _get_today_date()
 
     # Create themes for different categories
     love_theme = Theme(
@@ -116,7 +123,7 @@ def test_get_today_theme_with_category_filter(client: TestClient, db_session: Se
 
 def test_get_today_theme_category_not_found(client: TestClient, db_session: Session) -> None:
     """Test theme not found for specified category."""
-    today = date.today()
+    today = _get_today_date()
 
     # Create theme only for '季節' category
     theme = Theme(
