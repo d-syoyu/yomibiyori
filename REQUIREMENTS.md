@@ -18,6 +18,7 @@
   - 認証が無いユーザーは投稿系 API を利用できない。
   - **パスワードリセット**: メールアドレスを入力して Supabase からリカバリーメールを送信。リカバリートークンでパスワードを更新可能。
   - **プロフィール同期**: `/auth/profile/sync` エンドポイントで Supabase から最新のプロフィール情報を取得してローカルDBに同期。
+  - **OAuth**: `/auth/oauth/google` および `/auth/oauth/apple` エンドポイントで Google / Apple 認証の URL を取得し、クライアント側でリダイレクト認証を行う。
 
 ### 2. お題（上の句）生成と配信
 - **要件ID**: FR-002
@@ -94,7 +95,12 @@
 - **詳細**:
   - **ロール管理**: `users.role` で user / sponsor / admin を識別。
   - **スポンサー登録**: 法人情報（company_name, contact_email, official_url, logo_url）を登録し、運営審査（verified）を経て利用可能。
-  - **料金プラン**: basic / standard / premium の3段階。
+  - **クレジットシステム**:
+    - お題入稿にはクレジットが必要（1クレジット = 1お題）
+    - Stripe 連携による決済（カード / 銀行振込）
+    - まとめ買い割引: 4クレジットごとに1つ無料（25%割引）
+    - 購入履歴・利用履歴の管理
+    - API: `/sponsor/credits/pricing`, `/sponsor/credits/purchase`, `/sponsor/credits/transactions`
   - **キャンペーン管理**:
     - キャンペーン作成（名称、期間、予算、ターゲティング条件）
     - ステータス管理: draft / active / paused / completed / cancelled
@@ -103,17 +109,22 @@
     - キャンペーンに紐づいてお題（5-7-5）を入稿
     - カテゴリと配信日を指定
     - 優先度（priority）で配信スロットを調整
+    - お題ごとに個別のスポンサーURL（`sponsor_official_url`）を設定可能
   - **審査フロー**:
     - スポンサーが入稿 → status: pending
     - 管理者が審査 → approved（承認）/ rejected（却下）
-    - 承認後にお題生成スクリプトで themes テーブルに統合
+    - 承認後にお題生成スクリプトで themes テーブルに統合（status: published）
     - 却下時は却下理由を記録
+    - ステータス変更時に自動通知（`sponsor_theme_notifications`テーブルに記録）
   - **表示**:
     - お題一覧に「提供：企業名」を表記（`sponsor_company_name`）
     - sponsored フラグで識別
+  - **お知らせ機能**:
+    - 管理者からスポンサー向けのお知らせを配信
+    - ピン留め、有効期限、タイプ（info / warning / success / update）
   - **API**:
-    - スポンサー用: `/sponsor/campaigns`, `/sponsor/themes`
-    - 管理者用: `/admin/review/themes`
+    - スポンサー用: `/sponsor/campaigns`, `/sponsor/themes`, `/sponsor/credits/*`, `/sponsor/announcements`, `/sponsor/notifications`
+    - 管理者用: `/admin/review/themes`, `/admin/announcements`
 
 ### 8. 通知配信
 - **要件ID**: FR-008
@@ -148,9 +159,54 @@
   3. **CategorySelectionScreen** – 4 つのカテゴリー（恋愛 💕、季節 🌸、日常 ☕、ユーモア 😄）をカード形式で選択。
   4. **ActionSelectionScreen** – 選択したカテゴリーで「詠む」または「鑑賞する」を選択。
   5. **CompositionScreen** – 選択したカテゴリーのお題（上の句 5-7-5）を**縦書き**で表示し、下の句（7-7）を投稿。
-  6. **AppreciationScreen** – カテゴリー別または全カテゴリーの作品一覧を**縦書き**で表示。いいね機能付き。
+  6. **AppreciationScreen** – カテゴリー別または全カテゴリーの作品一覧を**縦書き**で表示。いいね・シェア機能付き。
   7. **RankingScreen** – カテゴリー別のリアルタイムランキングを**縦書き**で表示。
   8. **MyPoemsScreen** – 自身の投稿作品一覧を**縦書き**で表示。日付ごとに集計された情報も表示。
+  9. **ProfileScreen** – プロフィール編集画面。表示名、生年、都道府県、通知設定の変更が可能。
+
+### 11. シェアカード生成
+- **要件ID**: FR-011
+- **概要**: 作品をSNSでシェアするための画像を生成する。
+- **詳細**:
+  - API: `/share/card/{work_id}` で PNG 画像を返却
+  - 上の句・下の句・作者名・カテゴリー・日付・いいね数を含む
+  - スポンサーお題の場合は「提供：企業名」も表示
+  - キャッシュ制御: 24時間
+
+### 12. スポンサー向けWebサイト
+- **要件ID**: FR-012
+- **概要**: スポンサー企業向けの管理画面をWebで提供。
+- **画面構成**:
+  - **ダッシュボード** (`/sponsor`) – 概要、残りクレジット、お題ステータス
+  - **お題管理** (`/sponsor/themes`) – お題一覧、新規入稿
+  - **お題入稿** (`/sponsor/themes/new`) – お題作成フォーム
+  - **インサイト** (`/sponsor/insights`) – 配信済みお題の分析（投稿数、いいね数など）
+  - **クレジット** (`/sponsor/credits`) – クレジット購入、取引履歴
+  - **お知らせ** (`/sponsor/announcements`) – 運営からのお知らせ一覧
+  - **サポート** (`/sponsor/support`) – 問い合わせ履歴
+  - **プロフィール** (`/sponsor/profile`) – 企業情報の編集
+
+### 13. 管理者向けWebサイト
+- **要件ID**: FR-013
+- **概要**: 運営管理者向けの管理画面をWebで提供。
+- **画面構成**:
+  - **ダッシュボード** (`/admin`) – 概要統計
+  - **スポンサー管理** (`/admin/sponsors`) – スポンサー一覧、詳細、KYC審査
+  - **お題審査** (`/admin/themes`) – 審査待ちお題の承認・却下
+  - **お知らせ管理** (`/admin/announcements`) – スポンサー向けお知らせの作成・編集
+  - **サポート** (`/admin/support`) – 問い合わせ対応
+
+### 14. 公開Webサイト
+- **要件ID**: FR-014
+- **概要**: 一般向けの情報ページをWebで提供。
+- **画面構成**:
+  - **ランディングページ** (`/`) – アプリ紹介、ダウンロードリンク
+  - **スポンサーガイド** (`/sponsor-guide`) – スポンサー向け説明ページ
+  - **利用規約** (`/terms`)
+  - **プライバシーポリシー** (`/privacy`)
+  - **会社情報** (`/company`)
+  - **特定商取引法に基づく表記** (`/company/tokushoho`)
+  - **サポート** (`/support`) – FAQ、お問い合わせ
 
 ---
 
@@ -170,7 +226,7 @@
    - Supabase Auth によるメール＋パスワード認証。
    - 新規登録時は email と display_name が必須。
    - 「パスワードを忘れた方」リンクから PasswordResetScreen へ遷移。
-   - OAuth（Google / Apple）は未実装。
+   - Google / Apple OAuth 対応。
 
 2. **PasswordResetScreen**
    - メールアドレスを入力してリカバリーメールを送信。
@@ -204,6 +260,12 @@
    - 自身が投稿した作品の一覧を新しい順に**縦書き**表示。
    - 各作品のカテゴリー、本文、投稿日時、いいね数を表示。
    - 日付ごとのサマリー情報（投稿数、合計いいね数）も表示可能。
+
+9. **ProfileScreen**
+   - プロフィール編集画面。
+   - 表示名、生年、都道府県の編集。
+   - 通知設定（お題配信通知、ランキング結果通知）の ON/OFF 切り替え。
+   - ログアウト、アカウント削除機能。
 
 ### 3. フェーズステータス
 | フェーズ | 時間帯 | 機能状態 |
@@ -266,18 +328,24 @@
 
 | エンティティ | 主なフィールド | 説明 |
 | ------------ | -------------- | ---- |
-| users | id (UUID), name, email, role, created_at | Supabase Auth と同期されたユーザー情報。role: user / sponsor / admin |
+| users | id (UUID), name, email, role, birth_year, prefecture, notify_theme_release, notify_ranking_result, created_at | Supabase Auth と同期されたユーザー情報。role: user / sponsor / admin |
+| notification_tokens | id (UUID), user_id, expo_push_token, device_id, platform, is_active, created_at | Expo Push トークン登録 |
 | themes | id (UUID), text, category, date, sponsored, sponsor_theme_id, sponsor_company_name, created_at | カテゴリー別の日替わりお題（上の句 5-7-5）|
 | works | id (UUID), user_id, theme_id, text, created_at, updated_at | ユーザー投稿の下の句（40 文字以内）|
 | likes | id (UUID), user_id, work_id, created_at | 感謝（いいね）アクション（1 ユーザー 1 作品 1 回） |
-| rankings | id (UUID), theme_id, work_id, score, snapshot_time | 22:00 時点の確定ランキング |
-| sponsors | id (UUID), company_name, contact_email, plan_tier, verified, created_at | スポンサー企業情報 |
+| rankings | id (bigserial), theme_id, work_id, score, rank, snapshot_time | 22:00 時点の確定ランキング |
+| sponsors | id (UUID), company_name, contact_email, official_url, logo_url, credits, stripe_customer_id, verified, created_at | スポンサー企業情報 |
 | sponsor_campaigns | id (UUID), sponsor_id, name, status, budget, start_date, end_date, targeting, created_at | スポンサーキャンペーン |
-| sponsor_themes | id (UUID), campaign_id, date, category, text_575, priority, status, approved_at, created_at | スポンサー入稿お題（審査待ち）|
+| sponsor_themes | id (UUID), campaign_id, date, category, text_575, sponsor_official_url, priority, status, rejection_reason, approved_at, created_at | スポンサー入稿お題（審査待ち）|
+| sponsor_credit_transactions | id (UUID), sponsor_id, amount, transaction_type, stripe_payment_intent_id, description, created_at | スポンサークレジット取引履歴 |
+| sponsor_announcements | id (UUID), title, content, type, priority, is_pinned, is_published, expires_at, created_at | スポンサー向けお知らせ |
+| sponsor_theme_notifications | id (UUID), sponsor_theme_id, sponsor_id, status, title, message, is_read, created_at | スポンサーお題ステータス変更通知 |
+| api_tokens | id (string), access_token, user_id, expires_at, created_at | 外部APIトークン（Threads等） |
 
 **注:**
-- 1 ユーザーは 1 カテゴリーにつき 1 日 1 首まで投稿可能。`works` テーブルには `(user_id, theme_id)` に対する一意性制約は無いが、`works.create_work` サービスでカテゴリーごとの重複投稿を防止。
-- スポンサーお題は `sponsor_themes` で管理され、管理者の承認後に `themes` テーブルに統合される。
+- 1 ユーザーは 1 カテゴリーにつき 1 日 1 首まで投稿可能。`works` テーブルには `(user_id, theme_id)` に対する一意性制約があり、同一お題への重複投稿を防止。
+- スポンサーお題は `sponsor_themes` で管理され、管理者の承認後に `themes` テーブルに統合される。ステータス変更時は自動で `sponsor_theme_notifications` に通知が作成される。
+- スポンサーのクレジットは `sponsors.credits` に残高が保持され、取引履歴は `sponsor_credit_transactions` に記録される。
 
 ---
 
@@ -297,15 +365,17 @@
 
 | 分類 | サービス | 用途 |
 | ---- | -------- | ---- |
-| 認証 | Supabase Auth | JWT 認証・ユーザー管理・パスワードリセット |
+| 認証 | Supabase Auth | JWT 認証・ユーザー管理・パスワードリセット・OAuth |
 | DB | PostgreSQL（Neon / Supabase） | 永続データ |
 | キャッシュ | Upstash Redis | ランキング・リアルタイム指標・いいね集計 |
 | ストレージ | Cloudflare R2 | 画像・スナップショット（未実装） |
 | AI | XAI Grok / Anthropic Claude / OpenAI | お題（上の句）生成 |
+| 決済 | Stripe | スポンサークレジット購入（カード / 銀行振込） |
 | ジョブ | GitHub Actions Scheduler / Railway | お題生成・ランキング確定・定期処理 |
-| Push 通知 | Expo Push API | モバイル通知（未実装） |
-| 監視 | Sentry | エラー監視・障害検知（未実装） |
+| Push 通知 | Expo Push API | モバイル通知 |
+| 監視 | Sentry | エラー監視・障害検知 |
 | 分析 | PostHog | ユーザー行動分析・プロダクト改善 |
+| SNS連携 | Threads API | 作品の自動投稿（api_tokens で認証管理） |
 
 ---
 
