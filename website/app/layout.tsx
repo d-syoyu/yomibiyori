@@ -19,7 +19,7 @@ const siteDescription = '上の句に、あなたの下の句で応える。毎�
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${siteName} - 毎日詠む、短歌の世界`,
+    default: `短歌アプリ『${siteName}』`,
     template: `%s | ${siteName}`,
   },
   description: siteDescription,
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     locale: 'ja_JP',
     url: siteUrl,
     siteName: siteName,
-    title: `${siteName} - 毎日詠む、短歌の世界`,
+    title: `短歌アプリ『${siteName}』`,
     description: siteDescription,
     images: [
       {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${siteName} - 毎日詠む、短歌の世界`,
+    title: `短歌アプリ『${siteName}』`,
     description: siteDescription,
     images: ['/og-image.png'],
   },
