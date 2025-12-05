@@ -3,5 +3,29 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "yomibiyori.com"
+        }
+      ],
+      "destination": "https://yomibiyori.app/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.yomibiyori.com"
+        }
+      ],
+      "destination": "https://yomibiyori.app/:path*",
+      "permanent": true
+    }
+  ]
 }
