@@ -2,8 +2,60 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "サポート | よみびより",
-  description: "よみびよりのサポートページ - よくある質問、お問い合わせ、動作環境について",
+  title: "サポート・よくある質問 | よみびより",
+  description: "よみびよりのサポートページ。よくある質問（FAQ）、お問い合わせ方法、動作環境について。投稿時間や使い方、アカウント関連のご質問にお答えします。",
+  openGraph: {
+    title: "サポート・よくある質問 | よみびより",
+    description: "よみびよりの使い方やよくある質問、お問い合わせ方法をご案内します。",
+  },
+};
+
+// FAQ Schema for SEO
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "よみびよりとは何ですか？",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "よみびよりは、毎日届く上の句(5-7-5)に、あなたが下の句(7-7)を詠んで短歌を完成させる、言葉を紡ぐ喜びを味わえるサービスです。",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "投稿できる時間は決まっていますか？",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "はい。毎日6:00〜22:00(日本時間)の間に投稿できます。1日1首、カテゴリごとに投稿可能です。",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "お題のカテゴリは何がありますか？",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "「恋愛」「季節」「日常」「ユーモア」の4つのカテゴリからお題が毎日生成されます。",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "ランキングはどのように決まりますか？",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "他のユーザーからの「いいね」の数や閲覧数などを元に、リアルタイムでランキングが更新されます。毎日22:00に確定します。",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "アカウントを削除したい",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "アプリ内の「設定」から「アカウント削除」を選択してください。削除後は投稿した作品も全て削除されます。",
+      },
+    },
+  ],
 };
 
 function BackgroundDecoration() {
@@ -75,8 +127,14 @@ const systemRequirements = [
 
 export default function Support() {
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(to bottom, var(--color-bg-primary), var(--color-bg-secondary))" }}>
-      <BackgroundDecoration />
+    <>
+      {/* FAQ Schema for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <div className="min-h-screen" style={{ background: "linear-gradient(to bottom, var(--color-bg-primary), var(--color-bg-secondary))" }}>
+        <BackgroundDecoration />
 
       {/* ヘッダー */}
       <header className="pt-8 px-6">
@@ -465,6 +523,7 @@ export default function Support() {
           </p>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }

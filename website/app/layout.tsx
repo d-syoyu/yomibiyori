@@ -142,6 +142,8 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
+        {/* Smart App Banner for iOS */}
+        <meta name="apple-itunes-app" content="app-id=6754638890" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -1,6 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import BackgroundDecoration from "@/components/BackgroundDecoration";
+
+export const metadata: Metadata = {
+  title: "短歌アプリ『よみびより』- 日々を詠む、詩的SNS",
+  description: "毎朝届く「上の句」に、あなたの「下の句」で応える。短歌を通じて日々の感動を言葉にするiOSアプリ。恋愛・季節・日常・ユーモアの4カテゴリから選んで、五七五七七を完成させよう。",
+  keywords: ["短歌", "短歌アプリ", "tanka", "和歌", "詩", "ポエム", "SNS", "日本文化", "創作", "俳句", "文芸", "五七五七七", "iOS", "iPhone"],
+  openGraph: {
+    title: "短歌アプリ『よみびより』- 日々を詠む、詩的SNS",
+    description: "毎朝届く「上の句」に、あなたの「下の句」で応える。短歌を通じて日々の感動を言葉にするiOSアプリ。",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "短歌アプリ『よみびより』",
+    description: "毎朝届く「上の句」に、あなたの「下の句」で応える。日々を詠む、詩的SNS。",
+  },
+};
 
 export default function Home() {
   return (

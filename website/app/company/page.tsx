@@ -3,8 +3,29 @@ import type { Metadata } from "next";
 import BackgroundDecoration from "@/components/BackgroundDecoration";
 
 export const metadata: Metadata = {
-  title: "会社概要 | よみびより",
-  description: "株式会社SOGAの会社概要ページ。よみびよりアプリサービスを開発・運営しています。",
+  title: "会社概要 | よみびより - 株式会社SOGA",
+  description: "株式会社SOGAの会社概要。短歌アプリ「よみびより」の企画・開発・運営を行っています。大阪府守口市に本社を置き、詩的SNSを通じて日本の言葉文化を発信しています。",
+  openGraph: {
+    title: "会社概要 | よみびより - 株式会社SOGA",
+    description: "短歌アプリ「よみびより」を開発・運営する株式会社SOGAの会社概要です。",
+  },
+};
+
+// Organization Schema for SEO
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "株式会社SOGA",
+  url: "https://yomibiyori.app",
+  logo: "https://yomibiyori.app/icon-512.png",
+  description: "短歌アプリ「よみびより」の企画・開発・運営",
+  foundingDate: "2024-10",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "守口市",
+    addressRegion: "大阪府",
+    addressCountry: "JP",
+  },
 };
 
 const companyFacts: { label: string; value: string }[] = [
@@ -18,8 +39,14 @@ const companyFacts: { label: string; value: string }[] = [
 
 export default function CompanyPage() {
   return (
-    <div className="page-wrapper overflow-hidden relative">
-      <BackgroundDecoration />
+    <>
+      {/* Organization Schema for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <div className="page-wrapper overflow-hidden relative">
+        <BackgroundDecoration />
       <main className="relative z-10 py-16 lg:py-24">
         <div className="page-container space-y-12">
           <Link href="/" className="text-[var(--color-text-secondary)] hover:text-[var(--color-ai)] transition-colors text-sm">
@@ -97,6 +124,7 @@ export default function CompanyPage() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
