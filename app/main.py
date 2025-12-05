@@ -18,8 +18,7 @@ from app.routes.api import api_router
 app = FastAPI(title="Yomibiyori API", version="1.0.0")
 
 # CORS configuration for local development and production
-# Allow both http and https for yomibiyori.com to support redirects
-# Updated: 2025-11-22 14:45 JST - fix sponsor theme submission
+# Allow both http and https for yomibiyori.app to support redirects
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -27,10 +26,10 @@ app.add_middleware(
         "http://localhost:8081",  # Expo web dev server
         "http://localhost:19006",  # Alternative Expo port
         "https://yomibiyori-production.up.railway.app",  # Production domain
-        "https://www.yomibiyori.com",  # Marketing/admin site (https)
-        "http://www.yomibiyori.com",  # Marketing/admin site (http)
-        "https://yomibiyori.com",  # Marketing/admin site without www (https)
-        "http://yomibiyori.com",  # Marketing/admin site without www (http)
+        "https://www.yomibiyori.app",  # Marketing/admin site (https)
+        "http://www.yomibiyori.app",  # Marketing/admin site (http)
+        "https://yomibiyori.app",  # Marketing/admin site without www (https)
+        "http://yomibiyori.app",  # Marketing/admin site without www (http)
     ],
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods

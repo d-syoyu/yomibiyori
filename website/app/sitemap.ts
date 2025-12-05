@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://yomibiyori.com'
+  const baseUrl = 'https://yomibiyori.app'
 
   // Public pages that should be indexed
   const staticPages = [

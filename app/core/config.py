@@ -243,7 +243,7 @@ class Settings(BaseSettings):
         description="Resend API key for transactional emails.",
     )
     resend_from_email: str = Field(
-        default="よみびより <noreply@yomibiyori.com>",
+        default="よみびより <noreply@yomibiyori.app>",
         alias="RESEND_FROM_EMAIL",
         description="Sender email address for Resend emails.",
     )

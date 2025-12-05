@@ -16,7 +16,7 @@ interface ShareCardSVGProps {
 }
 
 const APP_NAME = 'よみびより';
-const APP_URL = 'yomibiyori.com';
+const APP_URL = 'yomibiyori.app';
 
 // 和紙色
 const BG_WASHI = '#F5F3ED';

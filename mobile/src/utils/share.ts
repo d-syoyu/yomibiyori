@@ -1,7 +1,7 @@
 import type { RankingEntry, Theme, ThemeCategory, Work } from '../types';
 import type { SharePayload } from '../types/share';
 
-export const SHARE_URL = 'https://yomibiyori.com';
+export const SHARE_URL = 'https://yomibiyori.app';
 const HASH_TAG = '#よみびより';
 const FALLBACK_CATEGORY = '����' as ThemeCategory;
 
@@ -57,7 +57,7 @@ export const createAppreciationSharePayload = (work: Work, theme?: Theme): Share
       categoryLabel: theme?.category ?? '作品',
       likesLabel: formatLikesLabel(work.likes_count),
       caption: '今日の一首',
-      footerUrl: 'yomibiyori.com',
+      footerUrl: 'yomibiyori.app',
     },
   };
 };
@@ -82,7 +82,7 @@ export const createRankingSharePayload = (entry: RankingEntry, theme: Theme): Sh
       scoreLabel: `共鳴スコア：${scoreValue}`,
       caption: '今日のランキング',
       badgeLabel: rankBadge,
-      footerUrl: 'yomibiyori.com',
+      footerUrl: 'yomibiyori.app',
     },
   };
 };
@@ -103,7 +103,7 @@ export const createProfileSharePayload = (work: Work, theme?: Theme): SharePaylo
       categoryLabel: theme?.category ?? '作品',
       likesLabel: formatLikesLabel(work.likes_count),
       caption: '今日の一首',
-      footerUrl: 'yomibiyori.com',
+      footerUrl: 'yomibiyori.app',
     },
   };
 };
