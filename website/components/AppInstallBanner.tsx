@@ -70,44 +70,44 @@ export function AppInstallBanner() {
 
   return (
     <div
-      className={`fixed bottom-4 left-4 right-4 z-50 transition-all duration-300 ease-out ${
-        isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out ${
+        isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full'
       }`}
     >
-      <div className="max-w-md mx-auto bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-[var(--color-border)] p-4">
-        <div className="flex items-center gap-4">
+      <div className="bg-white/95 backdrop-blur-xl shadow-md border-b border-[var(--color-border)] px-4 py-3">
+        <div className="max-w-screen-lg mx-auto flex items-center gap-3">
           {/* アプリアイコン */}
           <div className="flex-shrink-0">
             <Image
               src="/icon-192.png"
               alt="よみびより"
-              width={56}
-              height={56}
-              className="rounded-xl shadow-sm"
+              width={44}
+              height={44}
+              className="rounded-lg shadow-sm"
             />
           </div>
 
           {/* テキスト */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-[var(--color-igusa)] text-base">
+            <h3 className="font-bold text-[var(--color-igusa)] text-sm">
               よみびより
             </h3>
-            <p className="text-sm text-[var(--color-text-secondary)] mt-0.5 leading-snug">
+            <p className="text-xs text-[var(--color-text-secondary)] leading-snug">
               アプリでもっと便利に
             </p>
           </div>
 
           {/* ボタン群 */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <a
               href={store.url}
-              className="inline-flex items-center justify-center px-4 py-2 bg-[var(--color-ai)] text-white text-sm font-semibold rounded-full hover:bg-[var(--color-ai-medium)] transition-colors shadow-sm"
+              className="inline-flex items-center justify-center px-3 py-1.5 bg-[var(--color-ai)] text-white text-xs font-semibold rounded-full hover:bg-[var(--color-ai-medium)] transition-colors shadow-sm"
             >
               開く
             </a>
             <button
               onClick={handleDismiss}
-              className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-igusa)] transition-colors"
+              className="p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-igusa)] transition-colors"
               aria-label="閉じる"
             >
               <svg
@@ -116,7 +116,7 @@ export function AppInstallBanner() {
                 viewBox="0 0 24 24"
                 strokeWidth={2}
                 stroke="currentColor"
-                className="w-5 h-5"
+                className="w-4 h-4"
               >
                 <path
                   strokeLinecap="round"
