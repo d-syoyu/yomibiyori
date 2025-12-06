@@ -3,6 +3,7 @@ import { Noto_Serif_JP } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { ToastProviderWrapper } from "@/components/providers/ToastProviderWrapper";
+import { AppInstallBanner } from "@/components/AppInstallBanner";
 
 const GA_MEASUREMENT_ID = "G-BQQ72LNENE";
 
@@ -142,8 +143,6 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
-        {/* Smart App Banner for iOS */}
-        <meta name="apple-itunes-app" content="app-id=6754638890" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -155,6 +154,7 @@ export default function RootLayout({
       >
         <ToastProviderWrapper>
           {children}
+          <AppInstallBanner />
         </ToastProviderWrapper>
       </body>
     </html>
