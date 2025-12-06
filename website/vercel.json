@@ -10,6 +10,17 @@
       "has": [
         {
           "type": "host",
+          "value": "www.yomibiyori.app"
+        }
+      ],
+      "destination": "https://yomibiyori.app/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
           "value": "yomibiyori.com"
         }
       ],
