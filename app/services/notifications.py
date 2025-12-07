@@ -12,10 +12,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.models.like import Like
 from app.models.notification import NotificationToken
 from app.models.theme import Theme
 from app.models.ranking import Ranking
 from app.models.user import User
+from app.models.work import Work
 from app.schemas.notification import NotificationTokenCreate, NotificationTokenResponse
 
 
@@ -135,7 +137,13 @@ def send_ranking_result_notifications(
     target_date: date | None = None,
     push_client: "ExpoPushClient | None" = None,
 ) -> NotificationDispatchResult:
-    """Send evening notifications after rankings are finalised."""
+    """Send evening notifications after rankings are finalised.
+
+    Personalizes the notification based on whether the user posted today:
+    - Posted with likes: "あなたの作品に○件のいいねが集まりました！"
+    - Posted without likes: "今日も投稿おつかれさまでした！"
+    - Did not post: "今日のランキングが確定しました"
+    """
 
     settings = get_settings()
     resolved_date = target_date or datetime.now(settings.timezone).date()
@@ -169,19 +177,14 @@ def send_ranking_result_notifications(
             detail="No ranking data stored for target date",
         )
 
+    # Build user_id -> like_count mapping for today's works
+    user_likes_map = _build_user_likes_map(session, theme_uuid_ids)
+
     tokens = _fetch_tokens_for_kind(session, User.notify_ranking_result.is_(True))
-    template = NotificationTemplate(
-        title="今日のランキングが確定しました",
-        body="20位までの結果をアプリでチェックしましょう。",
-        data={
-            "type": "ranking_finalized",
-            "date": resolved_date.isoformat(),
-        },
-    )
-    return _dispatch_notifications(
+    return _dispatch_personalized_ranking_notifications(
         session,
         tokens=tokens,
-        template=template,
+        user_likes_map=user_likes_map,
         kind="ranking_finalized",
         target_date=resolved_date,
         push_client=push_client,
@@ -206,6 +209,127 @@ def _build_theme_template(target_date: date, themes: Sequence[Theme]) -> Notific
             "date": target_date.isoformat(),
             "themes": [theme.id for theme in themes],
         },
+    )
+
+
+def _build_user_likes_map(session: Session, theme_ids: Sequence[UUID]) -> dict[str, int]:
+    """Build a mapping of user_id -> like_count for works in the given themes.
+
+    Users who posted but received 0 likes will have a value of 0.
+    Users who did not post will not be in the map.
+    """
+
+    # Get all works for the themes with their like counts
+    theme_str_ids = [str(tid) for tid in theme_ids]
+    stmt = (
+        select(Work.user_id, func.count(Like.id).label("like_count"))
+        .outerjoin(Like, Like.work_id == Work.id)
+        .where(Work.theme_id.in_(theme_str_ids))
+        .group_by(Work.user_id)
+    )
+    results = session.execute(stmt).all()
+    return {str(row.user_id): row.like_count for row in results}
+
+
+def _dispatch_personalized_ranking_notifications(
+    session: Session,
+    *,
+    tokens: Sequence[NotificationToken],
+    user_likes_map: dict[str, int],
+    kind: str,
+    target_date: date,
+    push_client: "ExpoPushClient | None" = None,
+) -> NotificationDispatchResult:
+    """Send personalized ranking notifications based on user's posting activity."""
+
+    if not tokens:
+        return NotificationDispatchResult(
+            kind=kind,
+            target_date=target_date,
+            total_tokens=0,
+            sent=0,
+            failed=0,
+            disabled=0,
+            detail="No active tokens",
+        )
+
+    client = push_client or ExpoPushClient()
+    messages: list[NotificationMessage] = []
+    now = datetime.now(timezone.utc)
+
+    for token in tokens:
+        token.last_sent_at = now
+        user_id_str = str(token.user_id)
+
+        # Build personalized message based on posting status
+        if user_id_str in user_likes_map:
+            like_count = user_likes_map[user_id_str]
+            if like_count > 0:
+                title = "今日のランキングが確定しました"
+                body = f"あなたの作品に{like_count}件のいいねが集まりました！"
+            else:
+                title = "今日のランキングが確定しました"
+                body = "今日も投稿おつかれさまでした！"
+        else:
+            title = "今日のランキングが確定しました"
+            body = "20位までの結果をアプリでチェックしましょう。"
+
+        payload_data = _sanitize_payload({
+            "type": "ranking_finalized",
+            "date": target_date.isoformat(),
+            "user_id": token.user_id,
+        })
+        messages.append(
+            NotificationMessage(
+                token=token,
+                payload={
+                    "to": token.expo_push_token,
+                    "sound": "default",
+                    "title": title,
+                    "body": body,
+                    "data": payload_data,
+                },
+            )
+        )
+
+    dispatch_records = client.send(messages)
+
+    failed = 0
+    disabled = 0
+    for message, ticket in dispatch_records:
+        status = ticket.get("status")
+        if status == "ok":
+            continue
+        failed += 1
+        details = ticket.get("details") or {}
+        error_code = details.get("error")
+        if error_code in {"DeviceNotRegistered", "MessageTooBig", "MessageRateExceeded"}:
+            message.token.is_active = False
+            disabled += 1
+
+    session.commit()
+    total = len(messages)
+    sent = total - failed
+
+    for message, ticket in dispatch_records:
+        if ticket.get("status") != "ok":
+            print(
+                "[Notifications] Expo ticket error",
+                {
+                    "token": message.token.expo_push_token,
+                    "ticket": ticket,
+                    "kind": kind,
+                    "date": target_date,
+                },
+            )
+
+    return NotificationDispatchResult(
+        kind=kind,
+        target_date=target_date,
+        total_tokens=total,
+        sent=sent,
+        failed=failed,
+        disabled=disabled,
     )
 
 
