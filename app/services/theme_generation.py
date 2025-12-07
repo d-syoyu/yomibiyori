@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Sequence
 from uuid import uuid4
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, desc, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -17,8 +17,60 @@ from app.models import Theme
 from app.services.theme_ai_client import ThemeAIClient, ThemeAIClientError, resolve_theme_ai_client
 
 
+# 過去のお題を何日分取得するか
+PAST_THEMES_DAYS = 60
+
+
 class ThemeGenerationError(RuntimeError):
     """Raised when automatic theme generation fails after retries."""
+
+
+def get_past_themes(
+    session: Session,
+    *,
+    category: str,
+    target_date: date,
+    days: int = PAST_THEMES_DAYS,
+) -> list[str]:
+    """指定カテゴリーの過去お題テキストを取得する。
+
+    Args:
+        session: SQLAlchemy session
+        category: カテゴリー名
+        target_date: 対象日付（この日付より前のお題を取得）
+        days: 過去何日分を取得するか
+
+    Returns:
+        過去のお題テキストのリスト（新しい順）
+    """
+    start_date = target_date - timedelta(days=days)
+    stmt = (
+        select(Theme.text)
+        .where(
+            Theme.category == category,
+            Theme.date >= start_date,
+            Theme.date < target_date,
+        )
+        .order_by(desc(Theme.date))
+    )
+    result = session.execute(stmt).scalars().all()
+    return list(result)
+
+
+def _is_duplicate_theme(new_text: str, past_themes: list[str]) -> bool:
+    """生成されたお題が過去のものと重複しているかチェック。
+
+    完全一致だけでなく、改行を除去した状態での比較も行う。
+    """
+    # 改行を除去して正規化
+    normalized_new = new_text.replace('\n', '').strip()
+
+    for past in past_themes:
+        normalized_past = past.replace('\n', '').strip()
+        if normalized_new == normalized_past:
+            return True
+
+    return False
 
 
 def _validate_theme_text(text: str) -> str:
@@ -40,18 +92,47 @@ def _generate_with_retry(
     *,
     category: str,
     target_date: date,
+    past_themes: list[str] | None = None,
 ) -> str:
-    """Generate a theme text using the configured retry strategy."""
+    """Generate a theme text using the configured retry strategy.
 
+    Args:
+        ai_client: AIクライアント
+        category: カテゴリー名
+        target_date: 対象日付
+        past_themes: 過去のお題リスト（重複防止用）
+    """
     settings = get_settings()
     max_attempts = settings.theme_generation_max_retries
     delay_seconds = settings.theme_generation_retry_delay_seconds
     last_error: Exception | None = None
+    past_list = past_themes or []
 
     for attempt in range(1, max_attempts + 1):
         try:
-            raw_text = ai_client.generate(category=category, target_date=target_date)
-            return _validate_theme_text(raw_text)
+            raw_text = ai_client.generate(
+                category=category,
+                target_date=target_date,
+                past_themes=past_list,
+            )
+            validated_text = _validate_theme_text(raw_text)
+
+            # 重複チェック
+            if _is_duplicate_theme(validated_text, past_list):
+                logger.warning(
+                    f"Generated theme is duplicate (attempt {attempt}/{max_attempts}): "
+                    f"'{validated_text[:30]}...'"
+                )
+                if attempt >= max_attempts:
+                    # リトライ上限に達した場合でも重複なら失敗扱い
+                    raise ThemeGenerationError(
+                        f"All generated themes for '{category}' were duplicates"
+                    )
+                if delay_seconds > 0:
+                    time.sleep(delay_seconds)
+                continue
+
+            return validated_text
         except (ThemeAIClientError, ValueError) as exc:
             last_error = exc
             if attempt >= max_attempts:
@@ -159,8 +240,24 @@ def generate_all_categories(
             )
             continue
 
+        # 過去のお題を取得（重複防止用）
+        past_themes = get_past_themes(
+            session,
+            category=category,
+            target_date=resolved_date,
+        )
+        logger.info(
+            f"Loaded {len(past_themes)} past themes for category '{category}' "
+            f"(last {PAST_THEMES_DAYS} days)"
+        )
+
         # Generate AI theme
-        text = _generate_with_retry(client, category=category, target_date=resolved_date)
+        text = _generate_with_retry(
+            client,
+            category=category,
+            target_date=resolved_date,
+            past_themes=past_themes,
+        )
         existing_id = themes_before.get((category, resolved_date))
         theme = upsert_theme(session, category=category, target_date=resolved_date, text=text)
 

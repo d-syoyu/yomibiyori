@@ -135,8 +135,20 @@ def validate_575(text: str) -> tuple[bool, list[int]]:
 class ThemeAIClient(Protocol):
     """Protocol describing theme generation clients."""
 
-    def generate(self, *, category: str, target_date: date) -> str:
-        """Return a generated theme for the given category and date."""
+    def generate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
+        """Return a generated theme for the given category and date.
+
+        Args:
+            category: カテゴリー名
+            target_date: 対象日付
+            past_themes: 過去のお題リスト（重複防止用、プロンプトに含める）
+        """
 
 
 @dataclass(slots=True)
@@ -145,7 +157,13 @@ class DummyThemeAIClient(ThemeAIClient):
 
     prefix: str = "Placeholder theme"
 
-    def generate(self, *, category: str, target_date: date) -> str:
+    def generate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
         return f"{self.prefix} for {category} on {target_date.isoformat()}"
 
 
@@ -187,7 +205,13 @@ class OpenAIThemeClient(ThemeAIClient):
         ),
     }
 
-    def generate(self, *, category: str, target_date: date) -> str:
+    def generate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
         """Generate a haiku theme with 5-7-5 syllable validation.
 
         Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
@@ -202,6 +226,19 @@ class OpenAIThemeClient(ThemeAIClient):
         # 季節情報をプロンプトに挿入
         season_info = get_season_info(target_date)
         category_instruction = category_instruction.format(season_info=season_info)
+
+        # 過去のお題を避けるための指示を構築
+        past_themes_instruction = ""
+        if past_themes:
+            # 最新20件を表示（プロンプトが長くなりすぎないように）
+            recent_themes = past_themes[:20]
+            past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
+            past_themes_instruction = (
+                f"\n\n【重要：過去のお題との重複禁止】\n"
+                f"以下は過去に出題されたお題です。これらと同じ・類似のお題は絶対に作らないでください。\n"
+                f"新しい視点、新しい言葉の組み合わせで、まだ詠まれていないお題を創作してください。\n"
+                f"{past_list}"
+            )
 
         payload = {
             "model": self.model,
@@ -275,7 +312,8 @@ class OpenAIThemeClient(ThemeAIClient):
                         f"- 現代的でポップな言葉を使用\n"
                         f"- ひらがな・カタカナ・漢字を自然にミックス\n"
                         f"- 情景が目に浮かぶ具体的な表現\n"
-                        f"- テーマ: {category_instruction}\n\n"
+                        f"- テーマ: {category_instruction}"
+                        f"{past_themes_instruction}\n\n"
                         f"【出力形式】\n"
                         f"- 必ず3行（1行目5音/2行目7音/3行目5音）\n"
                         f"- 句のみ出力（音数カウントや説明は不要）\n"
@@ -375,7 +413,13 @@ class XAIThemeClient(ThemeAIClient):
         ),
     }
 
-    def generate(self, *, category: str, target_date: date) -> str:
+    def generate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
         """Generate a haiku theme with 5-7-5 syllable validation.
 
         Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
@@ -390,6 +434,19 @@ class XAIThemeClient(ThemeAIClient):
         # 季節情報をプロンプトに挿入
         season_info = get_season_info(target_date)
         category_instruction = category_instruction.format(season_info=season_info)
+
+        # 過去のお題を避けるための指示を構築
+        past_themes_instruction = ""
+        if past_themes:
+            # 最新20件を表示（プロンプトが長くなりすぎないように）
+            recent_themes = past_themes[:20]
+            past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
+            past_themes_instruction = (
+                f"\n\n【重要：過去のお題との重複禁止】\n"
+                f"以下は過去に出題されたお題です。これらと同じ・類似のお題は絶対に作らないでください。\n"
+                f"新しい視点、新しい言葉の組み合わせで、まだ詠まれていないお題を創作してください。\n"
+                f"{past_list}"
+            )
 
         payload = {
             "model": self.model,
@@ -455,7 +512,8 @@ class XAIThemeClient(ThemeAIClient):
                         f"- 現代的でポップな言葉を使用\n"
                         f"- ひらがな・カタカナ・漢字を自然にミックス\n"
                         f"- 情景が目に浮かぶ具体的な表現\n"
-                        f"- テーマ: {category_instruction}\n\n"
+                        f"- テーマ: {category_instruction}"
+                        f"{past_themes_instruction}\n\n"
                         f"【出力形式】\n"
                         f"- 必ず3行（1行目5音/2行目7音/3行目5音）\n"
                         f"- 句のみ出力（音数カウントや説明は不要）\n"
@@ -554,7 +612,13 @@ class ClaudeThemeClient(ThemeAIClient):
         ),
     }
 
-    def generate(self, *, category: str, target_date: date) -> str:
+    def generate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
         """Generate a haiku theme with 5-7-5 syllable validation.
 
         Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
@@ -569,6 +633,19 @@ class ClaudeThemeClient(ThemeAIClient):
         # 季節情報をプロンプトに挿入
         season_info = get_season_info(target_date)
         category_instruction = category_instruction.format(season_info=season_info)
+
+        # 過去のお題を避けるための指示を構築
+        past_themes_instruction = ""
+        if past_themes:
+            # 最新20件を表示（プロンプトが長くなりすぎないように）
+            recent_themes = past_themes[:20]
+            past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
+            past_themes_instruction = (
+                f"\n\n【重要：過去のお題との重複禁止】\n"
+                f"以下は過去に出題されたお題です。これらと同じ・類似のお題は絶対に作らないでください。\n"
+                f"新しい視点、新しい言葉の組み合わせで、まだ詠まれていないお題を創作してください。\n"
+                f"{past_list}"
+            )
 
         # システムプロンプト
         system_prompt = (
@@ -608,7 +685,8 @@ class ClaudeThemeClient(ThemeAIClient):
             f"- 「〜てる」「〜いる」「〜した」など、続きを想像させる表現\n"
             f"- ユーザーが「続きを詠みたい！」と思える内容\n\n"
             f"【テーマ】\n"
-            f"{category_instruction}\n\n"
+            f"{category_instruction}"
+            f"{past_themes_instruction}\n\n"
             f"【出力形式】\n"
             f"- 必ず3行（1行目5音/2行目7音/3行目5音）\n"
             f"- すべてひらがなのみ\n"
