@@ -308,11 +308,11 @@ export default function Support() {
                   メールでのお問い合わせ
                 </h3>
                 <a
-                  href="mailto:d.syoyu@gmail.com"
+                  href="mailto:support@soga.ltd"
                   className="text-lg font-medium hover:underline block mb-4"
                   style={{ color: "var(--color-igusa)" }}
                 >
-                  d.syoyu@gmail.com
+                  support@soga.ltd
                 </a>
                 <p
                   className="text-sm mb-3"
