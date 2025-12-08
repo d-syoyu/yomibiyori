@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   name: 'よみびより',
   slug: 'yomibiyori',
   owner: "dsyoyu",
-  version: '1.1.2',
+  version: '1.1.3',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
