@@ -99,10 +99,10 @@ export default function CompanyPage() {
                 <h2 className="text-2xl font-bold text-[var(--color-igusa)]">お問い合わせ</h2>
                 <p className="text-[var(--color-text-secondary)]">掲載内容の更新や取材のご連絡はこちらから。</p>
                 <a
-                  href="mailto:d.syou@gmail.com"
+                  href="mailto:support@soga.ltd"
                   className="inline-flex items-center gap-2 text-[var(--color-ai)] font-semibold underline underline-offset-4 decoration-[var(--color-ai-light)]"
                 >
-                  d.syou@gmail.com
+                  support@soga.ltd
                 </a>
                 <p className="text-xs text-[var(--color-text-secondary)]">更新頻度：静的掲載（必要に応じて手動で反映します）</p>
               </div>
