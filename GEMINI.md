@@ -1,5 +1,8 @@
 # GEMINI.md — Gemini Agent Context & Instructions
 
+## Language
+日本語で回答してください。
+
 ## 1. Project Overview
 **Project Name:** Yomibiyori (よみびより)
 **Description:** A poetic social network application centered around "Tanka" (5-7-5-7-7). AI generates the "Upper Verse" (Kami-no-ku, 5-7-5), and users compose the "Lower Verse" (Shimo-no-ku, 7-7) to complete the poem.
