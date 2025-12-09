@@ -217,10 +217,10 @@ def generate_all_categories(
     during slow AI generation.
 
     Args:
-        ai_client: AIクライアント (Optional)
-        target_date: 生成対象日 (Optional)
-        session_factory: セッション生成ファクトリ。テスト時にモックを注入するために使用。
-                         Noneの場合は app.db.session.SessionLocal が使用される。
+        ai_client: AI client implementation (optional).
+        target_date: Target date for generation (optional).
+        session_factory: Factory to create DB sessions. Used for dependency injection in tests.
+                         If None, app.db.session.SessionLocal is used.
     """
     from app.db.session import SessionLocal
 
