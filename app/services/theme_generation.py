@@ -203,17 +203,30 @@ class ThemeGenerationResult:
     was_created: bool
 
 
+from typing import Callable, ContextManager, Sequence
+
 def generate_all_categories(
     ai_client: ThemeAIClient | None = None,
     *,
     target_date: date | None = None,
+    session_factory: Callable[[], ContextManager[Session]] | None = None,
 ) -> list[ThemeGenerationResult]:
     """Generate themes for all configured categories and persist them.
     
     Manages DB sessions internally per category to avoid long-running transactions
     during slow AI generation.
+
+    Args:
+        ai_client: AIクライアント (Optional)
+        target_date: 生成対象日 (Optional)
+        session_factory: セッション生成ファクトリ。テスト時にモックを注入するために使用。
+                         Noneの場合は app.db.session.SessionLocal が使用される。
     """
     from app.db.session import SessionLocal
+
+    # Use provided factory or default to SessionLocal
+    # Note: SessionLocal returns a Session, which is a ContextManager
+    create_session = session_factory or SessionLocal
 
     settings = get_settings()
     tz = settings.timezone
@@ -230,7 +243,7 @@ def generate_all_categories(
         should_skip = False
         existing_id = None
         
-        with SessionLocal() as session:
+        with create_session() as session:
             # Check if sponsor theme already exists
             existing = session.execute(
                 select(Theme).where(
@@ -276,7 +289,7 @@ def generate_all_categories(
             continue
 
         # Step 3: Write session to persist the result
-        with SessionLocal() as session:
+        with create_session() as session:
             try:
                 theme = upsert_theme(session, category=category, target_date=resolved_date, text=text)
                 if theme:
