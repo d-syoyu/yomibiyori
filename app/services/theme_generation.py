@@ -57,7 +57,7 @@ def get_past_themes(
     return list(result)
 
 
-def _is_duplicate_theme(new_text: str, past_themes: list[str]) -> bool:
+def is_duplicate_theme(new_text: str, past_themes: list[str]) -> bool:
     """生成されたお題が過去のものと重複しているかチェック。
 
     完全一致だけでなく、改行を除去した状態での比較も行う。
@@ -73,7 +73,7 @@ def _is_duplicate_theme(new_text: str, past_themes: list[str]) -> bool:
     return False
 
 
-def _validate_theme_text(text: str) -> str:
+def validate_theme_text(text: str) -> str:
     """Return a trimmed theme text if it satisfies length constraints."""
 
     stripped = text.strip()
@@ -87,7 +87,7 @@ def _validate_theme_text(text: str) -> str:
     return stripped
 
 
-def _generate_with_retry(
+def generate_with_retry(
     ai_client: ThemeAIClient,
     *,
     category: str,
@@ -115,10 +115,10 @@ def _generate_with_retry(
                 target_date=target_date,
                 past_themes=past_list,
             )
-            validated_text = _validate_theme_text(raw_text)
+            validated_text = validate_theme_text(raw_text)
 
             # 重複チェック
-            if _is_duplicate_theme(validated_text, past_list):
+            if is_duplicate_theme(validated_text, past_list):
                 logger.warning(
                     f"Generated theme is duplicate (attempt {attempt}/{max_attempts}): "
                     f"'{validated_text[:30]}...'"
@@ -158,7 +158,7 @@ def upsert_theme(
     Returns None if a sponsor theme already exists for this slot.
     """
 
-    stripped = _validate_theme_text(text)
+    stripped = validate_theme_text(text)
     stmt: Select[Theme] = (
         select(Theme)
         .where(Theme.category == category, Theme.date == target_date)
@@ -204,13 +204,16 @@ class ThemeGenerationResult:
 
 
 def generate_all_categories(
-    session: Session,
     ai_client: ThemeAIClient | None = None,
     *,
     target_date: date | None = None,
-    commit: bool = True,
 ) -> list[ThemeGenerationResult]:
-    """Generate themes for all configured categories and persist them."""
+    """Generate themes for all configured categories and persist them.
+    
+    Manages DB sessions internally per category to avoid long-running transactions
+    during slow AI generation.
+    """
+    from app.db.session import SessionLocal
 
     settings = get_settings()
     tz = settings.timezone
@@ -218,66 +221,79 @@ def generate_all_categories(
 
     client = ai_client or resolve_theme_ai_client()
     results: list[ThemeGenerationResult] = []
-    themes_before = {
-        (theme.category, theme.date): theme.id
-        for theme in session.execute(
-            select(Theme).where(Theme.date == resolved_date)
-        ).scalars()
-    }
 
     for category in settings.theme_categories_list:
-        # Check if sponsor theme already exists
-        existing = session.execute(
-            select(Theme).where(
-                Theme.category == category,
-                Theme.date == resolved_date
-            )
-        ).scalars().first()
+        logger.info(f"Processing theme generation for category: {category}")
+        
+        # Step 1: Read-only session to check existence and get past themes
+        past_themes = []
+        should_skip = False
+        existing_id = None
+        
+        with SessionLocal() as session:
+            # Check if sponsor theme already exists
+            existing = session.execute(
+                select(Theme).where(
+                    Theme.category == category,
+                    Theme.date == resolved_date
+                )
+            ).scalars().first()
 
-        if existing and existing.sponsored:
-            logger.info(
-                f"Skipping {category} on {resolved_date}: sponsor theme exists"
-            )
+            if existing:
+                existing_id = existing.id
+                if existing.sponsored:
+                    logger.info(
+                        f"Skipping {category} on {resolved_date}: sponsor theme exists"
+                    )
+                    should_skip = True
+            
+            if not should_skip:
+                # 過去のお題を取得（重複防止用）
+                past_themes = get_past_themes(
+                    session,
+                    category=category,
+                    target_date=resolved_date,
+                )
+                logger.info(
+                    f"Loaded {len(past_themes)} past themes for category '{category}' "
+                    f"(last {PAST_THEMES_DAYS} days)"
+                )
+        
+        if should_skip:
             continue
 
-        # 過去のお題を取得（重複防止用）
-        past_themes = get_past_themes(
-            session,
-            category=category,
-            target_date=resolved_date,
-        )
-        logger.info(
-            f"Loaded {len(past_themes)} past themes for category '{category}' "
-            f"(last {PAST_THEMES_DAYS} days)"
-        )
-
-        # Generate AI theme
-        text = _generate_with_retry(
-            client,
-            category=category,
-            target_date=resolved_date,
-            past_themes=past_themes,
-        )
-        existing_id = themes_before.get((category, resolved_date))
-        theme = upsert_theme(session, category=category, target_date=resolved_date, text=text)
-
-        # upsert_theme returns None if sponsor theme exists
-        if theme is None:
-            continue
-
-        was_created = existing_id is None
-        results.append(
-            ThemeGenerationResult(
+        # Step 2: Generate AI theme (No DB session active here!)
+        # This prevents "SSL SYSCALL error: EOF detected" due to idle timeouts
+        try:
+            text = generate_with_retry(
+                client,
                 category=category,
-                theme=theme,
-                generated_text=text,
-                was_created=was_created,
+                target_date=resolved_date,
+                past_themes=past_themes,
             )
-        )
+        except Exception as e:
+            logger.error(f"Failed to generate theme for {category}: {e}")
+            continue
 
-    if commit:
-        session.commit()
-    else:
-        session.flush()
+        # Step 3: Write session to persist the result
+        with SessionLocal() as session:
+            try:
+                theme = upsert_theme(session, category=category, target_date=resolved_date, text=text)
+                if theme:
+                    session.commit()
+                    
+                    was_created = existing_id is None
+                    results.append(
+                        ThemeGenerationResult(
+                            category=category,
+                            theme=theme,
+                            generated_text=text,
+                            was_created=was_created,
+                        )
+                    )
+                    logger.info(f"Successfully saved theme for {category}")
+            except Exception as e:
+                logger.error(f"Failed to save theme for {category}: {e}")
+                session.rollback()
 
     return results

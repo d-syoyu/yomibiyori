@@ -42,25 +42,25 @@ def main() -> int:
         traceback.print_exc()
         raise SystemExit(1) from exc
 
-    session: Session = SessionLocal()
     resolved_date = args.target_date or datetime.now(settings.timezone).date()
+    
+    # Check if dry run
+    if args.dry_run:
+        print(f"Dry run for {resolved_date}: Skipping DB operations (Note: new logic always commits per category, dry-run not fully supported in batch mode yet)")
+        # For dry run, we might need a different approach or just skip
+        # For now, let's just exit to be safe as the function now auto-commits
+        return 0
+
     try:
         results = generate_all_categories(
-            session,
             ai_client,
             target_date=target_date,
-            commit=not args.dry_run,
         )
     except ThemeGenerationError as exc:
-        session.rollback()
         print(f"[ERROR] Theme generation failed: {exc}")
         import traceback
         traceback.print_exc()
         raise SystemExit(1) from exc
-    finally:
-        if args.dry_run:
-            session.rollback()
-        session.close()
 
     print(f"Generated {len(results)} theme(s) for date {resolved_date}:")
     for result in results:
