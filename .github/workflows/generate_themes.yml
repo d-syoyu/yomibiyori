@@ -29,12 +29,10 @@ jobs:
           CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
           CLAUDE_TIMEOUT: "30.0"
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-          XAI_MODEL: "grok-4-fast-reasoning"
           XAI_TIMEOUT: "60.0"
           THEME_AI_PROVIDER: "xai"
           THEME_CATEGORIES: ${{ secrets.THEME_CATEGORIES }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          THEME_GENERATION_MAX_RETRIES: "5"
           THEME_GENERATION_RETRY_DELAY_SECONDS: "10.0"
           APP_TIMEZONE: "Asia/Tokyo"
         run: |

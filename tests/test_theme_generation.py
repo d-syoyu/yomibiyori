@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -15,13 +16,20 @@ from app.services.theme_generation import ThemeGenerationError, ThemeGenerationR
 from app.services.theme_ai_client import ThemeAIClient
 
 
+@contextmanager
+def mock_session_factory(session: Session):
+    """Context manager that yields the provided session, mimicking SessionLocal."""
+    # We don't close the session here because it's managed by the pytest fixture
+    yield session
+
+
 class _StaticThemeClient:
     """Simple AI client returning preconfigured results."""
 
     def __init__(self, responses: dict[str, str]) -> None:
         self._responses = responses
 
-    def generate(self, *, category: str, target_date: date) -> str:
+    def generate(self, *, category: str, target_date: date, past_themes: list[str] | None = None) -> str:
         if category not in self._responses:
             raise KeyError(f"Missing response for category {category}")
         return self._responses[category]
@@ -60,7 +68,13 @@ def test_generate_all_categories_inserts_new_themes(db_session: Session, monkeyp
     )
 
     target = date(2025, 1, 5)
-    results = generate_all_categories(db_session, client, target_date=target)
+    
+    # Pass session_factory instead of db_session directly
+    results = generate_all_categories(
+        client, 
+        target_date=target, 
+        session_factory=lambda: mock_session_factory(db_session)
+    )
 
     assert len(results) == 2
     stored = db_session.query(Theme).filter(Theme.date == target).all()
@@ -82,7 +96,12 @@ def test_generate_all_categories_updates_existing_theme(db_session: Session, mon
     )
 
     client = _StaticThemeClient({"general": "Fresh morning breeze inspires hope"})
-    results = generate_all_categories(db_session, client, target_date=target)
+    
+    results = generate_all_categories(
+        client, 
+        target_date=target,
+        session_factory=lambda: mock_session_factory(db_session)
+    )
 
     assert len(results) == 1
     result = results[0]
@@ -98,10 +117,20 @@ def test_generate_all_categories_raises_on_invalid_text(db_session: Session, mon
     monkeypatch.setattr(settings, "theme_generation_retry_delay_seconds", 0.0)
 
     class _InvalidClient:
-        def generate(self, *, category: str, target_date: date) -> str:
+        def generate(self, *, category: str, target_date: date, past_themes: list[str] | None = None) -> str:
             return " "  # Always invalid
 
-    with pytest.raises(ThemeGenerationError):
-        generate_all_categories(db_session, _InvalidClient(), target_date=date(2025, 1, 7))
-
+    # generate_all_categories catches exceptions per category but logs them.
+    # It does NOT raise ThemeGenerationError for the whole batch unless something critical fails.
+    # Wait, the previous implementation did raise because it wasn't catching inside the loop?
+    # No, the new implementation catches exceptions inside the loop to continue processing other categories.
+    # So this test expectation needs to change: it should return empty results, not raise.
+    
+    results = generate_all_categories(
+        _InvalidClient(), 
+        target_date=date(2025, 1, 7),
+        session_factory=lambda: mock_session_factory(db_session)
+    )
+    
+    assert len(results) == 0
     assert db_session.query(Theme).filter(Theme.date == date(2025, 1, 7)).count() == 0
