@@ -5,24 +5,18 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, time
 from math import sqrt
 from typing import Any
 
 from fastapi import HTTPException, status
 from redis import Redis
-from sqlalchemy import Select, select, or_
+from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import logger
 from app.models import Ranking, Theme, User, Work
 from app.schemas.ranking import RankingEntry
-
-# Submission window constants (same as in works.py)
-SUBMISSION_START = time(hour=6, minute=0)
-SUBMISSION_END = time(hour=22, minute=0)
-
 
 @dataclass(slots=True)
 class _Candidate:
@@ -67,49 +61,6 @@ def bayesian_average(likes: int, impressions: int, *, prior_mean: float = 0.05, 
     observed_rate = likes / impressions
     weighted_score = (prior_confidence * prior_mean + impressions * observed_rate) / (prior_confidence + impressions)
     return max(0.0, min(1.0, float(weighted_score)))
-
-
-def _calculate_time_normalization_factor(work_created_at: datetime) -> float:
-    """Calculate time normalization factor to compensate for posting time bias.
-
-    Works posted early in the day have more exposure time than works posted
-    late in the day. This function returns a multiplier to normalize scores
-    based on how much exposure time the work had.
-
-    Args:
-        work_created_at: When the work was created (UTC)
-
-    Returns:
-        Normalization factor (1.0 - 2.0) where later posts get higher factors
-    """
-    settings = get_settings()
-    # Convert to JST for submission window logic
-    created_jst = work_created_at.astimezone(settings.timezone)
-
-    # Calculate submission end time on the same day
-    end_datetime = created_jst.replace(
-        hour=SUBMISSION_END.hour,
-        minute=SUBMISSION_END.minute,
-        second=0,
-        microsecond=0
-    )
-
-    # If work was posted after submission end, use minimum exposure time
-    if created_jst >= end_datetime:
-        exposure_hours = 0.5  # Assume 30 minutes minimum
-    else:
-        # Calculate remaining hours until submission end
-        remaining = end_datetime - created_jst
-        exposure_hours = remaining.total_seconds() / 3600.0
-
-    # Maximum exposure time is 16 hours (06:00 to 22:00)
-    MAX_EXPOSURE_HOURS = 16.0
-
-    # Normalize: works with less exposure get a boost
-    # Factor ranges from 1.0 (full exposure) to 2.0 (minimal exposure)
-    normalization = MAX_EXPOSURE_HOURS / max(exposure_hours, 0.5)
-    # Cap at 2.0 to prevent excessive boosting
-    return min(2.0, max(1.0, normalization))
 
 
 def _fetch_metrics(redis_client: Redis, work_ids: Sequence[str]) -> dict[str, dict[str, Any]]:
@@ -302,7 +253,7 @@ def get_ranking(
     theme_id: str,
     limit: int,
 ) -> list[RankingEntry]:
-    """Fetch ranking entries for the specified theme with time-based fairness adjustment."""
+    """Fetch ranking entries for the specified theme using Bayesian/Wilson scoring."""
 
     theme = session.get(Theme, theme_id)
     if not theme:
@@ -321,29 +272,12 @@ def get_ranking(
         # Convert work.id to string for consistent key type
         work_map: dict[str, tuple[Work, User]] = {str(work.id): (work, user) for work, user in rows}
 
-        # Apply time normalization and rebuild ranking
-        time_adjusted_candidates: list[tuple[_Candidate, float]] = []
-        for candidate in candidates:
+        # Build ranking entries (candidates are already sorted by adjusted_score)
+        entries: list[RankingEntry] = []
+        for index, candidate in enumerate(candidates, start=1):
             context = work_map.get(candidate.work_id)
             if not context:
                 logger.warning(f"[Ranking] Work {candidate.work_id} not found in database (skipping)")
-                continue
-            work, user = context
-            # Calculate time normalization factor based on posting time
-            time_factor = _calculate_time_normalization_factor(work.created_at)
-            # Apply time normalization to the adjusted score
-            time_adjusted_score = candidate.adjusted_score * time_factor
-            time_adjusted_candidates.append((candidate, time_adjusted_score))
-
-        logger.info(f"[Ranking] Time-adjusted {len(time_adjusted_candidates)} works")
-
-        # Re-sort by time-adjusted score
-        time_adjusted_candidates.sort(key=lambda item: item[1], reverse=True)
-
-        entries: list[RankingEntry] = []
-        for index, (candidate, time_adjusted_score) in enumerate(time_adjusted_candidates, start=1):
-            context = work_map.get(candidate.work_id)
-            if not context:
                 continue
             work, user = context
             display_name = user.name if user.name else user.email
@@ -351,7 +285,7 @@ def get_ranking(
                 RankingEntry(
                     rank=index,
                     work_id=str(work.id),
-                    score=time_adjusted_score,  # Use time-adjusted score in response
+                    score=candidate.adjusted_score,
                     display_name=display_name,
                     text=work.text,
                 )

@@ -83,7 +83,7 @@ def test_get_ranking_success(
     redis_client.hset(f"metrics:{work.id}", mapping={"likes": 12, "impressions": 30})
 
     expected_candidate = ranking_service._build_candidates(redis_client, theme.id, 1)[0]
-    expected_score = expected_candidate.adjusted_score * ranking_service._calculate_time_normalization_factor(work.created_at)
+    expected_score = expected_candidate.adjusted_score
 
     response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
 
@@ -114,7 +114,7 @@ def test_get_ranking_uses_unique_viewers(
     )
 
     expected_candidate = ranking_service._build_candidates(redis_client, theme.id, 1)[0]
-    expected_score = expected_candidate.adjusted_score * ranking_service._calculate_time_normalization_factor(work.created_at)
+    expected_score = expected_candidate.adjusted_score
 
     response = client.get(f"/api/v1/ranking?theme_id={theme.id}")
     assert response.status_code == 200
