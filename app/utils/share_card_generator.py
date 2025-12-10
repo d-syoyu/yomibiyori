@@ -245,7 +245,7 @@ class ShareCardGenerator:
         y: int,
         font: ImageFont.FreeTypeFont,
         fill: tuple[int, int, int] | tuple[int, int, int, int],
-        angle: int = 90,
+        angle: int = -90,
     ) -> None:
         """回転した文字を描画する"""
         temp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
@@ -277,7 +277,7 @@ class ShareCardGenerator:
         y: int,
         font: ImageFont.FreeTypeFont,
         fill: tuple[int, int, int] | tuple[int, int, int, int],
-        angle: int = 90,
+        angle: int = -90,
     ) -> int:
         """回転したテキストブロックを描画し、使用した高さを返す"""
         temp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
@@ -343,7 +343,7 @@ class ShareCardGenerator:
                     # 引用部分: 横書きテキストを90度回転
                     quoted_font = self._get_font(int(font.size * 0.8))
                     block_height = self._draw_rotated_text(
-                        img, segment_content, current_x, current_y, quoted_font, fill, angle=90
+                        img, segment_content, current_x, current_y, quoted_font, fill, angle=-90
                     )
                     current_y += block_height + 10
                 else:
