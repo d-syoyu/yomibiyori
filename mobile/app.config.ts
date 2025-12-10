@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   name: 'よみびより',
   slug: 'yomibiyori',
   owner: "dsyoyu",
-  version: '1.1.3',
+  version: '1.1.4',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
@@ -24,6 +24,8 @@ const config: ExpoConfig = {
       usesNonExemptEncryption: false,
     },
     infoPlist: {
+      CFBundleDevelopmentRegion: 'ja',
+      CFBundleLocalizations: ['ja'],
       UIBackgroundModes: ['remote-notification'],
     },
   },
