@@ -29,7 +29,7 @@ import { useToastStore } from '../stores/useToastStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { PrefecturePicker } from '../components/PrefecturePicker';
 import api from '../services/api';
-import type { UserProfile } from '../types';
+import type { UserProfile, GenderType } from '../types';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 
 export default function ProfileScreen() {
@@ -45,6 +45,7 @@ export default function ProfileScreen() {
   // Form fields
   const [displayName, setDisplayName] = useState('');
   const [birthYear, setBirthYear] = useState<number | undefined>();
+  const [gender, setGender] = useState<GenderType | undefined>();
   const [prefecture, setPrefecture] = useState<string | undefined>();
   const [themeNotificationEnabled, setThemeNotificationEnabled] = useState(true);
   const [rankingNotificationEnabled, setRankingNotificationEnabled] = useState(true);
@@ -71,6 +72,7 @@ export default function ProfileScreen() {
       // Initialize form fields with profile data
       setDisplayName(data.display_name || '');
       setBirthYear(data.birth_year);
+      setGender(data.gender);
       setPrefecture(data.prefecture);
       setThemeNotificationEnabled(
         data.notify_theme_release ?? true,
@@ -106,6 +108,7 @@ export default function ProfileScreen() {
       const updateData = {
         display_name: displayName.trim(),
         birth_year: birthYear,
+        gender,
         prefecture,
         notify_theme_release: themeNotificationEnabled,
         notify_ranking_result: rankingNotificationEnabled,
@@ -263,6 +266,25 @@ export default function ProfileScreen() {
                   const year = 2025 - i;
                   return <Picker.Item key={year} label={`${year}年`} value={year} />;
                 })}
+              </Picker>
+            </View>
+          </View>
+
+          {/* Gender */}
+          <View style={styles.section}>
+            <Text style={styles.label}>性別</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={gender ?? ''}
+                onValueChange={(itemValue) => setGender(itemValue === '' ? undefined : itemValue as GenderType)}
+                style={[styles.picker, styles.pickerText]}
+                itemStyle={styles.pickerItem}
+                dropdownIconColor={colors.text.secondary}
+              >
+                <Picker.Item label="選択してください" value="" />
+                <Picker.Item label="男性" value="male" />
+                <Picker.Item label="女性" value="female" />
+                <Picker.Item label="その他" value="other" />
               </Picker>
             </View>
           </View>

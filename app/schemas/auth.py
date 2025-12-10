@@ -6,6 +6,9 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
+# Gender type for profile
+GenderType = Literal["male", "female", "other"]
+
 
 class SignUpRequest(BaseModel):
     """Payload for creating a new Supabase user."""
@@ -56,6 +59,7 @@ class UserProfileResponse(BaseModel):
     email: EmailStr
     display_name: Optional[str] = None
     birth_year: Optional[int] = Field(None, description="Year of birth (e.g., 1990)")
+    gender: Optional[GenderType] = Field(None, description="Gender: male, female, or other")
     prefecture: Optional[str] = Field(None, description="User's prefecture (e.g., '東京都')")
     device_info: Optional[dict[str, Any]] = Field(None, description="Device information")
     analytics_opt_out: bool = Field(False, description="Analytics opt-out preference")
@@ -68,6 +72,7 @@ class UpdateProfileRequest(BaseModel):
 
     display_name: Optional[str] = Field(None, min_length=1, max_length=80, description="New display name")
     birth_year: Optional[int] = Field(None, ge=1900, le=2025, description="Year of birth")
+    gender: Optional[GenderType] = Field(None, description="Gender: male, female, or other")
     prefecture: Optional[str] = Field(None, max_length=50, description="Prefecture")
     device_info: Optional[dict[str, Any]] = Field(None, description="Device information")
     analytics_opt_out: Optional[bool] = Field(None, description="Opt out of analytics")

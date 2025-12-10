@@ -1894,6 +1894,10 @@ components:
           minimum: 1900
           maximum: 2025
           description: Year of birth (optional)
+        gender:
+          type: string
+          enum: [male, female, other]
+          description: Gender (male, female, or other)
         prefecture:
           type: string
           maxLength: 50
@@ -2001,6 +2005,11 @@ components:
           nullable: true
           minimum: 1900
           maximum: 2025
+        gender:
+          type: string
+          nullable: true
+          enum: [male, female, other]
+          description: Gender (male, female, or other)
         prefecture:
           type: string
           nullable: true

@@ -325,6 +325,7 @@ def _build_user_profile_response(user: User) -> UserProfileResponse:
         email=user.email,
         display_name=user.name,
         birth_year=user.birth_year,
+        gender=user.gender,
         prefecture=user.prefecture,
         device_info=user.device_info,
         analytics_opt_out=user.analytics_opt_out,
@@ -1006,6 +1007,9 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
 
     if payload.birth_year is not None:
         user.birth_year = payload.birth_year
+
+    if payload.gender is not None:
+        user.gender = payload.gender
 
     if payload.prefecture is not None:
         user.prefecture = payload.prefecture

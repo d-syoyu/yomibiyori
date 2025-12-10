@@ -46,11 +46,14 @@ export interface DeviceInfo {
   locale?: string;
 }
 
+export type GenderType = 'male' | 'female' | 'other';
+
 export interface UserProfile {
   user_id: string;
   email: string;
   display_name?: string;
   birth_year?: number;
+  gender?: GenderType;
   prefecture?: string;
   device_info?: DeviceInfo;
   analytics_opt_out: boolean;
@@ -61,6 +64,7 @@ export interface UserProfile {
 export interface UpdateProfileRequest {
   display_name?: string;
   birth_year?: number;
+  gender?: GenderType;
   prefecture?: string;
   device_info?: DeviceInfo;
   analytics_opt_out?: boolean;
@@ -222,6 +226,7 @@ export type HomeStackParamList = {
 
 export type MyPoemsStackParamList = {
   MyPoemsList: undefined;
+  ProfileSetup: undefined;
   Profile: undefined;
 };
 

@@ -299,7 +299,7 @@ export default function MyPoemsScreen() {
               </View>
               <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => navigation.navigate('Profile')}
+                onPress={() => navigation.navigate('ProfileSetup')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="settings-outline" size={16} color="#6B7B4F" />

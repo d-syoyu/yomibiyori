@@ -24,6 +24,7 @@ import CompositionScreen from '../screens/CompositionScreen';
 import MyPoemsScreen from '../screens/MyPoemsScreen';
 import AppreciationScreen from '../screens/AppreciationScreen';
 import RankingScreen from '../screens/RankingScreen';
+import ProfileSetupScreen from '../screens/ProfileSetupScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 // Import components
@@ -97,10 +98,18 @@ function MyPoemsStackNavigator() {
         }}
       />
       <MyPoemsStack.Screen
+        name="ProfileSetup"
+        component={ProfileSetupScreen}
+        options={{
+          title: 'プロフィール設定',
+          headerShown: false,
+        }}
+      />
+      <MyPoemsStack.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          title: 'プロフィール設定',
+          title: 'プロフィール詳細設定',
           headerBackTitle: '戻る',
         }}
       />

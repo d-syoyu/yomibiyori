@@ -22,6 +22,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True)
     role: Mapped[str] = mapped_column(String(20), default="user")
     birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(10), nullable=True)
     prefecture: Mapped[str | None] = mapped_column(String(50), nullable=True)
     device_info: Mapped[dict[str, Any] | None] = mapped_column(JSONBType, nullable=True)
     analytics_opt_out: Mapped[bool] = mapped_column(Boolean, default=False)
