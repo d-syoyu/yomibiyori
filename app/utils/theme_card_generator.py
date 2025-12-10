@@ -86,8 +86,8 @@ class ThemeCardGenerator(ShareCardGenerator):
 
         # 詩の配置: 中央
         theme_lines = theme_text.split('\n')
-        max_chars = max((len(line.strip()) for line in theme_lines), default=0)
-        poem_height = max_chars * char_height
+        # 正確な高さを計算
+        poem_height = max((self._calculate_line_height(line, font_poem, char_height) for line in theme_lines), default=0)
 
         # フッター領域のサイズ
         footer_height = 180

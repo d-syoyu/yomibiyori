@@ -370,6 +370,32 @@ class ShareCardGenerator:
 
             current_x -= column_spacing
 
+    def _calculate_line_height(
+        self,
+        text: str,
+        font: ImageFont.FreeTypeFont,
+        char_height: int = 38,
+    ) -> int:
+        """縦書きテキストの実際の描画高さを計算する"""
+        total_height = 0
+        segments = self._parse_text_with_quotes(text.strip())
+        
+        # ダミー描画用のオブジェクト
+        temp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+
+        for segment_type, segment_content in segments:
+            if segment_type == "quoted":
+                # 引用部分: 回転後の高さ（＝横書き時の幅）を計算
+                quoted_font = self._get_font(int(font.size * 0.8))
+                bbox = temp_draw.textbbox((0, 0), segment_content, font=quoted_font)
+                text_width = bbox[2] - bbox[0]
+                total_height += text_width + 10  # パディング分
+            else:
+                # 通常部分: 文字数 × 高さ
+                total_height += len(segment_content) * char_height
+        
+        return total_height
+
     def generate(
         self,
         upper_text: Optional[str],
@@ -435,10 +461,11 @@ class ShareCardGenerator:
 
         upper_lines = upper_text.split("\n") if upper_text else []
         lower_lines = lower_text.split("\n")
-        max_upper_chars = max((len(line.strip()) for line in upper_lines), default=0)
-        max_lower_chars = max((len(line.strip()) for line in lower_lines), default=0)
-        max_chars = max(max_upper_chars, max_lower_chars)
-        poem_height = max_chars * char_height
+        
+        # 正確な高さを計算
+        max_upper_height = max((self._calculate_line_height(line, font_poem, char_height) for line in upper_lines), default=0)
+        max_lower_height = max((self._calculate_line_height(line, font_poem, char_height) for line in lower_lines), default=0)
+        poem_height = max(max_upper_height, max_lower_height)
 
         # フッターの高さを計算
         footer_height = 180
