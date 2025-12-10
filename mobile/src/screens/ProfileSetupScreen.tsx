@@ -219,7 +219,6 @@ export default function ProfileSetupScreen() {
                 })}
               </Picker>
             </View>
-            <Text style={styles.inputHint}>年代別の統計などに使用されます</Text>
           </View>
         );
 
@@ -296,7 +295,6 @@ export default function ProfileSetupScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.inputHint}>統計情報の分析に使用されます</Text>
           </View>
         );
 
@@ -308,7 +306,6 @@ export default function ProfileSetupScreen() {
               onChange={setPrefecture}
               pickerStyle={styles.pickerContainer}
             />
-            <Text style={styles.inputHint}>地域別の統計などに使用されます</Text>
           </View>
         );
 
@@ -367,16 +364,6 @@ export default function ProfileSetupScreen() {
             <Text style={styles.stepSubtitle}>{currentStepData.subtitle}</Text>
             {renderStepContent()}
           </Animated.View>
-
-          {/* Advanced Settings Link */}
-          <TouchableOpacity
-            style={styles.advancedSettingsLink}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <Ionicons name="options-outline" size={18} color={colors.text.tertiary} />
-            <Text style={styles.advancedSettingsText}>詳細設定（通知など）</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
-          </TouchableOpacity>
         </ScrollView>
 
         {/* Footer */}
@@ -613,19 +600,5 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     color: colors.text.inverse,
     letterSpacing: 0.5,
-  },
-  advancedSettingsLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    marginTop: spacing.xxl,
-    gap: spacing.sm,
-  },
-  advancedSettingsText: {
-    fontSize: fontSize.bodySmall,
-    fontFamily: fontFamily.regular,
-    color: colors.text.tertiary,
-    letterSpacing: 0.3,
   },
 });
