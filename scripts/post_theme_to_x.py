@@ -6,10 +6,58 @@ X(Twitter)へお題を自動投稿するスクリプト
 import os
 import sys
 import logging
+import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 import tweepy
+
+
+# 曜日→カテゴリのスケジュール（デフォルト設定）
+# 0=月曜, 1=火曜, ..., 6=日曜
+DEFAULT_WEEKDAY_CATEGORY_SCHEDULE = {
+    0: "romance",   # 月曜: 恋愛
+    1: "season",    # 火曜: 季節
+    2: "daily",     # 水曜: 日常
+    3: "romance",   # 木曜: 恋愛
+    4: "daily",     # 金曜: 日常
+    5: "humor",     # 土曜: ユーモア
+    6: "humor",     # 日曜: ユーモア
+}
+
+
+def get_weekday_category_schedule() -> dict[int, str]:
+    """
+    曜日→カテゴリのスケジュールを取得
+    環境変数 X_POST_CATEGORY_SCHEDULE でJSON形式でオーバーライド可能
+
+    Returns:
+        曜日(0-6) → カテゴリ名のマッピング
+    """
+    schedule_json = os.getenv("X_POST_CATEGORY_SCHEDULE")
+    if schedule_json:
+        try:
+            custom_schedule = json.loads(schedule_json)
+            # キーを整数に変換
+            return {int(k): v for k, v in custom_schedule.items()}
+        except (json.JSONDecodeError, ValueError) as e:
+            logging.getLogger(__name__).warning(
+                f"Invalid X_POST_CATEGORY_SCHEDULE format, using default: {e}"
+            )
+    return DEFAULT_WEEKDAY_CATEGORY_SCHEDULE.copy()
+
+
+def get_category_for_today() -> str:
+    """
+    JSTで今日の曜日に基づくカテゴリを返す
+
+    Returns:
+        今日投稿すべきカテゴリ名
+    """
+    jst = timezone(timedelta(hours=9))
+    weekday = datetime.now(jst).weekday()  # 0=月曜, 6=日曜
+    schedule = get_weekday_category_schedule()
+    return schedule[weekday]
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
@@ -191,6 +239,9 @@ def generate_tweet_text(theme: Theme) -> str:
     # App Store URL
     app_store_url = "https://apps.apple.com/jp/app/%E3%82%88%E3%81%BF%E3%81%B3%E3%82%88%E3%82%8A/id6754638890"
 
+    # アプリ誘導文言
+    app_promo = "👇ほかのお題もよみびよりアプリで"
+
     # カテゴリごとの投稿文（お題テキストは画像に含まれているため省略）
     category_messages = {
         "romance": f"""💕 {date_str}のお題【恋愛】{sponsor_suffix}
@@ -198,6 +249,7 @@ def generate_tweet_text(theme: Theme) -> str:
 胸がときめく恋の一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
 
+{app_promo}
 {app_store_url}
 
 #よみびより #短歌 #詩 #恋愛""",
@@ -207,6 +259,7 @@ def generate_tweet_text(theme: Theme) -> str:
 季節の移ろいを感じる一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
 
+{app_promo}
 {app_store_url}
 
 #よみびより #短歌 #詩 #季節""",
@@ -216,6 +269,7 @@ def generate_tweet_text(theme: Theme) -> str:
 何気ない日々の中にある美しさを詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
 
+{app_promo}
 {app_store_url}
 
 #よみびより #短歌 #詩 #日常""",
@@ -225,6 +279,7 @@ def generate_tweet_text(theme: Theme) -> str:
 クスッと笑える一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
 
+{app_promo}
 {app_store_url}
 
 #よみびより #短歌 #詩 #ユーモア""",
@@ -274,6 +329,24 @@ def main():
 
     logger.info(f"Found {len(themes)} themes for today")
 
+    # 今日投稿すべきカテゴリを取得（曜日ベース）
+    target_category = get_category_for_today()
+    jst = timezone(timedelta(hours=9))
+    weekday_names = ["月", "火", "水", "木", "金", "土", "日"]
+    weekday = datetime.now(jst).weekday()
+    logger.info(f"Today is {weekday_names[weekday]}曜日, posting category: {target_category}")
+
+    # 該当カテゴリのテーマをフィルタリング
+    target_theme = None
+    for theme in themes:
+        if theme.category == target_category:
+            target_theme = theme
+            break
+
+    if not target_theme:
+        logger.error(f"No theme found for category '{target_category}' today")
+        sys.exit(1)
+
     # カテゴリラベル
     category_labels = {
         "romance": "恋愛",
@@ -293,78 +366,54 @@ def main():
     # 画像ジェネレーターを初期化
     generator = ThemeCardGenerator()
 
-    # 各カテゴリのお題を投稿
-    jst = timezone(timedelta(hours=9))
-    posted_count = 0
-    failed_count = 0
+    # 対象カテゴリのお題を投稿（1件のみ）
+    theme = target_theme
+    logger.info(f"Processing theme: {theme.id} - Category: {theme.category}")
 
-    for theme in themes:
-        logger.info(f"Processing theme: {theme.id} - Category: {theme.category}")
-
-        category_label = category_labels.get(theme.category, theme.category)
-        # theme.dateがdate型の場合、datetime型に変換
-        if isinstance(theme.date, datetime):
-            date_jst = theme.date.astimezone(jst)
-        else:
-            date_jst = datetime.combine(theme.date, datetime.min.time()).replace(tzinfo=jst)
-        date_label = date_jst.strftime("%Y/%m/%d")
-
-        # スポンサー情報を追加
-        if theme.sponsored and theme.sponsor_company_name:
-            date_label = f"{date_label} (提供: {theme.sponsor_company_name}様)"
-
-        # お題画像を生成
-        try:
-            image_bytes_io = generator.generate_theme_card(
-                theme_text=theme.text,
-                category=theme.category,
-                category_label=category_label,
-                date_label=date_label,
-            )
-            image_bytes = image_bytes_io.getvalue()
-            logger.info(f"Generated theme card image: {len(image_bytes)} bytes")
-        except Exception as e:
-            logger.error(f"Failed to generate theme card for {theme.category}: {e}")
-            failed_count += 1
-            continue
-
-        # 画像をアップロード
-        media_id = client.upload_media(image_bytes)
-        if not media_id:
-            logger.error(f"Failed to upload image for {theme.category}")
-            failed_count += 1
-            continue
-
-        # ツイート本文を生成
-        tweet_text = generate_tweet_text(theme)
-        logger.info(f"Tweet text for {theme.category}:\n{tweet_text}")
-
-        # ツイートを投稿
-        success = client.post_tweet(tweet_text, media_ids=[media_id])
-        if success:
-            logger.info(f"Successfully posted theme for {theme.category}")
-            posted_count += 1
-        else:
-            logger.error(f"Failed to post tweet for {theme.category}")
-            failed_count += 1
-
-        # レート制限対策: 各投稿間に少し待機
-        if theme != themes[-1]:  # 最後のテーマでなければ待機
-            import time
-            time.sleep(2)  # 2秒待機
-
-    # 結果をログ
-    logger.info(f"Posting completed. Posted: {posted_count}, Failed: {failed_count}")
-
-    if posted_count == 0:
-        logger.error("All posts failed")
-        sys.exit(1)
-    elif failed_count > 0:
-        logger.warning(f"Some posts failed ({failed_count} failures)")
-        sys.exit(0)  # 一部成功したので正常終了
+    category_label = category_labels.get(theme.category, theme.category)
+    # theme.dateがdate型の場合、datetime型に変換
+    if isinstance(theme.date, datetime):
+        date_jst = theme.date.astimezone(jst)
     else:
-        logger.info("All themes posted successfully!")
+        date_jst = datetime.combine(theme.date, datetime.min.time()).replace(tzinfo=jst)
+    date_label = date_jst.strftime("%Y/%m/%d")
+
+    # スポンサー情報を追加
+    if theme.sponsored and theme.sponsor_company_name:
+        date_label = f"{date_label} (提供: {theme.sponsor_company_name}様)"
+
+    # お題画像を生成
+    try:
+        image_bytes_io = generator.generate_theme_card(
+            theme_text=theme.text,
+            category=theme.category,
+            category_label=category_label,
+            date_label=date_label,
+        )
+        image_bytes = image_bytes_io.getvalue()
+        logger.info(f"Generated theme card image: {len(image_bytes)} bytes")
+    except Exception as e:
+        logger.error(f"Failed to generate theme card for {theme.category}: {e}")
+        sys.exit(1)
+
+    # 画像をアップロード
+    media_id = client.upload_media(image_bytes)
+    if not media_id:
+        logger.error(f"Failed to upload image for {theme.category}")
+        sys.exit(1)
+
+    # ツイート本文を生成
+    tweet_text = generate_tweet_text(theme)
+    logger.info(f"Tweet text for {theme.category}:\n{tweet_text}")
+
+    # ツイートを投稿
+    success = client.post_tweet(tweet_text, media_ids=[media_id])
+    if success:
+        logger.info(f"Successfully posted theme for {theme.category}")
         sys.exit(0)
+    else:
+        logger.error(f"Failed to post tweet for {theme.category}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
