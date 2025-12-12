@@ -217,7 +217,7 @@ class OpenAIThemeClient(ThemeAIClient):
 
         Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
         """
-        MAX_RETRIES = 10
+        MAX_RETRIES = 20
 
         # カテゴリーに応じたプロンプトを取得
         category_instruction = self.CATEGORY_PROMPTS.get(
@@ -424,7 +424,7 @@ class XAIThemeClient(ThemeAIClient):
 
         Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
         """
-        MAX_RETRIES = 10
+        MAX_RETRIES = 20
 
         # カテゴリーに応じたプロンプトを取得
         category_instruction = self.CATEGORY_PROMPTS.get(
@@ -621,7 +621,7 @@ class ClaudeThemeClient(ThemeAIClient):
 
         Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
         """
-        MAX_RETRIES = 10
+        MAX_RETRIES = 20
 
         # カテゴリーに応じたプロンプトを取得
         category_instruction = self.CATEGORY_PROMPTS.get(
