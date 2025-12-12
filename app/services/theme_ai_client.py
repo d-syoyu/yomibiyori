@@ -12,6 +12,7 @@ import requests
 from pykakasi import kakasi
 
 from app.core.config import get_settings
+from app.core.logging import logger
 
 
 def get_season_info(target_date: date) -> str:
@@ -361,17 +362,17 @@ class OpenAIThemeClient(ThemeAIClient):
             lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
 
             if is_valid:
-                print(f"[Theme generation] [OK] Success on attempt {attempt}: {lines_detail}")  # noqa: T201
+                logger.info(f"[OpenAI] Success on attempt {attempt}: {lines_detail}")
                 return content
 
             # Not valid, log and retry
             last_content = content
             last_counts = counts
-            print(f"[Theme generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
-            print(f"[Theme generation]    Lines: {lines_detail}")  # noqa: T201
+            logger.warning(f"[OpenAI] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")
+            logger.warning(f"[OpenAI] Lines: {lines_detail}")
 
         # All retries exhausted, return last attempt with warning
-        print(f"[Theme generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")  # noqa: T201
+        logger.error(f"[OpenAI] All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")
         return last_content or ""
 
 
@@ -558,17 +559,17 @@ class XAIThemeClient(ThemeAIClient):
             lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
 
             if is_valid:
-                print(f"[Theme generation] [OK] Success on attempt {attempt}: {lines_detail}")  # noqa: T201
+                logger.info(f"[XAI] Success on attempt {attempt}: {lines_detail}")
                 return content
 
             # Not valid, log and retry
             last_content = content
             last_counts = counts
-            print(f"[Theme generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
-            print(f"[Theme generation]    Lines: {lines_detail}")  # noqa: T201
+            logger.warning(f"[XAI] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")
+            logger.warning(f"[XAI] Lines: {lines_detail}")
 
         # All retries exhausted, return last attempt with warning
-        print(f"[Theme generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")  # noqa: T201
+        logger.error(f"[XAI] All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")
         return last_content or ""
 
 
@@ -733,17 +734,17 @@ class ClaudeThemeClient(ThemeAIClient):
             lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
 
             if is_valid:
-                print(f"[Theme generation] [OK] Success on attempt {attempt}: {lines_detail}")  # noqa: T201
+                logger.info(f"[Claude] Success on attempt {attempt}: {lines_detail}")
                 return content
 
             # Not valid, log and retry
             last_content = content
             last_counts = counts
-            print(f"[Theme generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")  # noqa: T201
-            print(f"[Theme generation]    Lines: {lines_detail}")  # noqa: T201
+            logger.warning(f"[Claude] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")
+            logger.warning(f"[Claude] Lines: {lines_detail}")
 
         # All retries exhausted, return last attempt with warning
-        print(f"[Theme generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")  # noqa: T201
+        logger.error(f"[Claude] All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")
         return last_content or ""
 
 
