@@ -230,8 +230,8 @@ class OpenAIThemeClient(ThemeAIClient):
         # 過去のお題を避けるための指示を構築
         past_themes_instruction = ""
         if past_themes:
-            # 最新20件を表示（プロンプトが長くなりすぎないように）
-            recent_themes = past_themes[:20]
+            # 最新10件を表示（プロンプトが長くなりすぎないように）
+            recent_themes = past_themes[:10]
             past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
             past_themes_instruction = (
                 f"\n\n【重要：過去のお題との重複禁止】\n"
@@ -437,8 +437,8 @@ class XAIThemeClient(ThemeAIClient):
         # 過去のお題を避けるための指示を構築
         past_themes_instruction = ""
         if past_themes:
-            # 最新20件を表示（プロンプトが長くなりすぎないように）
-            recent_themes = past_themes[:20]
+            # 最新10件を表示（プロンプトが長くなりすぎないように）
+            recent_themes = past_themes[:10]
             past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
             past_themes_instruction = (
                 f"\n\n【重要：過去のお題との重複禁止】\n"
@@ -634,8 +634,8 @@ class ClaudeThemeClient(ThemeAIClient):
         # 過去のお題を避けるための指示を構築
         past_themes_instruction = ""
         if past_themes:
-            # 最新20件を表示（プロンプトが長くなりすぎないように）
-            recent_themes = past_themes[:20]
+            # 最新10件を表示（プロンプトが長くなりすぎないように）
+            recent_themes = past_themes[:10]
             past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
             past_themes_instruction = (
                 f"\n\n【重要：過去のお題との重複禁止】\n"

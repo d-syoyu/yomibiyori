@@ -17,8 +17,8 @@ from app.models import Theme
 from app.services.theme_ai_client import ThemeAIClient, ThemeAIClientError, resolve_theme_ai_client
 
 
-# 過去のお題を何日分取得するか
-PAST_THEMES_DAYS = 60
+# 過去のお題を何日分取得するか（重複チェック用）
+PAST_THEMES_DAYS = 30
 
 
 class ThemeGenerationError(RuntimeError):
