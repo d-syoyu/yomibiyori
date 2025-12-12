@@ -172,7 +172,7 @@ class XAIWorkClient(WorkAIClient):
     """X.ai Grok-backed lower verse generator."""
 
     api_key: str
-    model: str = "grok-4-1-fast-reasoning"
+    model: str = "grok-4-1-fast-non-reasoning"
     endpoint: str = "https://api.x.ai/v1/chat/completions"
     timeout: float = 30.0
 
@@ -186,7 +186,7 @@ class XAIWorkClient(WorkAIClient):
 
     def generate(self, *, upper_verse: str, category: str, username: str, persona: str = "") -> str:
         """Generate a 7-7 lower verse with syllable validation."""
-        MAX_RETRIES = 3
+        MAX_RETRIES = 10
 
         # ペルソナが指定されていない場合はユーザー名をそのまま使用
         if not persona:
