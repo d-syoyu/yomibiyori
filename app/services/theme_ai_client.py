@@ -380,7 +380,7 @@ class XAIThemeClient(ThemeAIClient):
     """X.ai Grok-backed theme generator (OpenAI-compatible API)."""
 
     api_key: str
-    model: str = "grok-4-1-fast-reasoning"
+    model: str = "grok-4-1-fast"
     endpoint: str = "https://api.x.ai/v1/chat/completions"
     timeout: float = 30.0
 
