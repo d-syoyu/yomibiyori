@@ -15,14 +15,15 @@ import tweepy
 
 # 曜日→カテゴリのスケジュール（デフォルト設定）
 # 0=月曜, 1=火曜, ..., 6=日曜
+# カテゴリ名はDBに保存されている日本語名を使用
 DEFAULT_WEEKDAY_CATEGORY_SCHEDULE = {
-    0: "romance",   # 月曜: 恋愛
-    1: "season",    # 火曜: 季節
-    2: "daily",     # 水曜: 日常
-    3: "romance",   # 木曜: 恋愛
-    4: "daily",     # 金曜: 日常
-    5: "humor",     # 土曜: ユーモア
-    6: "humor",     # 日曜: ユーモア
+    0: "恋愛",     # 月曜: 恋愛
+    1: "季節",     # 火曜: 季節
+    2: "日常",     # 水曜: 日常
+    3: "恋愛",     # 木曜: 恋愛
+    4: "日常",     # 金曜: 日常
+    5: "ユーモア",  # 土曜: ユーモア
+    6: "ユーモア",  # 日曜: ユーモア
 }
 
 
@@ -208,12 +209,12 @@ def generate_tweet_text(theme: Theme) -> str:
     Returns:
         ツイート本文
     """
-    # カテゴリラベルと絵文字
+    # カテゴリラベルと絵文字（日本語カテゴリ名をキーとして使用）
     category_info = {
-        "romance": {"label": "恋愛", "emoji": "💕", "hashtag": "#恋愛"},
-        "season": {"label": "季節", "emoji": "🍃", "hashtag": "#季節"},
-        "daily": {"label": "日常", "emoji": "☕", "hashtag": "#日常"},
-        "humor": {"label": "ユーモア", "emoji": "😄", "hashtag": "#ユーモア"},
+        "恋愛": {"label": "恋愛", "emoji": "💕", "hashtag": "#恋愛"},
+        "季節": {"label": "季節", "emoji": "🍃", "hashtag": "#季節"},
+        "日常": {"label": "日常", "emoji": "☕", "hashtag": "#日常"},
+        "ユーモア": {"label": "ユーモア", "emoji": "😄", "hashtag": "#ユーモア"},
     }
 
     info = category_info.get(theme.category, {"label": theme.category, "emoji": "📖", "hashtag": ""})
@@ -242,9 +243,9 @@ def generate_tweet_text(theme: Theme) -> str:
     # アプリ誘導文言
     app_promo = "👇ほかのお題もよみびよりアプリで"
 
-    # カテゴリごとの投稿文（お題テキストは画像に含まれているため省略）
+    # カテゴリごとの投稿文（日本語カテゴリ名をキーとして使用）
     category_messages = {
-        "romance": f"""💕 {date_str}のお題【恋愛】{sponsor_suffix}
+        "恋愛": f"""💕 {date_str}のお題【恋愛】{sponsor_suffix}
 
 胸がときめく恋の一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -254,7 +255,7 @@ def generate_tweet_text(theme: Theme) -> str:
 
 #よみびより #短歌 #詩 #恋愛""",
 
-        "season": f"""🍃 {date_str}のお題【季節】{sponsor_suffix}
+        "季節": f"""🍃 {date_str}のお題【季節】{sponsor_suffix}
 
 季節の移ろいを感じる一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -264,7 +265,7 @@ def generate_tweet_text(theme: Theme) -> str:
 
 #よみびより #短歌 #詩 #季節""",
 
-        "daily": f"""☕ {date_str}のお題【日常】{sponsor_suffix}
+        "日常": f"""☕ {date_str}のお題【日常】{sponsor_suffix}
 
 何気ない日々の中にある美しさを詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -274,7 +275,7 @@ def generate_tweet_text(theme: Theme) -> str:
 
 #よみびより #短歌 #詩 #日常""",
 
-        "humor": f"""😄 {date_str}のお題【ユーモア】{sponsor_suffix}
+        "ユーモア": f"""😄 {date_str}のお題【ユーモア】{sponsor_suffix}
 
 クスッと笑える一首を詠んでみませんか？
 よみびよりアプリで下の句を投稿しよう！
@@ -347,12 +348,12 @@ def main():
         logger.error(f"No theme found for category '{target_category}' today")
         sys.exit(1)
 
-    # カテゴリラベル
+    # カテゴリラベル（日本語カテゴリ名をキーとして使用）
     category_labels = {
-        "romance": "恋愛",
-        "season": "季節",
-        "daily": "日常",
-        "humor": "ユーモア",
+        "恋愛": "恋愛",
+        "季節": "季節",
+        "日常": "日常",
+        "ユーモア": "ユーモア",
     }
 
     # X APIクライアントを初期化
