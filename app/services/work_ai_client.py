@@ -172,7 +172,7 @@ class XAIWorkClient(WorkAIClient):
     """X.ai Grok-backed lower verse generator."""
 
     api_key: str
-    model: str = "grok-4-1-fast-non-reasoning"
+    model: str = "grok-4-1-fast-reasoning"
     endpoint: str = "https://api.x.ai/v1/chat/completions"
     timeout: float = 30.0
 
