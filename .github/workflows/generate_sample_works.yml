@@ -40,8 +40,8 @@ jobs:
           # AI Provider configuration
           THEME_AI_PROVIDER: ${{ secrets.THEME_AI_PROVIDER }}
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-          XAI_MODEL: "grok-4-fast-reasoning"
-          XAI_TIMEOUT: "180.0"
+          XAI_MODEL: "grok-4-1-fast-reasoning"
+          XAI_TIMEOUT: "300.0"
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
           CLAUDE_TIMEOUT: "30.0"
