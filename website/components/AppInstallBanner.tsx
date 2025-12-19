@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 
 type Platform = 'ios' | 'android' | null;
@@ -22,6 +22,8 @@ const STORE_URLS: Record<'ios' | 'android', StoreConfig> = {
 };
 
 const BANNER_DISMISSED_KEY = 'app-install-banner-dismissed';
+const DEEP_LINK_URL = 'yomibiyori://';
+const TIMEOUT_MS = 2500;
 
 export function AppInstallBanner() {
   const [platform, setPlatform] = useState<Platform>(null);
@@ -64,9 +66,38 @@ export function AppInstallBanner() {
     }, 300);
   };
 
-  if (!isVisible || !platform) return null;
+  const handleOpenApp = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      if (!platform) return;
 
-  const store = STORE_URLS[platform];
+      const storeUrl = STORE_URLS[platform].url;
+      let isAppOpened = false;
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          isAppOpened = true;
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      // ディープリンクを試行
+      window.location.href = DEEP_LINK_URL;
+
+      // タイムアウト後にストアへリダイレクト
+      setTimeout(() => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+        if (!isAppOpened) {
+          window.location.href = storeUrl;
+        }
+      }, TIMEOUT_MS);
+    },
+    [platform]
+  );
+
+  if (!isVisible || !platform) return null;
 
   return (
     <div
@@ -99,12 +130,12 @@ export function AppInstallBanner() {
 
           {/* ボタン群 */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            <a
-              href={store.url}
+            <button
+              onClick={handleOpenApp}
               className="inline-flex items-center justify-center px-3 py-1.5 bg-[var(--color-ai)] text-white text-xs font-semibold rounded-full hover:bg-[var(--color-ai-medium)] transition-colors shadow-sm"
             >
               開く
-            </a>
+            </button>
             <button
               onClick={handleDismiss}
               className="p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-igusa)] transition-colors"
