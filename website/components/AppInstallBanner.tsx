@@ -12,11 +12,11 @@ interface StoreConfig {
 
 const STORE_URLS: Record<'ios' | 'android', StoreConfig> = {
   ios: {
-    url: 'https://apps.apple.com/us/app/%E3%82%88%E3%81%BF%E3%81%B3%E3%82%88%E3%82%8A/id6754638890',
+    url: 'https://apps.apple.com/jp/app/短歌アプリ-よみびより/id6754638890',
     label: 'App Store',
   },
   android: {
-    url: '', // Google Play URL（公開後に設定）
+    url: 'https://play.google.com/store/apps/details?id=com.yomibiyori.app&pcampaignid=web_share',
     label: 'Google Play',
   },
 };
@@ -46,14 +46,14 @@ export function AppInstallBanner() {
         setIsAnimating(true);
       }, 1500);
     }
-    // Android検出（公開後に有効化）
-    // else if (/Android/i.test(ua) && STORE_URLS.android.url) {
-    //   setPlatform('android');
-    //   setTimeout(() => {
-    //     setIsVisible(true);
-    //     setIsAnimating(true);
-    //   }, 1500);
-    // }
+    // Android検出
+    else if (/Android/i.test(ua) && STORE_URLS.android.url) {
+      setPlatform('android');
+      setTimeout(() => {
+        setIsVisible(true);
+        setIsAnimating(true);
+      }, 1500);
+    }
   }, []);
 
   const handleDismiss = () => {
