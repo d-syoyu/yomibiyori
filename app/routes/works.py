@@ -21,6 +21,7 @@ from app.schemas.work import (
     WorkLikeResponse,
     WorkLikeStatusResponse,
     WorkResponse,
+    WorkUpdate,
 )
 from app.services import likes as likes_service
 from app.services import works as works_service
@@ -200,4 +201,53 @@ def record_work_impression(
         redis_client=redis_client,
         work_id=work_id,
         payload=payload,
+    )
+
+
+@router.put(
+    "/{work_id}",
+    response_model=WorkResponse,
+    summary="Update a work",
+)
+def update_work(
+    work_id: str,
+    payload: WorkUpdate,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> WorkResponse:
+    """Update the text of an existing work owned by the authenticated user.
+
+    Only the owner can update their work. Likes and metrics are preserved.
+    """
+
+    return works_service.update_work(
+        session=session,
+        user_id=user_id,
+        work_id=work_id,
+        payload=payload,
+    )
+
+
+@router.delete(
+    "/{work_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a work",
+)
+def delete_work(
+    work_id: str,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+    redis_client: Annotated[Redis, Depends(get_redis_client)],
+) -> None:
+    """Delete a work owned by the authenticated user.
+
+    This removes the work from the database and cleans up related data
+    including likes, ranking entries (both Redis and confirmed snapshots).
+    """
+
+    works_service.delete_work(
+        session=session,
+        redis_client=redis_client,
+        user_id=user_id,
+        work_id=work_id,
     )

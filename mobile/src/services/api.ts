@@ -411,6 +411,15 @@ class ApiClient {
     return response.data;
   }
 
+  async updateWork(workId: string, data: { text: string }): Promise<Work> {
+    const response = await this.client.put<Work>(`/works/${workId}`, data);
+    return response.data;
+  }
+
+  async deleteWork(workId: string): Promise<void> {
+    await this.client.delete(`/works/${workId}`);
+  }
+
   // ==========================================================================
   // Ranking Endpoints
   // ==========================================================================

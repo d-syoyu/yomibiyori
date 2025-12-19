@@ -27,12 +27,15 @@ import type { SharePayload } from '../types/share';
 import api from '../services/api';
 import WorkCard from '../components/WorkCard';
 import ShareSheet from '../components/ShareSheet';
+import EditWorkModal from '../components/EditWorkModal';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import { useThemeStore } from '../stores/useThemeStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
 import TutorialModal from '../components/TutorialModal';
 import { createProfileSharePayload } from '../utils/share';
+import { useToastStore } from '../stores/useToastStore';
 
 type MyPoemsScreenNavigationProp = NativeStackNavigationProp<MyPoemsStackParamList, 'MyPoemsList'>;
 
@@ -61,6 +64,14 @@ export default function MyPoemsScreen() {
   const [tutorialModalVisible, setTutorialModalVisible] = useState(false);
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
+
+  // Edit/Delete modals
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedWork, setSelectedWork] = useState<{ work: Work; theme?: Theme } | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { showSuccess, showError } = useToastStore();
 
   useFocusEffect(
     useCallback(() => {
@@ -193,6 +204,101 @@ export default function MyPoemsScreen() {
   const closeShareSheet = useCallback(() => {
     setShareSheetVisible(false);
     setSharePayload(null);
+  }, []);
+
+  // Edit handlers
+  const handleEditPress = useCallback((work: Work, theme?: Theme) => {
+    setSelectedWork({ work, theme });
+    setEditModalVisible(true);
+  }, []);
+
+  const handleEditSave = useCallback(async (text: string) => {
+    if (!selectedWork) return;
+    setIsUpdating(true);
+    try {
+      await api.updateWork(selectedWork.work.id, { text });
+      // Update local cache
+      setDateWorksCache(prev => {
+        const newCache = new Map(prev);
+        for (const [date, cached] of newCache) {
+          const updatedWorks = cached.works.map(item => {
+            if (item.work.id === selectedWork.work.id) {
+              return { ...item, work: { ...item.work, text } };
+            }
+            return item;
+          });
+          newCache.set(date, { ...cached, works: updatedWorks });
+        }
+        return newCache;
+      });
+      setEditModalVisible(false);
+      setSelectedWork(null);
+      showSuccess('作品を更新しました');
+      trackEvent('work_updated', {
+        work_id: selectedWork.work.id,
+      });
+    } catch (error: any) {
+      handleError(error, 'update_work', '作品の更新に失敗しました');
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [selectedWork, handleError, showSuccess]);
+
+  const handleEditClose = useCallback(() => {
+    setEditModalVisible(false);
+    setSelectedWork(null);
+  }, []);
+
+  // Delete handlers
+  const handleDeletePress = useCallback((work: Work, theme?: Theme) => {
+    setSelectedWork({ work, theme });
+    setDeleteModalVisible(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!selectedWork) return;
+    setIsDeleting(true);
+    try {
+      await api.deleteWork(selectedWork.work.id);
+      // Remove from local cache
+      const workThemeDate = selectedWork.theme?.date;
+      setDateWorksCache(prev => {
+        const newCache = new Map(prev);
+        for (const [date, cached] of newCache) {
+          const filteredWorks = cached.works.filter(item => item.work.id !== selectedWork.work.id);
+          newCache.set(date, { ...cached, works: filteredWorks });
+        }
+        return newCache;
+      });
+      // Update summary
+      if (workThemeDate) {
+        setDateSummaries(prev => prev.map(summary => {
+          if (summary.date === workThemeDate) {
+            return {
+              ...summary,
+              works_count: Math.max(0, summary.works_count - 1),
+              total_likes: Math.max(0, summary.total_likes - (selectedWork.work.likes_count || 0)),
+            };
+          }
+          return summary;
+        }).filter(summary => summary.works_count > 0));
+      }
+      setDeleteModalVisible(false);
+      setSelectedWork(null);
+      showSuccess('作品を削除しました');
+      trackEvent('work_deleted', {
+        work_id: selectedWork.work.id,
+      });
+    } catch (error: any) {
+      handleError(error, 'delete_work', '作品の削除に失敗しました');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedWork, handleError, showSuccess]);
+
+  const handleDeleteClose = useCallback(() => {
+    setDeleteModalVisible(false);
+    setSelectedWork(null);
   }, []);
 
   const toggleDateExpansion = async (date: string) => {
@@ -419,7 +525,36 @@ export default function MyPoemsScreen() {
                                   Linking.openURL(theme.sponsor_official_url);
                                 }}
                                 likesCount={work.likes_count}
-                                onShare={() => openShareSheet(work, theme)}
+                                customActions={
+                                  <View style={styles.workCardActions}>
+                                    <TouchableOpacity
+                                      style={styles.actionButton}
+                                      onPress={() => handleDeletePress(work, theme)}
+                                      accessibilityLabel="削除"
+                                    >
+                                      <Ionicons name="trash-outline" size={20} color={colors.status.error} />
+                                    </TouchableOpacity>
+                                    <View style={styles.actionSpacer} />
+                                    <TouchableOpacity
+                                      style={styles.actionButton}
+                                      onPress={() => openShareSheet(work, theme)}
+                                      accessibilityLabel="共有"
+                                    >
+                                      <Ionicons name="share-outline" size={20} color={colors.text.secondary} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={styles.actionButton}
+                                      onPress={() => handleEditPress(work, theme)}
+                                      accessibilityLabel="編集"
+                                    >
+                                      <Ionicons name="pencil-outline" size={20} color={colors.text.secondary} />
+                                    </TouchableOpacity>
+                                    <View style={styles.likeBadge}>
+                                      <Ionicons name="heart" size={14} color={colors.status.error} />
+                                      <Text style={styles.likeText}>{work.likes_count}</Text>
+                                    </View>
+                                  </View>
+                                }
                               />
                             ))
                           ) : (
@@ -449,6 +584,23 @@ export default function MyPoemsScreen() {
           visible={shareSheetVisible}
           payload={sharePayload}
           onClose={closeShareSheet}
+        />
+
+        {/* Edit Work Modal */}
+        <EditWorkModal
+          visible={editModalVisible}
+          work={selectedWork?.work ?? null}
+          onClose={handleEditClose}
+          onSave={handleEditSave}
+          isSaving={isUpdating}
+        />
+
+        {/* Delete Confirm Modal */}
+        <DeleteConfirmModal
+          visible={deleteModalVisible}
+          onClose={handleDeleteClose}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
         />
       </View>
     </SafeAreaView>
@@ -726,5 +878,34 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     color: colors.text.inverse,
     letterSpacing: 0.5,
+  },
+  workCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  actionSpacer: {
+    flex: 1,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.8,
+  },
+  likeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.background.secondary,
+  },
+  likeText: {
+    fontSize: fontSize.bodySmall,
+    fontFamily: fontFamily.semiBold,
+    color: colors.status.error,
   },
 });

@@ -24,6 +24,17 @@ class WorkCreate(BaseModel):
     )
 
 
+class WorkUpdate(BaseModel):
+    """Payload for updating a work (lower verse / 下の句)."""
+
+    text: str = Field(
+        ...,
+        min_length=1,
+        max_length=40,
+        description="Updated lower verse (下の句) text",
+    )
+
+
 class WorkResponse(BaseModel):
     """Public representation of a work (lower verse / 下の句)."""
 

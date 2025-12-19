@@ -594,3 +594,303 @@ def test_record_work_impression_missing_work(client: TestClient) -> None:
     )
     assert response.status_code == 404
     assert response.json()["error"]["detail"] == "作品が見つかりませんでした"
+
+
+# ============================================================
+# Update Work Tests
+# ============================================================
+
+
+def test_update_work_success(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that owner can update their work text."""
+    user = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 23))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 23, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    headers = _auth_headers(user.id)
+    original_text = "morning mist veils the sleeping hills"
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": original_text},
+        headers=headers,
+    )
+    assert creation.status_code == 201
+    work_id = creation.json()["id"]
+
+    new_text = "evening rain paints the quiet streets"
+    response = client.put(
+        f"/api/v1/works/{work_id}",
+        json={"text": new_text},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == work_id
+    assert payload["text"] == new_text
+    assert payload["user_id"] == user.id
+
+    stored = db_session.query(Work).filter(Work.id == work_id).one()
+    assert stored.text == new_text
+
+
+def test_update_work_not_owner(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that non-owner cannot update another user's work."""
+    owner = _create_user(db_session)
+    other_user = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 24))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 24, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "twilight hush echoes through the valley"},
+        headers=_auth_headers(owner.id),
+    )
+    work_id = creation.json()["id"]
+
+    response = client.put(
+        f"/api/v1/works/{work_id}",
+        json={"text": "attempted hijack text"},
+        headers=_auth_headers(other_user.id),
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["detail"] == "この作品を編集する権限がありません"
+
+
+def test_update_work_not_found(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    """Test that updating non-existent work returns 404."""
+    user = _create_user(db_session)
+    fake_id = str(uuid4())
+
+    response = client.put(
+        f"/api/v1/works/{fake_id}",
+        json={"text": "ghost text for ghost work"},
+        headers=_auth_headers(user.id),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"]["detail"] == "作品が見つかりませんでした"
+
+
+def test_update_work_preserves_likes(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that editing a work preserves existing likes."""
+    author = _create_user(db_session)
+    liker = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 25))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 25, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "starlight whispers across the sea"},
+        headers=_auth_headers(author.id),
+    )
+    work_id = creation.json()["id"]
+
+    # Add a like
+    like_response = client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(liker.id),
+    )
+    assert like_response.status_code == 200
+    assert like_response.json()["likes_count"] == 1
+
+    # Update the work
+    update_response = client.put(
+        f"/api/v1/works/{work_id}",
+        json={"text": "moonlight dances on the silver waves"},
+        headers=_auth_headers(author.id),
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["likes_count"] == 1
+
+    # Verify like still exists in database
+    assert db_session.query(Like).filter(Like.work_id == work_id).count() == 1
+
+
+# ============================================================
+# Delete Work Tests
+# ============================================================
+
+
+def test_delete_work_success(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that owner can delete their work."""
+    user = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 26))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 26, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    headers = _auth_headers(user.id)
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "fleeting dreams dissolve at dawn"},
+        headers=headers,
+    )
+    work_id = creation.json()["id"]
+
+    response = client.delete(
+        f"/api/v1/works/{work_id}",
+        headers=headers,
+    )
+
+    assert response.status_code == 204
+    assert db_session.query(Work).filter(Work.id == work_id).first() is None
+
+
+def test_delete_work_not_owner(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that non-owner cannot delete another user's work."""
+    owner = _create_user(db_session)
+    other_user = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 27))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 27, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "gentle rain soothes the weary soul"},
+        headers=_auth_headers(owner.id),
+    )
+    work_id = creation.json()["id"]
+
+    response = client.delete(
+        f"/api/v1/works/{work_id}",
+        headers=_auth_headers(other_user.id),
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["detail"] == "この作品を削除する権限がありません"
+
+
+def test_delete_work_not_found(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+) -> None:
+    """Test that deleting non-existent work returns 404."""
+    user = _create_user(db_session)
+    fake_id = str(uuid4())
+
+    response = client.delete(
+        f"/api/v1/works/{fake_id}",
+        headers=_auth_headers(user.id),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"]["detail"] == "作品が見つかりませんでした"
+
+
+def test_delete_work_removes_from_ranking(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that deleting a work removes it from Redis ranking."""
+    author = _create_user(db_session)
+    liker = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 28))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 28, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "autumn leaves drift on silent winds"},
+        headers=_auth_headers(author.id),
+    )
+    work_id = creation.json()["id"]
+
+    # Add like to ensure work is in ranking
+    client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(liker.id),
+    )
+
+    # Verify work is in ranking
+    ranking_key = f"{settings.redis_ranking_prefix}{theme.id}"
+    assert redis_client.zscore(ranking_key, work_id) is not None
+
+    # Delete the work
+    response = client.delete(
+        f"/api/v1/works/{work_id}",
+        headers=_auth_headers(author.id),
+    )
+    assert response.status_code == 204
+
+    # Verify work is removed from ranking
+    assert redis_client.zscore(ranking_key, work_id) is None
+    assert redis_client.exists(f"metrics:{work_id}") == 0
+
+
+def test_delete_work_cascades_likes(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that deleting a work also deletes associated likes."""
+    author = _create_user(db_session)
+    liker1 = _create_user(db_session)
+    liker2 = _create_user(db_session)
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 29))
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 29, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "cherry blossoms fall softly"},
+        headers=_auth_headers(author.id),
+    )
+    assert creation.status_code == 201
+    work_id = creation.json()["id"]
+
+    # Add multiple likes
+    client.post(f"/api/v1/works/{work_id}/like", headers=_auth_headers(liker1.id))
+    client.post(f"/api/v1/works/{work_id}/like", headers=_auth_headers(liker2.id))
+
+    assert db_session.query(Like).filter(Like.work_id == work_id).count() == 2
+
+    # Delete the work
+    response = client.delete(
+        f"/api/v1/works/{work_id}",
+        headers=_auth_headers(author.id),
+    )
+    assert response.status_code == 204
+
+    # Verify likes are also deleted
+    assert db_session.query(Like).filter(Like.work_id == work_id).count() == 0

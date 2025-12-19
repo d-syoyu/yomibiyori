@@ -3,24 +3,25 @@
 from __future__ import annotations
 
 from datetime import datetime, time, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from redis import Redis
 from fastapi import HTTPException, status
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import logger
 from app.core.analytics import track_event, EventNames, is_sample_account, get_email_domain
-from app.models import Like, Theme, User, Work
+from app.models import Like, Ranking, Theme, User, Work
 from app.schemas.work import (
     WorkCreate,
     WorkDateSummary,
     WorkImpressionRequest,
     WorkImpressionResponse,
     WorkResponse,
+    WorkUpdate,
 )
 
 SUBMISSION_START = time(hour=6, minute=0)
@@ -496,3 +497,156 @@ def record_impression(
         impressions_count=impressions_total,
         unique_viewers_count=max(unique_viewers, 0),
     )
+
+
+def update_work(
+    session: Session,
+    *,
+    user_id: str,
+    work_id: str,
+    payload: WorkUpdate,
+) -> WorkResponse:
+    """Update the text of an existing work owned by the authenticated user.
+
+    Args:
+        session: Database session
+        user_id: Authenticated user ID
+        work_id: Work identifier to update
+        payload: Update payload with new text
+
+    Returns:
+        Updated work with likes count
+
+    Raises:
+        HTTPException: 404 if work not found, 403 if not owner
+    """
+    work = session.get(Work, work_id)
+    if not work:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="作品が見つかりませんでした",
+        )
+
+    if work.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="この作品を編集する権限がありません",
+        )
+
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="下の句を入力してください",
+        )
+    if len(text) > 40:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="下の句は40文字以内で入力してください",
+        )
+
+    work.text = text
+    work.updated_at = datetime.now(timezone.utc)
+    session.commit()
+    session.refresh(work)
+
+    likes_count = session.execute(
+        select(func.count(Like.id)).where(Like.work_id == work_id)
+    ).scalar_one()
+
+    user = session.get(User, user_id)
+    display_name = user.name if user and user.name else user.email if user else "Unknown"
+
+    if user and not user.analytics_opt_out:
+        try:
+            track_event(
+                distinct_id=user_id,
+                event_name="work_updated",
+                properties={
+                    "work_id": str(work.id),
+                    "theme_id": str(work.theme_id),
+                    "text_length": len(text),
+                },
+            )
+        except Exception as exc:
+            logger.error(f"[Analytics] Failed to track work update: {exc}")
+
+    return WorkResponse(
+        id=str(work.id),
+        user_id=str(work.user_id),
+        theme_id=str(work.theme_id),
+        text=work.text,
+        created_at=work.created_at,
+        likes_count=likes_count,
+        display_name=display_name,
+    )
+
+
+def delete_work(
+    session: Session,
+    *,
+    redis_client: Redis,
+    user_id: str,
+    work_id: str,
+) -> None:
+    """Delete a work owned by the authenticated user and clean up related data.
+
+    Args:
+        session: Database session
+        redis_client: Redis client for cleaning up ranking data
+        user_id: Authenticated user ID
+        work_id: Work identifier to delete
+
+    Raises:
+        HTTPException: 404 if work not found, 403 if not owner
+    """
+    work = session.get(Work, work_id)
+    if not work:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="作品が見つかりませんでした",
+        )
+
+    if work.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="この作品を削除する権限がありません",
+        )
+
+    theme_id = work.theme_id
+
+    # Track analytics before deletion (get user info)
+    user = session.get(User, user_id)
+    if user and not user.analytics_opt_out:
+        try:
+            track_event(
+                distinct_id=user_id,
+                event_name="work_deleted",
+                properties={
+                    "work_id": work_id,
+                    "theme_id": str(theme_id),
+                },
+            )
+        except Exception as exc:
+            logger.error(f"[Analytics] Failed to track work deletion: {exc}")
+
+    # Delete from rankings table (confirmed ranking snapshots)
+    session.execute(delete(Ranking).where(Ranking.work_id == UUID(work_id)))
+
+    # Delete work (likes are CASCADE deleted)
+    session.delete(work)
+    session.commit()
+
+    # Clean up Redis data (best-effort)
+    settings = get_settings()
+    ranking_key = f"{settings.redis_ranking_prefix}{theme_id}"
+    metrics_key = f"metrics:{work_id}"
+
+    try:
+        pipeline = redis_client.pipeline()
+        pipeline.zrem(ranking_key, work_id)
+        pipeline.delete(metrics_key)
+        pipeline.execute()
+        logger.info(f"[Works] Cleaned up Redis data for deleted work {work_id}")
+    except Exception as exc:
+        logger.error(f"[Works] Failed to clean Redis for work {work_id}: {exc}")
