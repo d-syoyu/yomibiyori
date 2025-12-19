@@ -237,8 +237,8 @@ def generate_tweet_text(theme: Theme) -> str:
     if theme.sponsored and theme.sponsor_company_name:
         sponsor_suffix = f" (提供: {theme.sponsor_company_name}様)"
 
-    # App Store URL
-    app_store_url = "https://apps.apple.com/jp/app/%E3%82%88%E3%81%BF%E3%81%B3%E3%82%88%E3%82%8A/id6754638890"
+    # ダウンロードページURL
+    download_url = "https://yomibiyori.app/download"
 
     # アプリ誘導文言
     app_promo = "👇ほかのお題もよみびよりアプリで"
@@ -251,7 +251,7 @@ def generate_tweet_text(theme: Theme) -> str:
 よみびよりアプリで下の句を投稿しよう！
 
 {app_promo}
-{app_store_url}
+{download_url}
 
 #よみびより #短歌 #詩 #恋愛""",
 
@@ -261,7 +261,7 @@ def generate_tweet_text(theme: Theme) -> str:
 よみびよりアプリで下の句を投稿しよう！
 
 {app_promo}
-{app_store_url}
+{download_url}
 
 #よみびより #短歌 #詩 #季節""",
 
@@ -271,7 +271,7 @@ def generate_tweet_text(theme: Theme) -> str:
 よみびよりアプリで下の句を投稿しよう！
 
 {app_promo}
-{app_store_url}
+{download_url}
 
 #よみびより #短歌 #詩 #日常""",
 
@@ -281,7 +281,7 @@ def generate_tweet_text(theme: Theme) -> str:
 よみびよりアプリで下の句を投稿しよう！
 
 {app_promo}
-{app_store_url}
+{download_url}
 
 #よみびより #短歌 #詩 #ユーモア""",
     }
@@ -293,7 +293,7 @@ def generate_tweet_text(theme: Theme) -> str:
 
 よみびよりアプリで下の句を詠んでみませんか？
 
-{app_store_url}
+{download_url}
 
 #よみびより #短歌 #詩"""
     )

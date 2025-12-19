@@ -239,7 +239,7 @@ def generate_tweet_text(theme: Theme, author: User) -> str:
 作者: {author_name} さん
 
 他の素敵な作品もアプリでチェック！
-https://apps.apple.com/jp/app/%E3%82%88%E3%81%BF%E3%81%B3%E3%82%88%E3%82%8A/id6754638890
+https://yomibiyori.app/download
 
 #よみびより #短歌 #詩"""
 
