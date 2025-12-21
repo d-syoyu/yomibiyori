@@ -527,23 +527,7 @@ def update_work(
             detail="作品が見つかりませんでした",
         )
 
-    # Debug: Log exact comparison details
-    logger.info(
-        "Comparing user_id=%r (type=%s) vs work.user_id=%r (type=%s) equal=%s",
-        user_id,
-        type(user_id).__name__,
-        work.user_id,
-        type(work.user_id).__name__,
-        str(work.user_id) == str(user_id),
-    )
-
     if str(work.user_id) != str(user_id):
-        logger.warning(
-            "User %s attempted to edit work %s owned by %s",
-            user_id,
-            work_id,
-            work.user_id,
-        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="この作品を編集する権限がありません",
@@ -623,7 +607,7 @@ def delete_work(
             detail="作品が見つかりませんでした",
         )
 
-    if work.user_id != user_id:
+    if str(work.user_id) != str(user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="この作品を削除する権限がありません",
