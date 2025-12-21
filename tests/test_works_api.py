@@ -267,7 +267,7 @@ def test_submit_work_too_long(
 
     assert response.status_code == 422
     error = response.json()["error"]
-    assert "40" in error["detail"]  # Pydantic validation error
+    assert "50" in error["detail"]  # Pydantic validation error
 
 
 def test_list_works_returns_likes_count(

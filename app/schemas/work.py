@@ -19,8 +19,8 @@ class WorkCreate(BaseModel):
     text: str = Field(
         ...,
         min_length=1,
-        max_length=40,
-        description="Lower verse (下の句) text, ideally 7-7 syllables to continue the theme's upper verse (<= 40 chars)",
+        max_length=50,
+        description="Lower verse (下の句) text, ideally 7-7 syllables to continue the theme's upper verse",
     )
 
 
@@ -30,7 +30,7 @@ class WorkUpdate(BaseModel):
     text: str = Field(
         ...,
         min_length=1,
-        max_length=40,
+        max_length=50,
         description="Updated lower verse (下の句) text",
     )
 

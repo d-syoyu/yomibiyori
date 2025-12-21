@@ -1,6 +1,6 @@
 /**
  * Edit Work Modal Component
- * Allows users to edit their work text
+ * Allows users to edit their work text (line by line like CompositionScreen)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Work } from '../types';
+import { colors, spacing, borderRadius, fontSize, fontFamily } from '../theme';
 
 // ============================================================================
 // Types
@@ -30,7 +31,30 @@ interface EditWorkModalProps {
   isSaving: boolean;
 }
 
-const MAX_TEXT_LENGTH = 40;
+const MAX_LINE_LENGTH = 20;
+
+// ============================================================================
+// Helper functions
+// ============================================================================
+
+/**
+ * Parse work text into two lines
+ * work.text format: "${line1} \n${line2} "
+ */
+function parseWorkText(text: string): { line1: string; line2: string } {
+  const lines = text.split('\n');
+  return {
+    line1: lines[0]?.trim() || '',
+    line2: lines[1]?.trim() || '',
+  };
+}
+
+/**
+ * Combine two lines into work text format
+ */
+function combineLines(line1: string, line2: string): string {
+  return `${line1.trim()} \n${line2.trim()} `;
+}
 
 // ============================================================================
 // Edit Work Modal Component
@@ -43,29 +67,34 @@ export default function EditWorkModal({
   onSave,
   isSaving,
 }: EditWorkModalProps) {
-  const [text, setText] = useState('');
+  const [line1, setLine1] = useState('');
+  const [line2, setLine2] = useState('');
 
-  // Initialize text when work changes
+  // Initialize lines when work changes
   useEffect(() => {
     if (work) {
-      setText(work.text);
+      const { line1: l1, line2: l2 } = parseWorkText(work.text);
+      setLine1(l1);
+      setLine2(l2);
     }
   }, [work]);
 
   const handleSave = async () => {
-    const trimmedText = text.trim();
-    if (trimmedText && trimmedText.length <= MAX_TEXT_LENGTH) {
-      await onSave(trimmedText);
+    if (line1.trim() && line2.trim()) {
+      const combinedText = combineLines(line1, line2);
+      await onSave(combinedText);
     }
   };
 
   const handleClose = () => {
-    setText('');
+    setLine1('');
+    setLine2('');
     onClose();
   };
 
-  const isValid = text.trim().length > 0 && text.trim().length <= MAX_TEXT_LENGTH;
-  const isChanged = work && text.trim() !== work.text;
+  const isValid = line1.trim().length > 0 && line2.trim().length > 0;
+  const originalParsed = work ? parseWorkText(work.text) : { line1: '', line2: '' };
+  const isChanged = line1.trim() !== originalParsed.line1 || line2.trim() !== originalParsed.line2;
 
   return (
     <Modal
@@ -94,21 +123,40 @@ export default function EditWorkModal({
 
           {/* Content */}
           <View style={styles.content}>
-            <Text style={styles.label}>下の句</Text>
-            <TextInput
-              style={styles.textInput}
-              value={text}
-              onChangeText={setText}
-              placeholder="下の句を入力..."
-              placeholderTextColor="#A0AEC0"
-              maxLength={MAX_TEXT_LENGTH}
-              multiline
-              autoFocus
-              editable={!isSaving}
-            />
-            <Text style={[styles.charCount, text.length > MAX_TEXT_LENGTH && styles.charCountError]}>
-              {text.length} / {MAX_TEXT_LENGTH}
-            </Text>
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>下の句（第一句：7音）</Text>
+              <TextInput
+                style={styles.textInput}
+                value={line1}
+                onChangeText={setLine1}
+                placeholder="第一句を入力"
+                placeholderTextColor="#A0AEC0"
+                maxLength={MAX_LINE_LENGTH}
+                multiline
+                autoFocus
+                editable={!isSaving}
+              />
+              <Text style={[styles.charCount, line1.length > MAX_LINE_LENGTH && styles.charCountError]}>
+                {line1.length} / {MAX_LINE_LENGTH}
+              </Text>
+            </View>
+
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>下の句（第二句：7音）</Text>
+              <TextInput
+                style={styles.textInput}
+                value={line2}
+                onChangeText={setLine2}
+                placeholder="第二句を入力"
+                placeholderTextColor="#A0AEC0"
+                maxLength={MAX_LINE_LENGTH}
+                multiline
+                editable={!isSaving}
+              />
+              <Text style={[styles.charCount, line2.length > MAX_LINE_LENGTH && styles.charCountError]}>
+                {line2.length} / {MAX_LINE_LENGTH}
+              </Text>
+            </View>
           </View>
 
           {/* Footer */}
@@ -152,7 +200,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.primary,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 40,
@@ -161,85 +209,89 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.background.secondary,
   },
   closeButton: {
-    padding: 8,
+    padding: spacing.sm,
   },
   title: {
-    fontSize: 18,
-    fontFamily: 'NotoSerifJP_600SemiBold',
-    color: '#2D3748',
+    fontSize: fontSize.h2,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
   },
   placeholder: {
     width: 40,
   },
   content: {
-    padding: 20,
+    padding: spacing.lg,
+  },
+  inputSection: {
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 14,
-    fontFamily: 'NotoSerifJP_500Medium',
-    color: '#4A5568',
-    marginBottom: 8,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    letterSpacing: 0.5,
   },
   textInput: {
-    backgroundColor: '#F7FAFC',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 18,
-    fontFamily: 'NotoSerifJP_400Regular',
-    color: '#2D3748',
-    minHeight: 100,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    color: colors.text.primary,
+    minHeight: 60,
     textAlignVertical: 'top',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.background.secondary,
   },
   charCount: {
-    fontSize: 12,
-    fontFamily: 'NotoSerifJP_400Regular',
-    color: '#718096',
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
     textAlign: 'right',
-    marginTop: 8,
+    marginTop: spacing.xs,
   },
   charCountError: {
-    color: '#E53E3E',
+    color: colors.status.error,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    gap: 12,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   cancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: '#EDF2F7',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.secondary,
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontFamily: 'NotoSerifJP_500Medium',
-    color: '#4A5568',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.medium,
+    color: colors.text.secondary,
   },
   saveButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: '#4A5568',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.text.primary,
     minWidth: 80,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#CBD5E0',
+    backgroundColor: colors.background.secondary,
   },
   saveButtonText: {
-    fontSize: 16,
-    fontFamily: 'NotoSerifJP_500Medium',
-    color: '#FFFFFF',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.medium,
+    color: colors.text.inverse,
   },
 });
