@@ -528,6 +528,12 @@ def update_work(
         )
 
     if work.user_id != user_id:
+        logger.warning(
+            "User %s attempted to edit work %s owned by %s",
+            user_id,
+            work_id,
+            work.user_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="この作品を編集する権限がありません",
@@ -539,10 +545,10 @@ def update_work(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="下の句を入力してください",
         )
-    if len(text) > 40:
+    if len(text) > 50:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="下の句は40文字以内で入力してください",
+            detail="下の句は50文字以内で入力してください",
         )
 
     work.text = text
