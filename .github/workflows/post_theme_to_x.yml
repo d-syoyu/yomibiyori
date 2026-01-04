@@ -27,6 +27,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install --no-cache-dir -e .
 
+      - name: Random delay to avoid automation detection
+        if: github.event_name == 'schedule'
+        run: |
+          # 10分〜60分の間で10分間隔のランダム遅延
+          DELAY_MINUTES=$(( (RANDOM % 6 + 1) * 10 ))
+          DELAY_SECONDS=$((DELAY_MINUTES * 60))
+          echo "Waiting ${DELAY_MINUTES} minutes (${DELAY_SECONDS} seconds) to avoid automation detection..."
+          sleep $DELAY_SECONDS
+
       - name: Post theme to X
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

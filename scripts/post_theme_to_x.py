@@ -7,6 +7,7 @@ import os
 import sys
 import logging
 import json
+import random
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
@@ -147,30 +148,77 @@ class XAPIClient:
                 logger.error(f"Response: {e.response}")
             return None
 
-    def post_tweet(self, text: str, media_ids: Optional[list[str]] = None) -> bool:
+    def post_tweet(
+        self,
+        text: str,
+        media_ids: Optional[list[str]] = None,
+        max_retries: int = 3,
+        initial_delay: float = 5.0,
+    ) -> bool:
         """
-        ツイートを投稿
+        ツイートを投稿（リトライ機能付き）
 
         Args:
             text: ツイート本文
             media_ids: 添付メディアIDリスト
+            max_retries: 最大リトライ回数
+            initial_delay: 初回リトライ前の待機秒数（指数バックオフ）
 
         Returns:
             成功したかどうか
         """
-        try:
-            # API v2でツイート投稿
-            response = self.client.create_tweet(
-                text=text,
-                media_ids=media_ids
-            )
-            logger.info(f"Tweet posted successfully: {response.data}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to post tweet: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response: {e.response}")
-            return False
+        import time
+
+        for attempt in range(max_retries):
+            try:
+                # API v2でツイート投稿
+                response = self.client.create_tweet(
+                    text=text,
+                    media_ids=media_ids
+                )
+                logger.info(f"Tweet posted successfully: {response.data}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to post tweet (attempt {attempt + 1}/{max_retries}): {e}")
+
+                # 詳細なエラー情報をログ出力
+                error_code = None
+                if hasattr(e, 'response') and e.response is not None:
+                    logger.error(f"Response status: {e.response.status_code}")
+                    try:
+                        error_json = e.response.json()
+                        logger.error(f"Error details: {json.dumps(error_json, ensure_ascii=False)}")
+                        # X APIのエラーコードを抽出
+                        if 'errors' in error_json:
+                            for err in error_json['errors']:
+                                error_code = err.get('code')
+                                logger.error(f"X API error code: {error_code}, message: {err.get('message')}")
+                    except Exception:
+                        try:
+                            logger.error(f"Response text: {e.response.text}")
+                        except Exception:
+                            pass
+
+                if hasattr(e, 'api_errors'):
+                    logger.error(f"API errors: {e.api_errors}")
+                if hasattr(e, 'api_codes'):
+                    logger.error(f"API codes: {e.api_codes}")
+                if hasattr(e, 'api_messages'):
+                    logger.error(f"API messages: {e.api_messages}")
+
+                # 重複投稿エラー(187)の場合はリトライしても無駄なので終了
+                if error_code == 187:
+                    logger.error("Duplicate tweet detected (error code 187), skipping retries")
+                    return False
+
+                # リトライ可能な場合は待機してリトライ
+                if attempt < max_retries - 1:
+                    wait_time = initial_delay * (2 ** attempt)  # 5, 10, 20秒
+                    logger.info(f"Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+
+        logger.error(f"All {max_retries} retry attempts failed")
+        return False
 
 
 def get_today_themes() -> list[Theme]:
@@ -297,6 +345,15 @@ def generate_tweet_text(theme: Theme) -> str:
 
 #よみびより #短歌 #詩"""
     )
+
+    # 変動要素を追加（重複投稿検出を回避）
+    # 現在時刻を目立たない形でハッシュタグの後に追加
+    now_jst = datetime.now(jst)
+    time_marker = now_jst.strftime("%H%M")
+    # ランダムな装飾絵文字を選択
+    decorations = ["✨", "🌟", "💫", "⭐", "🎵", "🎶", "📝", "🖋️"]
+    random_decoration = random.choice(decorations)
+    tweet_text = f"{tweet_text} {random_decoration}"
 
     return tweet_text
 
