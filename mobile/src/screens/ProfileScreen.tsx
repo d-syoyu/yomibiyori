@@ -37,6 +37,7 @@ import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const logout = useAuthStore(state => state.logout);
+  const refreshProfile = useAuthStore(state => state.refreshProfile);
   const { width, height } = useWindowDimensions();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -228,6 +229,8 @@ export default function ProfileScreen() {
 
       const response = await api.uploadAvatar(formData);
       setProfileImageUrl(response.profile_image_url);
+      // Refresh auth store to update user profile across the app
+      await refreshProfile();
       showSuccess('プロフィール画像を更新しました');
     } catch (error: any) {
       console.error('[ProfileScreen] Failed to upload avatar:', error);

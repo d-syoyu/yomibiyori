@@ -62,6 +62,7 @@ interface AuthState {
   logout: () => Promise<void>;
   loadStoredSession: () => Promise<void>;
   updateProfile: (data: UpdateProfileRequest) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   clearError: () => void;
   ensureValidToken: () => Promise<void>;
 }
@@ -459,6 +460,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: errorMessage,
       });
       throw err;
+    }
+  },
+
+  // Refresh user profile from API (used after avatar upload etc.)
+  refreshProfile: async () => {
+    try {
+      const freshProfile = await api.getUserProfile();
+
+      // Update stored profile securely
+      await setSecureItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
+
+      set({
+        user: freshProfile,
+      });
+
+      logger.debug('[Auth] Profile refreshed successfully');
+    } catch (err: unknown) {
+      logger.error('[Auth] Failed to refresh profile:', err);
+      // Don't throw - just log the error
     }
   },
 
