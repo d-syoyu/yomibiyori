@@ -331,6 +331,7 @@ def _build_user_profile_response(user: User) -> UserProfileResponse:
         analytics_opt_out=user.analytics_opt_out,
         notify_theme_release=user.notify_theme_release,
         notify_ranking_result=user.notify_ranking_result,
+        profile_image_url=user.profile_image_url,
     )
 
 
