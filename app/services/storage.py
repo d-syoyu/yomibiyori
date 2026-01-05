@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 from typing import BinaryIO
 
@@ -12,6 +13,8 @@ from fastapi import HTTPException, status
 from PIL import Image
 
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 # Maximum avatar file size: 5MB
@@ -27,7 +30,11 @@ class StorageService:
 
     def __init__(self) -> None:
         settings = get_settings()
+        logger.info(f"[StorageService] Initializing with r2_account_id={settings.r2_account_id}")
+        logger.info(f"[StorageService] r2_bucket_name={settings.r2_bucket_name}")
+        logger.info(f"[StorageService] r2_public_url={settings.r2_public_url!r}")
         if not all([settings.r2_account_id, settings.r2_access_key_id, settings.r2_secret_access_key]):
+            logger.warning("[StorageService] R2 credentials not configured, storage disabled")
             self._client = None
             self._bucket = None
             self._public_url = None
@@ -42,6 +49,7 @@ class StorageService:
         )
         self._bucket = settings.r2_bucket_name
         self._public_url = settings.r2_public_url
+        logger.info(f"[StorageService] Initialized: bucket={self._bucket}, public_url={self._public_url!r}")
 
     @property
     def is_configured(self) -> bool:
@@ -106,10 +114,14 @@ class StorageService:
 
             # Return public URL
             if self._public_url:
-                return f"{self._public_url}/{key}"
+                url = f"{self._public_url}/{key}"
+                logger.info(f"[StorageService] Using configured public_url: {url}")
+                return url
             else:
                 # Fallback: use R2 public access URL format
-                return f"https://{self._bucket}.r2.dev/{key}"
+                url = f"https://{self._bucket}.r2.dev/{key}"
+                logger.warning(f"[StorageService] Using fallback URL (no R2_PUBLIC_URL configured): {url}")
+                return url
 
         except ClientError as e:
             raise HTTPException(

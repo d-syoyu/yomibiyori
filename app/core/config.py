@@ -4,7 +4,7 @@ from functools import lru_cache
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     )
     r2_public_url: str | None = Field(
         default=None,
-        alias="R2_PUBLIC_URL",
+        validation_alias=AliasChoices("R2_PUBLIC_URL", "R2_PUBLIC_BASE_URL"),
         description="Cloudflare R2 public URL (e.g., https://pub-xxx.r2.dev).",
     )
     service_role_key: str | None = Field(

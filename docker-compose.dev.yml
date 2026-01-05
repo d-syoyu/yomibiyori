@@ -36,6 +36,8 @@ services:
     container_name: yomibiyori-backend
     ports:
       - "8000:8000"  # ローカルの8000でアクセス
+    env_file:
+      - .env.local
     environment:
       DATABASE_URL: postgresql://yomibiyori:devpassword@db:5432/yomibiyori_dev
       REDIS_URL: redis://redis:6379
