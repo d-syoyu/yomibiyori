@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, status, UploadFile, File
+
+logger = logging.getLogger(__name__)
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -115,8 +118,9 @@ def profile(
     session: Annotated[Session, Depends(get_authenticated_db_session)],
 ) -> UserProfileResponse:
     """Return the locally stored profile for the authenticated user."""
-
-    return get_user_profile(session=session, user_id=user_id)
+    result = get_user_profile(session=session, user_id=user_id)
+    logger.info(f"[GET /profile] user_id={user_id}, profile_image_url={result.profile_image_url}")
+    return result
 
 
 @router.patch(
@@ -275,10 +279,12 @@ async def upload_avatar(
     - Maximum file size: 5MB
     - Image will be resized to 256x256 and converted to JPEG
     """
+    logger.info(f"[POST /profile/avatar] user_id={user_id}, filename={file.filename}, content_type={file.content_type}")
     storage = get_storage_service()
 
     # Read file content
     content = await file.read()
+    logger.info(f"[POST /profile/avatar] file size={len(content)} bytes")
 
     # Upload to R2
     profile_image_url = storage.upload_avatar(
@@ -286,14 +292,17 @@ async def upload_avatar(
         file_content=content,
         content_type=file.content_type or "image/jpeg",
     )
+    logger.info(f"[POST /profile/avatar] uploaded to R2, url={profile_image_url}")
 
     # Update user's profile_image_url in database
     user = session.get(User, user_id)
     if user:
+        old_url = user.profile_image_url
         # Delete old avatar if exists
         if user.profile_image_url:
             storage.delete_avatar(user.profile_image_url)
         user.profile_image_url = profile_image_url
         session.commit()
+        logger.info(f"[POST /profile/avatar] DB updated, old_url={old_url}, new_url={profile_image_url}")
 
     return {"profile_image_url": profile_image_url}
