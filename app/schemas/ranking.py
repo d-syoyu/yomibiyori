@@ -12,6 +12,8 @@ class RankingEntry(BaseModel):
 
     rank: int
     work_id: str
+    user_id: str
     score: float
     display_name: str
     text: str
+    profile_image_url: str | None = None

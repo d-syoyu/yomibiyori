@@ -59,6 +59,7 @@ export interface UserProfile {
   analytics_opt_out: boolean;
   notify_theme_release: boolean;
   notify_ranking_result: boolean;
+  profile_image_url?: string;
 }
 
 export interface UpdateProfileRequest {
@@ -146,6 +147,7 @@ export interface Work {
   created_at: string;
   likes_count: number;
   display_name: string;
+  profile_image_url?: string;
 }
 
 // API returns an array of works directly, not wrapped in an object
@@ -193,13 +195,27 @@ export interface WorkImpressionResponse {
 export interface RankingEntry {
   rank: number;
   work_id: string;
+  user_id: string;
   score: number;
   display_name: string;
   text: string;
+  profile_image_url?: string;
 }
 
 // API returns an array of ranking entries directly
 export type RankingResponse = RankingEntry[];
+
+// ============================================================================
+// Public User Profile Types
+// ============================================================================
+
+export interface PublicUserProfile {
+  user_id: string;
+  display_name: string;
+  profile_image_url?: string;
+  works_count: number;
+  total_likes: number;
+}
 
 // ============================================================================
 // Navigation Types
@@ -209,6 +225,7 @@ export type RootStackParamList = {
   Login: undefined;
   PasswordReset: undefined;
   Main: undefined;
+  UserProfile: { userId: string; displayName: string };
 };
 
 export type MainTabParamList = {

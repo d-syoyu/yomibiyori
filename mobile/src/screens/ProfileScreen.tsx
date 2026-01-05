@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Alert,
   Switch,
+  Image,
   useWindowDimensions,
   type StyleProp,
   type ViewStyle,
@@ -25,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { useToastStore } from '../stores/useToastStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { PrefecturePicker } from '../components/PrefecturePicker';
@@ -41,6 +43,7 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Form fields
   const [displayName, setDisplayName] = useState('');
@@ -49,6 +52,7 @@ export default function ProfileScreen() {
   const [prefecture, setPrefecture] = useState<string | undefined>();
   const [themeNotificationEnabled, setThemeNotificationEnabled] = useState(true);
   const [rankingNotificationEnabled, setRankingNotificationEnabled] = useState(true);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>();
 
   const { showSuccess, showError } = useToastStore();
 
@@ -80,6 +84,7 @@ export default function ProfileScreen() {
       setRankingNotificationEnabled(
         data.notify_ranking_result ?? true,
       );
+      setProfileImageUrl(data.profile_image_url);
     } catch (error: any) {
       console.error('[ProfileScreen] Failed to load profile:', error);
       try {
@@ -185,6 +190,54 @@ export default function ProfileScreen() {
     }
   }
 
+  async function handlePickImage() {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showError('写真へのアクセス許可が必要です');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+
+      // Upload the image
+      setIsUploadingAvatar(true);
+
+      const formData = new FormData();
+      const filename = asset.uri.split('/').pop() || 'avatar.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('file', {
+        uri: asset.uri,
+        name: filename,
+        type,
+      } as any);
+
+      const response = await api.uploadAvatar(formData);
+      setProfileImageUrl(response.profile_image_url);
+      showSuccess('プロフィール画像を更新しました');
+    } catch (error: any) {
+      console.error('[ProfileScreen] Failed to upload avatar:', error);
+      showError(error?.message || 'プロフィール画像のアップロードに失敗しました');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -226,6 +279,37 @@ export default function ProfileScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>プロフィール設定</Text>
             <Text style={styles.subtitle}>基本情報や設定を変更できます</Text>
+          </View>
+
+          {/* Profile Image */}
+          <View style={styles.avatarSection}>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={handlePickImage}
+              disabled={isUploadingAvatar}
+              activeOpacity={0.7}
+            >
+              {profileImageUrl ? (
+                <Image
+                  source={{ uri: profileImageUrl }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <Ionicons name="person" size={40} color={colors.text.tertiary} />
+                </View>
+              )}
+              {isUploadingAvatar ? (
+                <View style={styles.avatarOverlay}>
+                  <ActivityIndicator color={colors.text.inverse} />
+                </View>
+              ) : (
+                <View style={styles.avatarEditBadge}>
+                  <Ionicons name="camera" size={14} color={colors.text.inverse} />
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.avatarHint}>タップして画像を変更</Text>
           </View>
 
           {/* Display Name */}
@@ -399,8 +483,56 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl * 3, // Extra padding at bottom to prevent content overlap on all devices
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     zIndex: 1,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: spacing.sm,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.background.secondary,
+  },
+  avatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.text.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.background.primary,
+  },
+  avatarHint: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.regular,
+    color: colors.text.tertiary,
+    letterSpacing: 0.3,
   },
   title: {
     fontSize: fontSize.h1,

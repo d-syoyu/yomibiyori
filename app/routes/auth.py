@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, UploadFile, File
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
+
+from app.services.storage import get_storage_service
 
 from app.db.session import get_authenticated_db_session, get_db_session
 from app.schemas.auth import (
@@ -255,3 +257,43 @@ def delete_account(
     """Delete the authenticated user's account and all associated data."""
 
     delete_user_account(session=session, user_id=user_id)
+
+
+@router.post(
+    "/profile/avatar",
+    status_code=status.HTTP_200_OK,
+    summary="Upload profile avatar image",
+)
+async def upload_avatar(
+    file: Annotated[UploadFile, File(description="Avatar image file (JPEG, PNG, WebP)")],
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    session: Annotated[Session, Depends(get_authenticated_db_session)],
+) -> dict[str, str]:
+    """Upload and set user's profile avatar image.
+
+    - Accepts JPEG, PNG, or WebP images
+    - Maximum file size: 5MB
+    - Image will be resized to 256x256 and converted to JPEG
+    """
+    storage = get_storage_service()
+
+    # Read file content
+    content = await file.read()
+
+    # Upload to R2
+    profile_image_url = storage.upload_avatar(
+        user_id=user_id,
+        file_content=content,
+        content_type=file.content_type or "image/jpeg",
+    )
+
+    # Update user's profile_image_url in database
+    user = session.get(User, user_id)
+    if user:
+        # Delete old avatar if exists
+        if user.profile_image_url:
+            storage.delete_avatar(user.profile_image_url)
+        user.profile_image_url = profile_image_url
+        session.commit()
+
+    return {"profile_image_url": profile_image_url}

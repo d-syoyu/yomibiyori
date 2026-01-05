@@ -81,6 +81,16 @@ class Settings(BaseSettings):
         alias="R2_SECRET_ACCESS_KEY",
         description="Cloudflare R2 secret key.",
     )
+    r2_bucket_name: str = Field(
+        default="yomibiyori",
+        alias="R2_BUCKET_NAME",
+        description="Cloudflare R2 bucket name.",
+    )
+    r2_public_url: str | None = Field(
+        default=None,
+        alias="R2_PUBLIC_URL",
+        description="Cloudflare R2 public URL (e.g., https://pub-xxx.r2.dev).",
+    )
     service_role_key: str | None = Field(
         default=None,
         alias="SUPABASE_SERVICE_ROLE_KEY",

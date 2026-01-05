@@ -32,6 +32,7 @@ import type {
   ApiError,
   NotificationTokenRequest,
   NotificationTokenResponse,
+  PublicUserProfile,
 } from '../types';
 
 // ============================================================================
@@ -326,6 +327,13 @@ class ApiClient {
     return response.data;
   }
 
+  async getYesterdayTheme(category?: ThemeCategory): Promise<Theme> {
+    const response = await this.client.get<Theme>('/themes/yesterday', {
+      params: category ? { category } : undefined,
+    });
+    return response.data;
+  }
+
   async getThemes(params?: {
     date?: string;
     category?: ThemeCategory;
@@ -437,6 +445,39 @@ class ApiClient {
 
   async registerNotificationToken(data: NotificationTokenRequest): Promise<NotificationTokenResponse> {
     const response = await this.client.post<NotificationTokenResponse>('/notifications/tokens', data);
+    return response.data;
+  }
+
+  // ==========================================================================
+  // Public User Endpoints
+  // ==========================================================================
+
+  async getPublicUserProfile(userId: string): Promise<PublicUserProfile> {
+    const response = await this.client.get<PublicUserProfile>(`/users/${userId}/profile`);
+    return response.data;
+  }
+
+  async getUserWorks(userId: string, params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<WorkListResponse> {
+    const response = await this.client.get<WorkListResponse>(`/users/${userId}/works`, {
+      params,
+    });
+    return response.data;
+  }
+
+  async getUserWorksSummary(userId: string): Promise<WorkDateSummary[]> {
+    const response = await this.client.get<WorkDateSummary[]>(`/users/${userId}/works/summary`);
+    return response.data;
+  }
+
+  async uploadAvatar(file: FormData): Promise<{ profile_image_url: string }> {
+    const response = await this.client.post<{ profile_image_url: string }>('/auth/profile/avatar', file, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 }

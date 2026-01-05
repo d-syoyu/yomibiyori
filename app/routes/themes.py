@@ -68,6 +68,30 @@ def get_today_theme(
 
 
 @router.get(
+    "/yesterday",
+    response_model=ThemeResponse,
+    summary="Get yesterday's theme",
+)
+def get_yesterday_theme(
+    session: Annotated[Session, Depends(get_db_session)],
+    category: Annotated[
+        str | None,
+        Query(
+            description="Category filter (e.g., '恋愛', '季節', '日常', 'ユーモア')",
+            example="恋愛",
+        ),
+    ] = None,
+) -> ThemeResponse:
+    """Return the theme for yesterday's date in JST timezone.
+
+    If a category is specified, returns the theme for that category.
+    If multiple themes exist for different categories and no category is specified,
+    returns the most recent.
+    """
+    return themes_service.get_yesterday_theme(session=session, category=category)
+
+
+@router.get(
     "/{theme_id}",
     response_model=ThemeResponse,
     summary="Get theme by ID",

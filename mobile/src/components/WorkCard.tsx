@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Image,
   type GestureResponderEvent,
   Linking,
 } from 'react-native';
@@ -17,6 +18,9 @@ interface WorkCardProps {
   lowerText: string;
   category: ThemeCategory;
   displayName: string;
+  userId?: string;
+  profileImageUrl?: string;
+  onAuthorPress?: (userId: string, displayName: string) => void;
   sponsorName?: string;
   sponsorUrl?: string;
   onSponsorPress?: () => void;
@@ -36,6 +40,9 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
   lowerText,
   category,
   displayName,
+  userId,
+  profileImageUrl,
+  onAuthorPress,
   sponsorName,
   sponsorUrl,
   onSponsorPress,
@@ -83,7 +90,26 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
         columnMinHeight={200}
       />
 
-      <Text style={styles.authorText}>@{displayName}</Text>
+      <TouchableOpacity
+        style={styles.authorContainer}
+        onPress={() => userId && onAuthorPress?.(userId, displayName)}
+        disabled={!onAuthorPress || !userId}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${displayName}のプロフィールを見る`}
+      >
+        {profileImageUrl ? (
+          <Image
+            source={{ uri: profileImageUrl }}
+            style={styles.authorAvatar}
+          />
+        ) : (
+          <View style={[styles.authorAvatar, styles.authorAvatarPlaceholder]}>
+            <Ionicons name="person" size={14} color={colors.text.tertiary} />
+          </View>
+        )}
+        <Text style={styles.authorText}>@{displayName}</Text>
+      </TouchableOpacity>
 
       <View style={styles.divider} />
 
@@ -165,8 +191,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  authorText: {
+  authorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     marginTop: spacing.md,
+    alignSelf: 'flex-start',
+  },
+  authorAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.background.secondary,
+  },
+  authorAvatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  authorText: {
     fontSize: fontSize.bodySmall,
     fontFamily: fontFamily.medium,
     color: colors.text.secondary,

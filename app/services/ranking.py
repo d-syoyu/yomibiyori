@@ -236,9 +236,11 @@ def _fetch_from_snapshot(session: Session, theme_id: str, limit: int) -> list[Ra
             RankingEntry(
                 rank=ranking.rank,
                 work_id=str(work.id),
+                user_id=str(user.id),
                 score=float(ranking.score),
                 display_name=display_name,
                 text=work.text,
+                profile_image_url=user.profile_image_url,
             )
         )
         if len(entries) >= limit:
@@ -285,9 +287,11 @@ def get_ranking(
                 RankingEntry(
                     rank=index,
                     work_id=str(work.id),
+                    user_id=str(user.id),
                     score=candidate.adjusted_score,
                     display_name=display_name,
                     text=work.text,
+                    profile_image_url=user.profile_image_url,
                 )
             )
 

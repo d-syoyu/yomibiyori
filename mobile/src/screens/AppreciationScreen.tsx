@@ -16,8 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, CommonActions, useNavigation } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { HomeStackParamList, ThemeCategory, Work, Theme } from '../types';
+import type { NativeStackScreenProps, NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { HomeStackParamList, ThemeCategory, Work, Theme, RootStackParamList } from '../types';
 import type { SharePayload } from '../types/share';
 import api from '../services/api';
 import VerticalText from '../components/VerticalText';
@@ -33,12 +33,14 @@ import { getViewerHash } from '../utils/viewerHash';
 import { createAppreciationSharePayload } from '../utils/share';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
+type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 const IMPRESSION_BATCH_LIMIT = 20;
 
 export default function AppreciationScreen({ route }: Props) {
   const navigation = useNavigation();
+  const rootNavigation = useNavigation<RootNavigationProp>();
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const { handleError } = useApiErrorHandler();
@@ -238,6 +240,14 @@ export default function AppreciationScreen({ route }: Props) {
     setSharePayload(null);
   }, []);
 
+  const handleAuthorPress = useCallback((userId: string, displayName: string) => {
+    trackEvent('author_profile_clicked', {
+      user_id: userId,
+      context: 'appreciation',
+    });
+    rootNavigation.navigate('UserProfile', { userId, displayName });
+  }, [rootNavigation]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
@@ -308,6 +318,9 @@ export default function AppreciationScreen({ route }: Props) {
                   lowerText={work.text}
                   category={theme?.category ?? '恋愛'}
                   displayName={work.display_name}
+                  userId={work.user_id}
+                  profileImageUrl={work.profile_image_url}
+                  onAuthorPress={handleAuthorPress}
                   liked={likedStates.get(work.id) ?? false}
                   onLike={() => handleLike(work.id)}
                   onShare={() => openShareSheet(work)}

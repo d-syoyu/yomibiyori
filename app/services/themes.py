@@ -182,6 +182,68 @@ def get_today_theme(session: Session, category: str | None = None) -> ThemeRespo
     )
 
 
+def get_yesterday_theme(session: Session, category: str | None = None) -> ThemeResponse:
+    """Return the theme for yesterday's date in the application timezone.
+
+    This follows the same 6:00 JST rollover logic as get_today_theme:
+    - Before 6:00 JST: "yesterday" means 2 days ago
+    - After 6:00 JST: "yesterday" means 1 day ago
+
+    Args:
+        session: Database session
+        category: Optional category filter (e.g., '恋愛', '季節', '日常', 'ユーモア')
+
+    Returns:
+        ThemeResponse for yesterday's theme in the specified category
+
+    Raises:
+        HTTPException: 404 if no theme found for yesterday (and optional category)
+    """
+    settings = get_settings()
+    now_jst = datetime.now(settings.timezone)
+
+    # Theme day changes at 6:00 JST
+    rollover_hour = settings.theme_day_rollover_hour
+    if now_jst.hour < rollover_hour:
+        # Before 6:00 JST: "today" is yesterday, so "yesterday" is 2 days ago
+        yesterday_date = (now_jst - timedelta(days=2)).date()
+    else:
+        # After 6:00 JST: "today" is today, so "yesterday" is 1 day ago
+        yesterday_date = (now_jst - timedelta(days=1)).date()
+
+    stmt = select(Theme).options(
+        joinedload(Theme.sponsor_theme)
+        .joinedload(SponsorTheme.campaign)
+        .joinedload(SponsorCampaign.sponsor)
+    ).where(Theme.date == yesterday_date)
+
+    if category:
+        stmt = stmt.where(Theme.category == category)
+
+    # Prioritize sponsored themes over AI-generated themes
+    stmt = stmt.order_by(Theme.sponsored.desc(), Theme.created_at.desc()).limit(1)
+
+    theme = session.execute(stmt).scalars().first()
+    if not theme:
+        detail = f"昨日の「{category}」カテゴリのお題が見つかりませんでした" if category else "昨日のお題が見つかりませんでした"
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=detail
+        )
+
+    return ThemeResponse(
+        id=str(theme.id),
+        text=theme.text,
+        category=theme.category,
+        date=theme.date,
+        sponsored=theme.sponsored,
+        sponsor_company_name=theme.sponsor_company_name,
+        sponsor_official_url=_get_sponsor_url(theme),
+        created_at=theme.created_at,
+        is_finalized=_is_theme_finalized(theme.date),
+    )
+
+
 def get_theme_by_id(session: Session, theme_id: str) -> ThemeResponse:
     """Return a theme by its ID.
 

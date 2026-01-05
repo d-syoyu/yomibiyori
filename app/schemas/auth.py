@@ -58,6 +58,7 @@ class UserProfileResponse(BaseModel):
     user_id: str
     email: EmailStr
     display_name: Optional[str] = None
+    profile_image_url: Optional[str] = Field(None, description="URL of user's profile image")
     birth_year: Optional[int] = Field(None, description="Year of birth (e.g., 1990)")
     gender: Optional[GenderType] = Field(None, description="Gender: male, female, or other")
     prefecture: Optional[str] = Field(None, description="User's prefecture (e.g., '東京都')")

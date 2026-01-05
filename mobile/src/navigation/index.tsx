@@ -26,6 +26,7 @@ import AppreciationScreen from '../screens/AppreciationScreen';
 import RankingScreen from '../screens/RankingScreen';
 import ProfileSetupScreen from '../screens/ProfileSetupScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 
 // Import components
 import ToastContainer from '../components/ToastContainer';
@@ -203,6 +204,11 @@ function RootNavigator() {
         name="PasswordReset"
         component={PasswordResetScreen}
         options={{ presentation: 'modal' }}
+      />
+      <RootStack.Screen
+        name="UserProfile"
+        component={UserProfileScreen}
+        options={{ presentation: 'card' }}
       />
     </RootStack.Navigator>
   );

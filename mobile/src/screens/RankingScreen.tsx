@@ -15,9 +15,10 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { api } from '../services/api';
-import type { ThemeCategory, RankingEntry, Theme } from '../types';
+import type { ThemeCategory, RankingEntry, Theme, RootStackParamList } from '../types';
 import type { SharePayload } from '../types/share';
 import { Ionicons } from '@expo/vector-icons';
 import CategoryIcon from '../components/CategoryIcon';
@@ -31,10 +32,14 @@ import { createRankingSharePayload } from '../utils/share';
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
 
+type RankingScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export default function RankingScreen() {
+  const navigation = useNavigation<RankingScreenNavigationProp>();
   const getTodayTheme = useThemeStore(state => state.getTodayTheme);
   const { handleError } = useApiErrorHandler();
 
+  const [selectedDate, setSelectedDate] = useState<'today' | 'yesterday'>('today');
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>('恋愛');
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [theme, setTheme] = useState<Theme | null>(null);
@@ -54,14 +59,15 @@ export default function RankingScreen() {
     }, [selectedCategory])
   );
 
-  const fetchRankings = async (category: ThemeCategory) => {
+  const fetchRankings = async (category: ThemeCategory, date: 'today' | 'yesterday' = 'today') => {
     try {
       setLoading(true);
       setError(null);
 
-      // Get today's theme for the category (using cached store with built-in fallback)
-      // This should be instant if already cached
-      const themeData = await getTodayTheme(category);
+      // Get theme for the category based on selected date
+      const themeData = date === 'today'
+        ? await getTodayTheme(category)
+        : await api.getYesterdayTheme(category);
 
       // Display theme immediately
       setTheme(themeData);
@@ -77,6 +83,7 @@ export default function RankingScreen() {
       trackEvent(EventNames.RANKING_VIEWED, {
         theme_id: themeData.id,
         category: category,
+        date: date,
         is_finalized: themeData.is_finalized,
         entries_count: rankingData.length,
       });
@@ -103,12 +110,16 @@ export default function RankingScreen() {
   }, []); // Run only once on mount
 
   useEffect(() => {
-    fetchRankings(selectedCategory);
-  }, [selectedCategory]);
+    fetchRankings(selectedCategory, selectedDate);
+  }, [selectedCategory, selectedDate]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchRankings(selectedCategory);
+    fetchRankings(selectedCategory, selectedDate);
+  };
+
+  const handleDateChange = (date: 'today' | 'yesterday') => {
+    setSelectedDate(date);
   };
 
   const handleCategoryChange = (category: ThemeCategory) => {
@@ -124,6 +135,14 @@ export default function RankingScreen() {
     setShareSheetVisible(true);
   }, [theme]);
 
+  const handleAuthorPress = useCallback((userId: string, displayName: string) => {
+    trackEvent('author_profile_clicked', {
+      user_id: userId,
+      context: 'ranking',
+    });
+    navigation.navigate('UserProfile', { userId, displayName });
+  }, [navigation]);
+
   const closeShareSheet = useCallback(() => {
     setShareSheetVisible(false);
     setSharePayload(null);
@@ -136,6 +155,27 @@ export default function RankingScreen() {
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>ランキング</Text>
+            {/* Date Selector - Compact Segment Control */}
+            <View style={styles.dateSelector}>
+              <TouchableOpacity
+                style={[styles.dateTab, selectedDate === 'today' && styles.dateTabActive]}
+                onPress={() => handleDateChange('today')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.dateTabText, selectedDate === 'today' && styles.dateTabTextActive]}>
+                  今日
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateTab, selectedDate === 'yesterday' && styles.dateTabActive]}
+                onPress={() => handleDateChange('yesterday')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.dateTabText, selectedDate === 'yesterday' && styles.dateTabTextActive]}>
+                  昨日
+                </Text>
+              </TouchableOpacity>
+            </View>
             {theme && (
               <View style={[
                 styles.statusBadge,
@@ -226,6 +266,9 @@ export default function RankingScreen() {
                   lowerText={entry.text}
                   category={theme?.category ?? '恋愛'}
                   displayName={entry.display_name}
+                  userId={entry.user_id}
+                  profileImageUrl={entry.profile_image_url}
+                  onAuthorPress={handleAuthorPress}
                   sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}
                   sponsorUrl={theme?.sponsor_official_url}
                   onSponsorPress={() => {
@@ -304,6 +347,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
     gap: spacing.sm,
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.sm,
+    padding: 2,
+  },
+  dateTab: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm - 2,
+  },
+  dateTabActive: {
+    backgroundColor: colors.background.card,
+  },
+  dateTabText: {
+    fontSize: fontSize.caption,
+    fontFamily: fontFamily.medium,
+    color: colors.text.tertiary,
+  },
+  dateTabTextActive: {
+    color: colors.text.primary,
   },
   title: {
     fontSize: fontSize.h1,
