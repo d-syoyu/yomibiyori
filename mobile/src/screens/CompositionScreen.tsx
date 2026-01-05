@@ -41,6 +41,7 @@ export default function CompositionScreen({ route }: Props) {
   const showError = useToastStore((state) => state.showError);
   const { handleError } = useApiErrorHandler();
   const displayName = useAuthStore((state) => state.user?.display_name ?? 'あなた');
+  const profileImageUrl = useAuthStore((state) => state.user?.profile_image_url);
 
   const [line1, setLine1] = useState('');
   const [line2, setLine2] = useState('');
@@ -238,6 +239,7 @@ export default function CompositionScreen({ route }: Props) {
                   lowerText={`${line1.trim()}\n${line2.trim()}`}
                   category={theme.category}
                   displayName={displayName}
+                  profileImageUrl={profileImageUrl}
                   sponsorName={theme.sponsored ? theme.sponsor_company_name : undefined}
                   sponsorUrl={theme.sponsored ? theme.sponsor_official_url : undefined}
                   customActions={<View />}

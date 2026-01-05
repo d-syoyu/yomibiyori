@@ -524,6 +524,7 @@ export default function MyPoemsScreen() {
                                 lowerText={work.text}
                                 category={theme?.category ?? '恋愛'}
                                 displayName={work.display_name}
+                                profileImageUrl={user?.profile_image_url}
                                 sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}
                                 sponsorUrl={theme?.sponsor_official_url}
                                 onSponsorPress={() => {
