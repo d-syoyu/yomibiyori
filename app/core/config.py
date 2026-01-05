@@ -258,7 +258,12 @@ class Settings(BaseSettings):
         description="Sender email address for Resend emails.",
     )
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # .env.localがあれば.envより優先（ローカル開発用）
+    model_config = SettingsConfigDict(
+        env_file=[".env", ".env.local"],
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     @property
     def theme_categories_list(self) -> list[str]:

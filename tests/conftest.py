@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
 
 import fakeredis
@@ -16,8 +17,15 @@ from app.main import app
 from app.models import Base
 from app.db.session import get_db_session, get_authenticated_db_session
 
-TEST_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False}, future=True)
+# 環境変数でPostgreSQLに切り替え可能（デフォルトはSQLite）
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite:///./test.db")
+
+# SQLiteとPostgreSQLで接続引数を分岐
+if TEST_DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False}, future=True)
+else:
+    engine = create_engine(TEST_DATABASE_URL, future=True)
+
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
