@@ -15,6 +15,7 @@ import {
   AppState,
   AppStateStatus,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -397,6 +398,16 @@ export default function MyPoemsScreen() {
 
           <View style={styles.userCard}>
             <View style={styles.userInfo}>
+              {user?.profile_image_url ? (
+                <Image
+                  source={{ uri: user.profile_image_url }}
+                  style={styles.userAvatar}
+                />
+              ) : (
+                <View style={[styles.userAvatar, styles.userAvatarPlaceholder]}>
+                  <Ionicons name="person" size={24} color={colors.text.tertiary} />
+                </View>
+              )}
               <View style={styles.userTexts}>
                 <Text style={styles.userName}>
                   {user?.display_name || user?.email || 'ユーザー'}
@@ -692,6 +703,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: fontFamily.regular,
     color: colors.text.tertiary,
+  },
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: spacing.sm,
+    backgroundColor: colors.background.secondary,
+  },
+  userAvatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   editButton: {
     backgroundColor: colors.background.secondary,

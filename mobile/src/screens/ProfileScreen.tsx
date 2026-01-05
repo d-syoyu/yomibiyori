@@ -199,11 +199,10 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Launch image picker
+      // Launch image picker (クロップなしで直接選択)
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
         quality: 0.8,
       });
 
