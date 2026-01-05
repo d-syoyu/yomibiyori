@@ -403,6 +403,8 @@ export default function MyPoemsScreen() {
                   source={{ uri: user.profile_image_url, cache: 'reload' }}
                   style={styles.userAvatar}
                   key={user.profile_image_url}
+                  onError={(e) => console.error('[MyPoemsScreen] Image load error:', e.nativeEvent.error, 'URL:', user.profile_image_url)}
+                  onLoad={() => console.log('[MyPoemsScreen] Image loaded successfully')}
                 />
               ) : (
                 <View style={[styles.userAvatar, styles.userAvatarPlaceholder]}>

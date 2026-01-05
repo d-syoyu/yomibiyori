@@ -228,6 +228,8 @@ export default function ProfileScreen() {
       } as any);
 
       const response = await api.uploadAvatar(formData);
+      console.log('[ProfileScreen] Upload response:', JSON.stringify(response));
+      console.log('[ProfileScreen] profile_image_url:', response.profile_image_url);
       setProfileImageUrl(response.profile_image_url);
       // Refresh auth store to update user profile across the app
       await refreshProfile();
@@ -296,6 +298,8 @@ export default function ProfileScreen() {
                   source={{ uri: profileImageUrl, cache: 'reload' }}
                   style={styles.avatar}
                   key={profileImageUrl}
+                  onError={(e) => console.error('[ProfileScreen] Image load error:', e.nativeEvent.error, 'URL:', profileImageUrl)}
+                  onLoad={() => console.log('[ProfileScreen] Image loaded successfully:', profileImageUrl)}
                 />
               ) : (
                 <View style={[styles.avatar, styles.avatarPlaceholder]}>
