@@ -58,7 +58,7 @@ def get_profile(
 def list_user_works(
     user_id: str,
     session: Annotated[Session, Depends(get_db_session)],
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[WorkResponse]:
     """Return works created by the specified user."""

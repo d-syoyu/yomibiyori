@@ -133,15 +133,17 @@ class ApiClient {
         // No retry - format and reject the error
         if (error.response) {
           // Server responded with error status
+          // Handle both formats: { detail: "..." } and { error: { detail: "..." } }
           const apiError: ApiError = {
-            detail: error.response.data?.detail || 'Unknown error occurred',
+            detail: error.response.data?.detail || error.response.data?.error?.detail || 'Unknown error occurred',
             status: error.response.status,
           };
 
           // Handle token expiration (401 with specific message)
+          const errorDetail = error.response.data?.detail || error.response.data?.error?.detail || '';
           if (
             error.response.status === 401 &&
-            error.response.data?.detail?.includes('expired')
+            errorDetail.includes('expired')
           ) {
             // Token has expired - need to logout
             // Note: This will be handled by the caller (UI components)
