@@ -238,8 +238,9 @@ export default function UserProfileScreen() {
             <View style={styles.profileHeader}>
               {userProfile?.profile_image_url ? (
                 <Image
-                  source={{ uri: userProfile.profile_image_url }}
+                  source={{ uri: userProfile.profile_image_url, cache: 'reload' }}
                   style={styles.profileAvatar}
+                  key={userProfile.profile_image_url}
                 />
               ) : (
                 <View style={[styles.profileAvatar, styles.profileAvatarPlaceholder]}>

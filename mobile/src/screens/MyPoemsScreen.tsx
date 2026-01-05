@@ -400,8 +400,9 @@ export default function MyPoemsScreen() {
             <View style={styles.userInfo}>
               {user?.profile_image_url ? (
                 <Image
-                  source={{ uri: user.profile_image_url }}
+                  source={{ uri: user.profile_image_url, cache: 'reload' }}
                   style={styles.userAvatar}
+                  key={user.profile_image_url}
                 />
               ) : (
                 <View style={[styles.userAvatar, styles.userAvatarPlaceholder]}>

@@ -293,8 +293,9 @@ export default function ProfileScreen() {
             >
               {profileImageUrl ? (
                 <Image
-                  source={{ uri: profileImageUrl }}
+                  source={{ uri: profileImageUrl, cache: 'reload' }}
                   style={styles.avatar}
+                  key={profileImageUrl}
                 />
               ) : (
                 <View style={[styles.avatar, styles.avatarPlaceholder]}>
