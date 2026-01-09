@@ -47,6 +47,7 @@ class WorkResponse(BaseModel):
     created_at: datetime
     likes_count: int = 0
     display_name: str = Field(description="Display name of the author")
+    profile_image_url: str | None = Field(default=None, description="Profile image URL of the author")
 
 
 class WorkLikeResponse(BaseModel):

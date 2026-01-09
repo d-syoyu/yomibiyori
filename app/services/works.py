@@ -148,9 +148,10 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
             logger.error(f"[Works] Failed to initialize Redis ranking entry for work {work.id}: {exc}")
             # Don't fail the work creation if Redis fails - data is already in PostgreSQL
 
-    # Get user info for display name and analytics
+    # Get user info for display name, profile image and analytics
     user = session.get(User, user_id)
     display_name = user.name if user and user.name else user.email if user else "Unknown"
+    profile_image_url = user.profile_image_url if user else None
 
     # Track work creation event (respect opt-out preference)
     if user and not user.analytics_opt_out:
@@ -185,6 +186,7 @@ def create_work(session: Session, *, user_id: str, payload: WorkCreate, redis_cl
         created_at=work.created_at,
         likes_count=0,
         display_name=display_name,
+        profile_image_url=profile_image_url,
     )
 
 
@@ -259,13 +261,13 @@ def list_works(
     if not theme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="お題が見つかりませんでした")
 
-    # Fetch all works with likes count and user name (without ordering, we'll sort in Python)
+    # Fetch all works with likes count and user info (without ordering, we'll sort in Python)
     stmt = (
-        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email)
+        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email, User.profile_image_url)
         .outerjoin(Like, Like.work_id == Work.id)
         .join(User, User.id == Work.user_id)
         .where(Work.theme_id == theme_id)
-        .group_by(Work.id, User.name, User.email)
+        .group_by(Work.id, User.name, User.email, User.profile_image_url)
     )
 
     # Exclude the specified user's works (e.g., current user viewing appreciation screen)
@@ -276,7 +278,7 @@ def list_works(
 
     # Build response objects
     works_with_scores = []
-    for work, likes_count, name, email in results:
+    for work, likes_count, name, email, profile_image_url in results:
         # Use name if available, otherwise fallback to email
         author_name = name if name else email
 
@@ -288,6 +290,7 @@ def list_works(
             created_at=work.created_at,
             likes_count=likes_count or 0,
             display_name=author_name or "Unknown",
+            profile_image_url=profile_image_url,
         )
 
         if order_by == "fair_score":
@@ -324,13 +327,13 @@ def list_my_works(
     Returns:
         List of user's works with likes count
     """
-    # Build query to fetch user's works with likes count and user name
+    # Build query to fetch user's works with likes count and user info
     stmt = (
-        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email)
+        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email, User.profile_image_url)
         .outerjoin(Like, Like.work_id == Work.id)
         .join(User, User.id == Work.user_id)
         .where(Work.user_id == user_id)
-        .group_by(Work.id, User.name, User.email)
+        .group_by(Work.id, User.name, User.email, User.profile_image_url)
         .order_by(Work.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -344,7 +347,7 @@ def list_my_works(
 
     # Build response objects
     works = []
-    for work, likes_count, name, email in results:
+    for work, likes_count, name, email, profile_image_url in results:
         # Use name if available, otherwise fallback to email
         author_name = name if name else email
 
@@ -356,6 +359,7 @@ def list_my_works(
             created_at=work.created_at,
             likes_count=likes_count or 0,
             display_name=author_name or "Unknown",
+            profile_image_url=profile_image_url,
         )
         works.append(work_response)
 
@@ -556,6 +560,7 @@ def update_work(
 
     user = session.get(User, user_id)
     display_name = user.name if user and user.name else user.email if user else "Unknown"
+    profile_image_url = user.profile_image_url if user else None
 
     if user and not user.analytics_opt_out:
         try:
@@ -579,6 +584,7 @@ def update_work(
         created_at=work.created_at,
         likes_count=likes_count,
         display_name=display_name,
+        profile_image_url=profile_image_url,
     )
 
 
