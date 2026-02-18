@@ -57,6 +57,7 @@ export default function ProfileScreen() {
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>();
   const [cropModalVisible, setCropModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [selectedImageSize, setSelectedImageSize] = useState<{ width: number; height: number } | null>(null);
 
   const { showSuccess, showError } = useToastStore();
 
@@ -203,20 +204,21 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Launch image picker with native square crop
+      // Launch image picker (no native crop - use custom circular crop UI)
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+        allowsEditing: false,
+        quality: 0.9,
       });
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
-      // Show circular preview before uploading
-      setSelectedImageUri(result.assets[0].uri);
+      // Show circular crop modal
+      const asset = result.assets[0];
+      setSelectedImageUri(asset.uri);
+      setSelectedImageSize({ width: asset.width, height: asset.height });
       setCropModalVisible(true);
     } catch (error: any) {
       console.error('[ProfileScreen] Failed to pick image:', error);
@@ -224,19 +226,18 @@ export default function ProfileScreen() {
     }
   }
 
-  async function handleCropConfirm() {
-    if (!selectedImageUri) return;
+  async function handleCropConfirm(croppedUri: string) {
     setCropModalVisible(false);
     try {
       setIsUploadingAvatar(true);
 
       const formData = new FormData();
-      const filename = selectedImageUri.split('/').pop() || 'avatar.jpg';
+      const filename = croppedUri.split('/').pop() || 'avatar.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
 
       formData.append('file', {
-        uri: selectedImageUri,
+        uri: croppedUri,
         name: filename,
         type,
       } as any);
@@ -480,10 +481,9 @@ export default function ProfileScreen() {
       <CircularCropModal
         visible={cropModalVisible}
         imageUri={selectedImageUri}
+        imageSize={selectedImageSize}
         onCancel={() => {
           setCropModalVisible(false);
-          // Re-open image picker for retry
-          handlePickImage();
         }}
         onConfirm={handleCropConfirm}
       />

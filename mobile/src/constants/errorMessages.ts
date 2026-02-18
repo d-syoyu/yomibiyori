@@ -41,8 +41,24 @@ export const CONTEXT_MESSAGES = {
     default: 'ログインできませんでした',
     hint: 'もう一度お試しください',
   },
+  update_work: {
+    default: '作品を更新できませんでした',
+    hint: 'もう一度お試しください',
+  },
+  delete_work: {
+    default: '作品を削除できませんでした',
+    hint: 'もう一度お試しください',
+  },
   user_data: {
     default: '情報を読み込めませんでした',
+    hint: 'もう一度お試しください',
+  },
+  user_profile: {
+    default: 'プロフィールを読み込めませんでした',
+    hint: 'もう一度お試しください',
+  },
+  user_works: {
+    default: '作品を読み込めませんでした',
     hint: 'もう一度お試しください',
   },
   generic: {

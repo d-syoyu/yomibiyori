@@ -254,6 +254,9 @@ export type MyPoemsStackParamList = {
 export interface ApiError {
   detail: string;
   status?: number;
+  error?: {
+    detail: string;
+  };
 }
 
 export interface ValidationError {

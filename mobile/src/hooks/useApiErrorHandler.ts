@@ -22,11 +22,15 @@ import {
 export type ErrorContext =
   | 'work_creation'        // 作品投稿
   | 'work_fetching'        // 作品取得
+  | 'update_work'          // 作品更新
+  | 'delete_work'          // 作品削除
   | 'ranking_fetching'     // ランキング取得
   | 'theme_fetching'       // お題取得
   | 'like_action'          // いいねアクション
   | 'authentication'       // 認証処理
   | 'user_data'            // ユーザーデータ取得
+  | 'user_profile'         // ユーザープロフィール取得
+  | 'user_works'           // ユーザー作品取得
   | 'generic';             // 汎用
 
 /**
