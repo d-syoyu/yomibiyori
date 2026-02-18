@@ -257,6 +257,16 @@ class Settings(BaseSettings):
         alias="RESEND_FROM_EMAIL",
         description="Sender email address for Resend emails.",
     )
+    local_upload_dir: str = Field(
+        default="/app/uploads",
+        alias="LOCAL_UPLOAD_DIR",
+        description="Local directory for file uploads (development only).",
+    )
+    local_upload_base_url: str = Field(
+        default="http://localhost:8000",
+        alias="LOCAL_UPLOAD_BASE_URL",
+        description="Base URL for serving local uploads (development only).",
+    )
 
     # .env.localがあれば.envより優先（ローカル開発用）
     model_config = SettingsConfigDict(

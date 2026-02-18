@@ -48,8 +48,11 @@ services:
       SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHltb29rZHpqb3Z3eGlya3BxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk0NDM0OTMsImV4cCI6MjA0NTAxOTQ5M30.T1jzyN-P5APGqFKWcaQ6A7fJbMp7iQY56RXuMjMtQGE
       SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cHltb29rZHpqb3Z3eGlya3BxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyOTQ0MzQ5MywiZXhwIjoyMDQ1MDE5NDkzfQ.dqQcfNzAy0EjrA6PB82vCFO-fVU2bshcGJ2hgWNjT5U
       SUPABASE_JWT_SECRET: D3lrh5VQglwXeYDO/rlNWIQWQ2vxH22e5Bvuk9Jqh1vIvuX70Uxet8ifNsEzA/hs3oQNf+4kMmFNCqMuA5yN/g==
+      LOCAL_UPLOAD_DIR: /app/uploads
+      LOCAL_UPLOAD_BASE_URL: http://localhost:8000
     volumes:
       - ./app:/app/app:ro  # ホットリロード用
+      - upload_data:/app/uploads  # アップロードファイル永続化
     depends_on:
       db:
         condition: service_healthy
@@ -59,3 +62,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  upload_data:

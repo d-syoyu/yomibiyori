@@ -1,11 +1,11 @@
-"""R2 storage service for file uploads."""
+"""Storage service for file uploads (R2 + local fallback)."""
 
 from __future__ import annotations
 
 import io
 import logging
 import uuid
-from typing import BinaryIO
+from pathlib import Path
 
 import boto3
 from botocore.exceptions import ClientError
@@ -26,15 +26,24 @@ AVATAR_MAX_DIMENSION = 256
 
 
 class StorageService:
-    """Service for managing file uploads to Cloudflare R2."""
+    """Service for managing file uploads to Cloudflare R2 or local filesystem."""
 
     def __init__(self) -> None:
         settings = get_settings()
         logger.info(f"[StorageService] Initializing with r2_account_id={settings.r2_account_id}")
         logger.info(f"[StorageService] r2_bucket_name={settings.r2_bucket_name}")
         logger.info(f"[StorageService] r2_public_url={settings.r2_public_url!r}")
+
+        # Local upload directory (used as fallback in development)
+        self._local_upload_dir = Path(settings.local_upload_dir) / "avatars"
+        self._local_upload_base_url = settings.local_upload_base_url
+
         if not all([settings.r2_account_id, settings.r2_access_key_id, settings.r2_secret_access_key]):
-            logger.warning("[StorageService] R2 credentials not configured, storage disabled")
+            if settings.app_env == "development":
+                logger.info("[StorageService] R2 not configured, using local file storage (development mode)")
+                self._local_upload_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                logger.warning("[StorageService] R2 credentials not configured, storage disabled")
             self._client = None
             self._bucket = None
             self._public_url = None
@@ -53,8 +62,11 @@ class StorageService:
 
     @property
     def is_configured(self) -> bool:
-        """Check if R2 storage is properly configured."""
-        return self._client is not None
+        """Check if storage is available (R2 or local fallback)."""
+        if self._client is not None:
+            return True
+        settings = get_settings()
+        return settings.app_env == "development"
 
     def upload_avatar(
         self,
@@ -95,15 +107,22 @@ class StorageService:
                 detail="画像サイズは5MB以下にしてください",
             )
 
+        # Process and resize image
+        processed_image = self._process_avatar(file_content)
+
+        # Generate unique filename
+        unique_suffix = uuid.uuid4().hex[:8]
+        filename = f"{user_id}_{unique_suffix}.jpg"
+
+        if self._client is not None:
+            return self._upload_to_r2(filename, processed_image)
+        else:
+            return self._upload_to_local(filename, processed_image)
+
+    def _upload_to_r2(self, filename: str, processed_image: bytes) -> str:
+        """Upload to Cloudflare R2 (production)."""
+        key = f"avatars/{filename}"
         try:
-            # Process and resize image
-            processed_image = self._process_avatar(file_content)
-
-            # Generate unique key with timestamp to bust cache
-            unique_suffix = uuid.uuid4().hex[:8]
-            key = f"avatars/{user_id}_{unique_suffix}.jpg"
-
-            # Upload to R2
             self._client.put_object(
                 Bucket=self._bucket,
                 Key=key,
@@ -112,13 +131,11 @@ class StorageService:
                 CacheControl="public, max-age=31536000",
             )
 
-            # Return public URL
             if self._public_url:
                 url = f"{self._public_url}/{key}"
                 logger.info(f"[StorageService] Using configured public_url: {url}")
                 return url
             else:
-                # Fallback: use R2 public access URL format
                 url = f"https://{self._bucket}.r2.dev/{key}"
                 logger.warning(f"[StorageService] Using fallback URL (no R2_PUBLIC_URL configured): {url}")
                 return url
@@ -128,6 +145,15 @@ class StorageService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="画像のアップロードに失敗しました",
             ) from e
+
+    def _upload_to_local(self, filename: str, processed_image: bytes) -> str:
+        """Save to local filesystem (development)."""
+        self._local_upload_dir.mkdir(parents=True, exist_ok=True)
+        file_path = self._local_upload_dir / filename
+        file_path.write_bytes(processed_image)
+        logger.info(f"[StorageService] Saved avatar locally: {file_path}")
+        base_url = self._local_upload_base_url.rstrip("/")
+        return f"{base_url}/uploads/avatars/{filename}"
 
     def _process_avatar(self, file_content: bytes) -> bytes:
         """Process avatar image: resize and convert to JPEG.
@@ -159,19 +185,34 @@ class StorageService:
             ) from e
 
     def delete_avatar(self, avatar_url: str) -> None:
-        """Delete an avatar from R2.
+        """Delete an avatar from storage.
 
         Args:
             avatar_url: Full URL of the avatar to delete
         """
-        if not self.is_configured or not avatar_url:
+        if not avatar_url:
+            return
+
+        # Local file deletion
+        if "/uploads/avatars/" in avatar_url:
+            try:
+                filename = avatar_url.split("/uploads/avatars/")[-1]
+                file_path = self._local_upload_dir / filename
+                if file_path.exists():
+                    file_path.unlink()
+                    logger.info(f"[StorageService] Deleted local avatar: {file_path}")
+            except OSError:
+                pass
+            return
+
+        # R2 deletion
+        if not self._client:
             return
 
         try:
-            # Extract key from URL
             if self._public_url and avatar_url.startswith(self._public_url):
                 key = avatar_url[len(self._public_url) + 1 :]
-            elif f"{self._bucket}.r2.dev" in avatar_url:
+            elif self._bucket and f"{self._bucket}.r2.dev" in avatar_url:
                 key = avatar_url.split(f"{self._bucket}.r2.dev/")[1]
             else:
                 return  # Unknown URL format, skip deletion

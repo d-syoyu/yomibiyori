@@ -12,6 +12,7 @@ from app.core.exceptions import (
     http_exception_handler,
     validation_exception_handler,
 )
+from app.core.config import get_settings
 from app.db.session import clear_request_user_context
 from app.routes.api import api_router
 
@@ -75,6 +76,15 @@ def password_reset_page():
 
 
 app.include_router(api_router, prefix="/api/v1")
+
+# ローカル開発時のアップロードファイル配信
+_settings = get_settings()
+if _settings.app_env == "development":
+    from fastapi.staticfiles import StaticFiles
+
+    _uploads_dir = Path(_settings.local_upload_dir)
+    _uploads_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 
 # Handle OPTIONS requests for CORS preflight (must be after routers)
