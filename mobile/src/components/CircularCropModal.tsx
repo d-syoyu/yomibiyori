@@ -48,40 +48,42 @@ export default function CircularCropModal({
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [scale, setScale] = useState(MIN_SCALE);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Pan offset (using plain values for calculation, animated for display)
+  // Use refs for values accessed inside PanResponder to avoid stale closures
+  const scaleRef = useRef(MIN_SCALE);
+  const imageSizeRef = useRef({ width: 0, height: 0 });
+
+  // Pan tracking
   const pan = useRef(new Animated.ValueXY()).current;
-  const panOffset = useRef({ x: 0, y: 0 });
   const currentPan = useRef({ x: 0, y: 0 });
+  const panOffset = useRef({ x: 0, y: 0 });
 
-  // Calculate image display dimensions to fill the mask area
-  const getDisplayDimensions = useCallback(() => {
-    if (!imageSize.width || !imageSize.height) return { width: 0, height: 0 };
-    const aspectRatio = imageSize.width / imageSize.height;
+  // Keep refs in sync with state
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
+  useEffect(() => {
+    imageSizeRef.current = imageSize;
+  }, [imageSize]);
 
-    // Image should at minimum fill the mask diameter
+  const getDisplayDims = (imgSize: { width: number; height: number }) => {
+    if (!imgSize.width || !imgSize.height) return { width: 0, height: 0 };
+    const aspectRatio = imgSize.width / imgSize.height;
     if (aspectRatio >= 1) {
       return { width: MASK_DIAMETER * aspectRatio, height: MASK_DIAMETER };
     }
     return { width: MASK_DIAMETER, height: MASK_DIAMETER / aspectRatio };
-  }, [imageSize]);
+  };
 
-  // Clamp pan values so image always covers the mask
-  const clampPan = useCallback(
-    (x: number, y: number, currentScale: number) => {
-      const { width, height } = getDisplayDimensions();
-      const scaledWidth = width * currentScale;
-      const scaledHeight = height * currentScale;
-      const maxX = Math.max(0, (scaledWidth - MASK_DIAMETER) / 2);
-      const maxY = Math.max(0, (scaledHeight - MASK_DIAMETER) / 2);
-      return {
-        x: Math.max(-maxX, Math.min(maxX, x)),
-        y: Math.max(-maxY, Math.min(maxY, y)),
-      };
-    },
-    [getDisplayDimensions],
-  );
+  const clamp = (x: number, y: number, s: number, imgSize: { width: number; height: number }) => {
+    const dims = getDisplayDims(imgSize);
+    const maxX = Math.max(0, (dims.width * s - MASK_DIAMETER) / 2);
+    const maxY = Math.max(0, (dims.height * s - MASK_DIAMETER) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, x)),
+      y: Math.max(-maxY, Math.min(maxY, y)),
+    };
+  };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -90,10 +92,10 @@ export default function CircularCropModal({
       onPanResponderGrant: () => {
         panOffset.current = { ...currentPan.current };
       },
-      onPanResponderMove: (_e, gestureState) => {
-        const newX = panOffset.current.x + gestureState.dx;
-        const newY = panOffset.current.y + gestureState.dy;
-        const clamped = clampPan(newX, newY, scale);
+      onPanResponderMove: (_e, gs) => {
+        const newX = panOffset.current.x + gs.dx;
+        const newY = panOffset.current.y + gs.dy;
+        const clamped = clamp(newX, newY, scaleRef.current, imageSizeRef.current);
         currentPan.current = clamped;
         pan.setValue(clamped);
       },
@@ -103,24 +105,30 @@ export default function CircularCropModal({
 
   // Re-clamp when scale changes
   useEffect(() => {
-    const clamped = clampPan(currentPan.current.x, currentPan.current.y, scale);
+    const clamped = clamp(currentPan.current.x, currentPan.current.y, scale, imageSize);
     currentPan.current = clamped;
     pan.setValue(clamped);
-  }, [scale]);
+  }, [scale, imageSize]);
 
-  // Reset state when modal opens with a new image
+  // Reset state when modal opens
   useEffect(() => {
     if (visible && imageUri) {
       setScale(MIN_SCALE);
+      scaleRef.current = MIN_SCALE;
       currentPan.current = { x: 0, y: 0 };
       pan.setValue({ x: 0, y: 0 });
       panOffset.current = { x: 0, y: 0 };
-      setImageLoaded(false);
 
       Image.getSize(
         imageUri,
-        (w, h) => setImageSize({ width: w, height: h }),
-        () => setImageSize({ width: SCREEN_WIDTH, height: SCREEN_WIDTH }),
+        (w, h) => {
+          setImageSize({ width: w, height: h });
+          imageSizeRef.current = { width: w, height: h };
+        },
+        () => {
+          setImageSize({ width: SCREEN_WIDTH, height: SCREEN_WIDTH });
+          imageSizeRef.current = { width: SCREEN_WIDTH, height: SCREEN_WIDTH };
+        },
       );
     }
   }, [visible, imageUri]);
@@ -134,21 +142,18 @@ export default function CircularCropModal({
   };
 
   const handleConfirm = async () => {
-    if (!imageUri || !imageSize.width || !imageSize.height) return;
+    if (!imageUri || !imageSize.width || !imageSize.height) {
+      console.warn('[CircularCropModal] Cannot confirm: missing image data');
+      return;
+    }
     setIsProcessing(true);
 
     try {
-      const displayDims = getDisplayDimensions();
+      const displayDims = getDisplayDims(imageSize);
 
-      // displayDims is the base (scale=1) display size of the image
-      // The ratio from display pixels to original image pixels
       const ratioX = imageSize.width / (displayDims.width * scale);
       const ratioY = imageSize.height / (displayDims.height * scale);
 
-      // The mask circle center is at the center of the display area.
-      // The image center is offset by currentPan from the display center.
-      // So the crop origin (top-left of the square inscribing the circle)
-      // in display coordinates (relative to the scaled image top-left):
       const scaledImgW = displayDims.width * scale;
       const scaledImgH = displayDims.height * scale;
 
@@ -156,31 +161,26 @@ export default function CircularCropModal({
       const centerX = scaledImgW / 2 - currentPan.current.x;
       const centerY = scaledImgH / 2 - currentPan.current.y;
 
-      // Crop rectangle in display coordinates
+      // Crop origin in display coords
       const cropDisplayX = centerX - MASK_RADIUS;
       const cropDisplayY = centerY - MASK_RADIUS;
 
       // Convert to original image coordinates
-      const originX = Math.round(cropDisplayX * ratioX);
-      const originY = Math.round(cropDisplayY * ratioY);
+      const originX = Math.max(0, Math.round(cropDisplayX * ratioX));
+      const originY = Math.max(0, Math.round(cropDisplayY * ratioY));
       const cropSize = Math.round(MASK_DIAMETER * ratioX);
 
-      // Clamp to image bounds
-      const safeX = Math.max(0, Math.min(originX, imageSize.width - cropSize));
-      const safeY = Math.max(0, Math.min(originY, imageSize.height - cropSize));
-      const safeCropSize = Math.min(
-        cropSize,
-        imageSize.width - safeX,
-        imageSize.height - safeY,
-      );
+      const safeWidth = Math.min(cropSize, imageSize.width - originX);
+      const safeHeight = Math.min(cropSize, imageSize.height - originY);
+      const safeCropSize = Math.min(safeWidth, safeHeight);
 
       const result = await ImageManipulator.manipulateAsync(
         imageUri,
         [
           {
             crop: {
-              originX: safeX,
-              originY: safeY,
+              originX,
+              originY,
               width: safeCropSize,
               height: safeCropSize,
             },
@@ -198,7 +198,8 @@ export default function CircularCropModal({
     }
   };
 
-  const displayDims = getDisplayDimensions();
+  const displayDims = getDisplayDims(imageSize);
+  const hasImage = imageSize.width > 0 && imageSize.height > 0;
 
   return (
     <Modal
@@ -219,24 +220,30 @@ export default function CircularCropModal({
 
         {/* Crop Area */}
         <View style={styles.cropWrapper}>
-          {/* Image layer */}
-          <View style={styles.imageContainer}>
-            <Animated.Image
-              source={{ uri: imageUri ?? undefined }}
-              style={{
+          {/* Image layer — use Animated.View wrapping a regular Image */}
+          <Animated.View
+            style={[
+              styles.imageContainer,
+              {
                 width: displayDims.width * scale,
                 height: displayDims.height * scale,
                 transform: [
                   { translateX: pan.x },
                   { translateY: pan.y },
                 ],
-              }}
-              resizeMode="cover"
-              onLoad={() => setImageLoaded(true)}
-            />
-          </View>
+              },
+            ]}
+          >
+            {imageUri && (
+              <Image
+                source={{ uri: imageUri }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            )}
+          </Animated.View>
 
-          {/* Overlay mask — darkens area outside the circle */}
+          {/* Overlay mask */}
           <View style={styles.maskContainer} pointerEvents="none">
             <Svg
               width={SCREEN_WIDTH}
@@ -309,9 +316,9 @@ export default function CircularCropModal({
         {/* Confirm Button */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.confirmButton, isProcessing && styles.confirmButtonDisabled]}
+            style={[styles.confirmButton, (isProcessing || !hasImage) && styles.confirmButtonDisabled]}
             onPress={handleConfirm}
-            disabled={isProcessing || !imageLoaded}
+            disabled={isProcessing || !hasImage}
           >
             {isProcessing ? (
               <ActivityIndicator color={colors.text.inverse} />
@@ -353,11 +360,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   imageContainer: {
-    width: MASK_DIAMETER,
-    height: MASK_DIAMETER,
-    overflow: 'visible',
     justifyContent: 'center',
     alignItems: 'center',
   },
