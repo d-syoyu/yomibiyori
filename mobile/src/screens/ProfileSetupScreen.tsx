@@ -219,6 +219,7 @@ export default function ProfileSetupScreen() {
                 })}
               </Picker>
             </View>
+            <Text style={styles.inputHint}>※他のユーザーには表示されません</Text>
           </View>
         );
 
@@ -295,6 +296,7 @@ export default function ProfileSetupScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+            <Text style={styles.inputHint}>※他のユーザーには表示されません</Text>
           </View>
         );
 
@@ -306,6 +308,7 @@ export default function ProfileSetupScreen() {
               onChange={setPrefecture}
               pickerStyle={styles.pickerContainer}
             />
+            <Text style={styles.inputHint}>※他のユーザーには表示されません</Text>
           </View>
         );
 

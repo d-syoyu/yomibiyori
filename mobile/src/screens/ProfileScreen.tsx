@@ -30,6 +30,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useToastStore } from '../stores/useToastStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { PrefecturePicker } from '../components/PrefecturePicker';
+import CircularCropModal from '../components/CircularCropModal';
 import api from '../services/api';
 import type { UserProfile, GenderType } from '../types';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
@@ -54,6 +55,8 @@ export default function ProfileScreen() {
   const [themeNotificationEnabled, setThemeNotificationEnabled] = useState(true);
   const [rankingNotificationEnabled, setRankingNotificationEnabled] = useState(true);
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>();
+  const [cropModalVisible, setCropModalVisible] = useState(false);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
   const { showSuccess, showError } = useToastStore();
 
@@ -200,7 +203,7 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Launch image picker (クロップなしで直接選択)
+      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
@@ -211,18 +214,27 @@ export default function ProfileScreen() {
         return;
       }
 
-      const asset = result.assets[0];
+      // Open circular crop modal
+      setSelectedImageUri(result.assets[0].uri);
+      setCropModalVisible(true);
+    } catch (error: any) {
+      console.error('[ProfileScreen] Failed to pick image:', error);
+      showError(error?.message || '画像の選択に失敗しました');
+    }
+  }
 
-      // Upload the image
+  async function handleCropConfirm(croppedUri: string) {
+    setCropModalVisible(false);
+    try {
       setIsUploadingAvatar(true);
 
       const formData = new FormData();
-      const filename = asset.uri.split('/').pop() || 'avatar.jpg';
+      const filename = croppedUri.split('/').pop() || 'avatar.png';
       const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      const type = match ? `image/${match[1]}` : 'image/png';
 
       formData.append('file', {
-        uri: asset.uri,
+        uri: croppedUri,
         name: filename,
         type,
       } as any);
@@ -359,6 +371,7 @@ export default function ProfileScreen() {
                 })}
               </Picker>
             </View>
+            <Text style={styles.helpText}>※他のユーザーには表示されません</Text>
           </View>
 
           {/* Gender */}
@@ -378,12 +391,14 @@ export default function ProfileScreen() {
                 <Picker.Item label="その他" value="other" />
               </Picker>
             </View>
+            <Text style={styles.helpText}>※他のユーザーには表示されません</Text>
           </View>
 
           {/* Prefecture */}
           <View style={styles.section}>
             <Text style={styles.label}>都道府県</Text>
             <PrefecturePicker value={prefecture} onChange={setPrefecture} pickerStyle={styles.pickerContainer} />
+            <Text style={styles.helpText}>※他のユーザーには表示されません</Text>
           </View>
 
           {/* Notification Preferences */}
@@ -459,6 +474,13 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CircularCropModal
+        visible={cropModalVisible}
+        imageUri={selectedImageUri}
+        onCancel={() => setCropModalVisible(false)}
+        onConfirm={handleCropConfirm}
+      />
     </SafeAreaView>
   );
 }
