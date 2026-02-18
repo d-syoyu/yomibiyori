@@ -203,10 +203,11 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Launch image picker
+      // Launch image picker with native square crop
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: false,
+        allowsEditing: true,
+        aspect: [1, 1],
         quality: 0.8,
       });
 
@@ -214,7 +215,7 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Open circular crop modal
+      // Show circular preview before uploading
       setSelectedImageUri(result.assets[0].uri);
       setCropModalVisible(true);
     } catch (error: any) {
@@ -223,18 +224,19 @@ export default function ProfileScreen() {
     }
   }
 
-  async function handleCropConfirm(croppedUri: string) {
+  async function handleCropConfirm() {
+    if (!selectedImageUri) return;
     setCropModalVisible(false);
     try {
       setIsUploadingAvatar(true);
 
       const formData = new FormData();
-      const filename = croppedUri.split('/').pop() || 'avatar.png';
+      const filename = selectedImageUri.split('/').pop() || 'avatar.jpg';
       const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/png';
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
 
       formData.append('file', {
-        uri: croppedUri,
+        uri: selectedImageUri,
         name: filename,
         type,
       } as any);
@@ -478,7 +480,11 @@ export default function ProfileScreen() {
       <CircularCropModal
         visible={cropModalVisible}
         imageUri={selectedImageUri}
-        onCancel={() => setCropModalVisible(false)}
+        onCancel={() => {
+          setCropModalVisible(false);
+          // Re-open image picker for retry
+          handlePickImage();
+        }}
         onConfirm={handleCropConfirm}
       />
     </SafeAreaView>
