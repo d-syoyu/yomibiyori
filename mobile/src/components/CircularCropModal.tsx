@@ -20,7 +20,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Rect, Circle, Defs, Mask } from 'react-native-svg';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { colors, spacing, fontSize, fontFamily, borderRadius } from '../theme';
 
@@ -243,39 +242,9 @@ export default function CircularCropModal({
             )}
           </Animated.View>
 
-          {/* Overlay mask */}
+          {/* Overlay mask — View with huge border to create circular hole */}
           <View style={styles.maskContainer} pointerEvents="none">
-            <Svg
-              width={SCREEN_WIDTH}
-              height={SCREEN_WIDTH}
-              viewBox={`0 0 ${SCREEN_WIDTH} ${SCREEN_WIDTH}`}
-            >
-              <Defs>
-                <Mask id="circleMask">
-                  <Rect width={SCREEN_WIDTH} height={SCREEN_WIDTH} fill="white" />
-                  <Circle
-                    cx={SCREEN_WIDTH / 2}
-                    cy={SCREEN_WIDTH / 2}
-                    r={MASK_RADIUS}
-                    fill="black"
-                  />
-                </Mask>
-              </Defs>
-              <Rect
-                width={SCREEN_WIDTH}
-                height={SCREEN_WIDTH}
-                fill="rgba(0,0,0,0.6)"
-                mask="url(#circleMask)"
-              />
-              <Circle
-                cx={SCREEN_WIDTH / 2}
-                cy={SCREEN_WIDTH / 2}
-                r={MASK_RADIUS}
-                stroke="rgba(255,255,255,0.5)"
-                strokeWidth={2}
-                fill="none"
-              />
-            </Svg>
+            <View style={styles.circleMask} />
           </View>
 
           {/* Touch area for dragging */}
@@ -367,9 +336,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   maskContainer: {
-    position: 'absolute',
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  circleMask: {
+    width: MASK_DIAMETER,
+    height: MASK_DIAMETER,
+    borderRadius: MASK_RADIUS,
+    borderWidth: SCREEN_WIDTH,
+    borderColor: 'rgba(0,0,0,0.6)',
   },
   touchArea: {
     position: 'absolute',
