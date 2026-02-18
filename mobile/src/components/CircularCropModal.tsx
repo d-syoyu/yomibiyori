@@ -1,6 +1,7 @@
 /**
  * Circular Crop Modal
  * 丸形クロップモーダル — プロフィール画像を丸形にトリミング
+ * expo-image-manipulator で実際にクロップを行う
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -20,7 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Rect, Circle, Defs, Mask } from 'react-native-svg';
-import { captureRef } from 'react-native-view-shot';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { colors, spacing, fontSize, fontFamily, borderRadius } from '../theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -29,6 +30,7 @@ const MASK_DIAMETER = MASK_RADIUS * 2;
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const SCALE_STEP = 0.25;
+const OUTPUT_SIZE = 400;
 
 interface CircularCropModalProps {
   visible: boolean;
@@ -45,35 +47,24 @@ export default function CircularCropModal({
 }: CircularCropModalProps) {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [scale, setScale] = useState(MIN_SCALE);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Crop result area ref
-  const cropRef = useRef<View>(null);
-
-  // Pan offset (animated for smooth dragging)
+  // Pan offset (using plain values for calculation, animated for display)
   const pan = useRef(new Animated.ValueXY()).current;
   const panOffset = useRef({ x: 0, y: 0 });
+  const currentPan = useRef({ x: 0, y: 0 });
 
   // Calculate image display dimensions to fill the mask area
   const getDisplayDimensions = useCallback(() => {
     if (!imageSize.width || !imageSize.height) return { width: 0, height: 0 };
     const aspectRatio = imageSize.width / imageSize.height;
-    let displayWidth: number;
-    let displayHeight: number;
 
     // Image should at minimum fill the mask diameter
     if (aspectRatio >= 1) {
-      // Landscape or square
-      displayHeight = MASK_DIAMETER;
-      displayWidth = displayHeight * aspectRatio;
-    } else {
-      // Portrait
-      displayWidth = MASK_DIAMETER;
-      displayHeight = displayWidth / aspectRatio;
+      return { width: MASK_DIAMETER * aspectRatio, height: MASK_DIAMETER };
     }
-
-    return { width: displayWidth, height: displayHeight };
+    return { width: MASK_DIAMETER, height: MASK_DIAMETER / aspectRatio };
   }, [imageSize]);
 
   // Clamp pan values so image always covers the mask
@@ -97,30 +88,23 @@ export default function CircularCropModal({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        // Store current offset
-        panOffset.current = {
-          x: (pan.x as any)._value ?? 0,
-          y: (pan.y as any)._value ?? 0,
-        };
+        panOffset.current = { ...currentPan.current };
       },
       onPanResponderMove: (_e, gestureState) => {
         const newX = panOffset.current.x + gestureState.dx;
         const newY = panOffset.current.y + gestureState.dy;
-        pan.setValue(clampPan(newX, newY, scale));
+        const clamped = clampPan(newX, newY, scale);
+        currentPan.current = clamped;
+        pan.setValue(clamped);
       },
-      onPanResponderRelease: () => {
-        // Already clamped during move
-      },
+      onPanResponderRelease: () => {},
     }),
   ).current;
 
-  // Update panResponder when scale changes
+  // Re-clamp when scale changes
   useEffect(() => {
-    const clamped = clampPan(
-      (pan.x as any)._value ?? 0,
-      (pan.y as any)._value ?? 0,
-      scale,
-    );
+    const clamped = clampPan(currentPan.current.x, currentPan.current.y, scale);
+    currentPan.current = clamped;
     pan.setValue(clamped);
   }, [scale]);
 
@@ -128,6 +112,7 @@ export default function CircularCropModal({
   useEffect(() => {
     if (visible && imageUri) {
       setScale(MIN_SCALE);
+      currentPan.current = { x: 0, y: 0 };
       pan.setValue({ x: 0, y: 0 });
       panOffset.current = { x: 0, y: 0 };
       setImageLoaded(false);
@@ -141,36 +126,79 @@ export default function CircularCropModal({
   }, [visible, imageUri]);
 
   const handleZoom = (direction: 'in' | 'out') => {
-    setScale((prev) => {
-      const next =
-        direction === 'in'
-          ? Math.min(MAX_SCALE, prev + SCALE_STEP)
-          : Math.max(MIN_SCALE, prev - SCALE_STEP);
-      return next;
-    });
+    setScale((prev) =>
+      direction === 'in'
+        ? Math.min(MAX_SCALE, prev + SCALE_STEP)
+        : Math.max(MIN_SCALE, prev - SCALE_STEP),
+    );
   };
 
   const handleConfirm = async () => {
-    if (!cropRef.current) return;
-    setIsCapturing(true);
+    if (!imageUri || !imageSize.width || !imageSize.height) return;
+    setIsProcessing(true);
+
     try {
-      const uri = await captureRef(cropRef.current, {
-        format: 'png',
-        quality: 1,
-        width: 400,
-        height: 400,
-        result: 'tmpfile',
-      });
-      onConfirm(uri);
+      const displayDims = getDisplayDimensions();
+
+      // displayDims is the base (scale=1) display size of the image
+      // The ratio from display pixels to original image pixels
+      const ratioX = imageSize.width / (displayDims.width * scale);
+      const ratioY = imageSize.height / (displayDims.height * scale);
+
+      // The mask circle center is at the center of the display area.
+      // The image center is offset by currentPan from the display center.
+      // So the crop origin (top-left of the square inscribing the circle)
+      // in display coordinates (relative to the scaled image top-left):
+      const scaledImgW = displayDims.width * scale;
+      const scaledImgH = displayDims.height * scale;
+
+      // Center of the mask in scaled-image coordinates
+      const centerX = scaledImgW / 2 - currentPan.current.x;
+      const centerY = scaledImgH / 2 - currentPan.current.y;
+
+      // Crop rectangle in display coordinates
+      const cropDisplayX = centerX - MASK_RADIUS;
+      const cropDisplayY = centerY - MASK_RADIUS;
+
+      // Convert to original image coordinates
+      const originX = Math.round(cropDisplayX * ratioX);
+      const originY = Math.round(cropDisplayY * ratioY);
+      const cropSize = Math.round(MASK_DIAMETER * ratioX);
+
+      // Clamp to image bounds
+      const safeX = Math.max(0, Math.min(originX, imageSize.width - cropSize));
+      const safeY = Math.max(0, Math.min(originY, imageSize.height - cropSize));
+      const safeCropSize = Math.min(
+        cropSize,
+        imageSize.width - safeX,
+        imageSize.height - safeY,
+      );
+
+      const result = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [
+          {
+            crop: {
+              originX: safeX,
+              originY: safeY,
+              width: safeCropSize,
+              height: safeCropSize,
+            },
+          },
+          { resize: { width: OUTPUT_SIZE, height: OUTPUT_SIZE } },
+        ],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.PNG },
+      );
+
+      onConfirm(result.uri);
     } catch (error) {
-      console.error('[CircularCropModal] Capture failed:', error);
+      console.error('[CircularCropModal] Crop failed:', error);
     } finally {
-      setIsCapturing(false);
+      setIsProcessing(false);
     }
   };
 
   const displayDims = getDisplayDimensions();
-  const cropAreaSize = MASK_DIAMETER;
 
   return (
     <Modal
@@ -191,30 +219,21 @@ export default function CircularCropModal({
 
         {/* Crop Area */}
         <View style={styles.cropWrapper}>
-          {/* Hidden capture view — only the circular region */}
-          <View
-            ref={cropRef}
-            style={[
-              styles.captureArea,
-              { width: cropAreaSize, height: cropAreaSize },
-            ]}
-            collapsable={false}
-          >
-            <View style={styles.captureClip}>
-              <Animated.Image
-                source={{ uri: imageUri ?? undefined }}
-                style={{
-                  width: displayDims.width * scale,
-                  height: displayDims.height * scale,
-                  transform: [
-                    { translateX: pan.x },
-                    { translateY: pan.y },
-                  ],
-                }}
-                resizeMode="cover"
-                onLoad={() => setImageLoaded(true)}
-              />
-            </View>
+          {/* Image layer */}
+          <View style={styles.imageContainer}>
+            <Animated.Image
+              source={{ uri: imageUri ?? undefined }}
+              style={{
+                width: displayDims.width * scale,
+                height: displayDims.height * scale,
+                transform: [
+                  { translateX: pan.x },
+                  { translateY: pan.y },
+                ],
+              }}
+              resizeMode="cover"
+              onLoad={() => setImageLoaded(true)}
+            />
           </View>
 
           {/* Overlay mask — darkens area outside the circle */}
@@ -241,7 +260,6 @@ export default function CircularCropModal({
                 fill="rgba(0,0,0,0.6)"
                 mask="url(#circleMask)"
               />
-              {/* Circle border */}
               <Circle
                 cx={SCREEN_WIDTH / 2}
                 cy={SCREEN_WIDTH / 2}
@@ -253,7 +271,7 @@ export default function CircularCropModal({
             </Svg>
           </View>
 
-          {/* Touch area for dragging (covers the crop area) */}
+          {/* Touch area for dragging */}
           <View style={styles.touchArea} {...panResponder.panHandlers} />
         </View>
 
@@ -291,11 +309,11 @@ export default function CircularCropModal({
         {/* Confirm Button */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.confirmButton, isCapturing && styles.confirmButtonDisabled]}
+            style={[styles.confirmButton, isProcessing && styles.confirmButtonDisabled]}
             onPress={handleConfirm}
-            disabled={isCapturing || !imageLoaded}
+            disabled={isProcessing || !imageLoaded}
           >
-            {isCapturing ? (
+            {isProcessing ? (
               <ActivityIndicator color={colors.text.inverse} />
             ) : (
               <Text style={styles.confirmButtonText}>この画像を使用</Text>
@@ -336,17 +354,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  captureArea: {
-    overflow: 'hidden',
-    borderRadius: MASK_RADIUS,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureClip: {
+  imageContainer: {
     width: MASK_DIAMETER,
     height: MASK_DIAMETER,
-    overflow: 'hidden',
-    borderRadius: MASK_RADIUS,
+    overflow: 'visible',
     justifyContent: 'center',
     alignItems: 'center',
   },
