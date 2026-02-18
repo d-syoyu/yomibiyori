@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Maximum avatar file size: 5MB
 MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
 # Allowed MIME types for avatar uploads
-ALLOWED_AVATAR_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_AVATAR_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
 # Avatar will be resized to this maximum dimension
 AVATAR_MAX_DIMENSION = 256
 

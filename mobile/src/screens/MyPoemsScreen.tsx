@@ -31,6 +31,7 @@ import ShareSheet from '../components/ShareSheet';
 import EditWorkModal from '../components/EditWorkModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import { useThemeStore } from '../stores/useThemeStore';
+import { useProfileSetupStore } from '../stores/useProfileSetupStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
@@ -51,7 +52,13 @@ export default function MyPoemsScreen() {
   const navigation = useNavigation<MyPoemsScreenNavigationProp>();
   const { user, logout, isAuthenticated } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
+  const { profileSetupCompleted, loadProfileSetupStatus } = useProfileSetupStore();
   const { handleError } = useApiErrorHandler();
+
+  // Load profile setup status on mount
+  useEffect(() => {
+    loadProfileSetupStatus();
+  }, [loadProfileSetupStatus]);
 
   // サマリー情報（日付ごとの作品数、いいね数）
   const [dateSummaries, setDateSummaries] = useState<WorkDateSummary[]>([]);
@@ -419,7 +426,7 @@ export default function MyPoemsScreen() {
               </View>
               <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => navigation.navigate('ProfileSetup')}
+                onPress={() => navigation.navigate(profileSetupCompleted ? 'Profile' : 'ProfileSetup')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="settings-outline" size={16} color="#6B7B4F" />

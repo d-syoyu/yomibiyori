@@ -29,7 +29,7 @@ import Svg, { Rect, Circle, Defs, Mask } from 'react-native-svg';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { colors, spacing, fontSize, fontFamily } from '../theme';
 
-const CIRCLE_RATIO = 0.75; // 円の直径 = 画面幅の75%
+const CIRCLE_RATIO = 0.95; // 円の直径 = 画面幅の95%
 const MAX_SCALE = 5;
 const OUTPUT_SIZE = 400;
 const SPRING_CONFIG = { damping: 15, stiffness: 150 };

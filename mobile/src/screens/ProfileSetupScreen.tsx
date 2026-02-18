@@ -23,6 +23,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useToastStore } from '../stores/useToastStore';
+import { useProfileSetupStore } from '../stores/useProfileSetupStore';
 import { PrefecturePicker } from '../components/PrefecturePicker';
 import api from '../services/api';
 import type { UserProfile, GenderType, MyPoemsStackParamList } from '../types';
@@ -43,6 +44,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function ProfileSetupScreen() {
   const navigation = useNavigation<ProfileSetupNavigationProp>();
   const { showSuccess, showError } = useToastStore();
+  const { completeProfileSetup } = useProfileSetupStore();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,6 +156,7 @@ export default function ProfileSetupScreen() {
       };
 
       await api.updateProfile(updateData);
+      await completeProfileSetup();
       showSuccess('プロフィールを更新しました');
       // ステップ完了後は従来のプロフィール設定画面に遷移
       navigation.replace('Profile');
