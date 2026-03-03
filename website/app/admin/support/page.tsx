@@ -158,8 +158,8 @@ export default function AdminSupportPage() {
   }
 
   return (
-    <div className="-mt-6 space-y-4 h-[calc(100vh-130px)] flex flex-col">
-      <header className="flex justify-between items-center shrink-0">
+    <div className="-mt-6 space-y-4 flex flex-col" style={{ height: 'calc(100vh - 130px)', minHeight: '500px' }}>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
         <div className="space-y-1">
           <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
             サポート
@@ -201,9 +201,9 @@ export default function AdminSupportPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex gap-6 overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
         {/* Ticket List */}
-        <div className="w-1/3 card overflow-hidden flex flex-col p-0">
+        <div className="w-full md:w-1/3 h-64 md:h-auto card overflow-hidden flex flex-col p-0 shrink-0">
           <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-washi)]/50">
             <h3 className="font-bold text-[var(--color-text-primary)]">問い合わせ一覧 ({tickets.length})</h3>
           </div>

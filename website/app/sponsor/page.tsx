@@ -251,8 +251,7 @@ export default function SponsorDashboard() {
   }
 
   return (
-    <div className="page-wrapper">
-      <div className="page-container space-y-12">
+    <div className="space-y-12">
         <header className="space-y-4 text-center md:text-left pt-8">
           <div className="flex items-center justify-between">
             <div className="inline-flex items-center rounded-full bg-[var(--color-washi)] px-4 py-1.5 text-sm font-medium tracking-wider text-[var(--color-igusa)] border border-[var(--color-washi-dark)]">
@@ -539,7 +538,6 @@ export default function SponsorDashboard() {
             </div>
           </div>
         </section>
-      </div>
     </div>
   )
 }

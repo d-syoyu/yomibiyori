@@ -97,7 +97,7 @@ export default function AdminLayout({
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-[var(--color-border)] sticky top-0 z-10">
         <div className="page-container">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex flex-col md:flex-row justify-between items-center min-h-16 py-2 gap-2">
             <div className="flex items-center gap-4">
               <Link href="/" className="text-2xl font-bold text-[var(--color-igusa)] font-serif hover:text-[var(--color-igusa-light)] transition-colors">
                 よみびより
@@ -125,7 +125,7 @@ export default function AdminLayout({
       {/* Navigation */}
       <nav className="bg-white/60 backdrop-blur-sm border-b border-[var(--color-border)]">
         <div className="page-container">
-          <div className="flex gap-2 py-3">
+          <div className="flex gap-2 py-3 overflow-x-auto whitespace-nowrap">
             {ADMIN_NAV_ITEMS.map((item) => (
               <NavLink key={item.href} href={item.href}>
                 {item.icon} {item.label}

@@ -178,9 +178,15 @@ h6 {
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-xl);
-  padding: 2.5rem;
+  padding: 1.25rem;
   box-shadow: var(--shadow-soft);
   transition: box-shadow 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 2.5rem;
+  }
 }
 
 .card:hover {
