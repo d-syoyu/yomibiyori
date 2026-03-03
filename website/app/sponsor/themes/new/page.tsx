@@ -126,7 +126,7 @@ export default function NewThemePage() {
       }
 
       // Get or create default campaign
-      let { data: campaigns } = await supabase
+      const { data: campaigns } = await supabase
         .from('sponsor_campaigns')
         .select('id')
         .eq('sponsor_id', sponsor.id)

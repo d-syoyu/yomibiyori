@@ -53,9 +53,9 @@ export function FunnelChart({ data }: FunnelChartProps) {
                             border: '1px solid #e5e7eb',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                         }}
-                        formatter={(value: number, name: string, props: any) => {
-                            const rate = props.payload.rate
-                            return [`${value.toLocaleString()} ${rate ? `(${rate}%)` : ''}`, '']
+                        formatter={(value: number, name: string, entry: { payload?: FunnelData }) => {
+                            const rate = entry.payload?.rate
+                            return [`${value.toLocaleString()} ${rate ? `(${rate}%)` : ''}`, name]
                         }}
                     />
                     <Bar dataKey="value" fill="var(--color-igusa)" radius={[0, 4, 4, 0]} barSize={40}>

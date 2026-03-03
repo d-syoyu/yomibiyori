@@ -69,9 +69,10 @@ export async function GET(request: Request) {
 
         if (!projectId || !apiKey) {
             console.warn('PostHog credentials not configured')
-            // Return empty data instead of error to allow UI to show "No Data" or mock
+            // Return degraded status so UI can explicitly show unavailable state.
             return NextResponse.json({
                 results: [],
+                status: 'degraded',
                 warning: 'PostHog not configured'
             })
         }
@@ -89,7 +90,7 @@ export async function GET(request: Request) {
 
         if (!campaigns || campaigns.length === 0) {
             console.warn('[Insights API] No campaigns for sponsor, returning empty results')
-            return NextResponse.json({ results: [] })
+            return NextResponse.json({ results: [], status: 'ok' })
         }
 
         const campaignIds = campaigns.map(c => c.id)
@@ -107,7 +108,7 @@ export async function GET(request: Request) {
 
         if (!sponsorThemes || sponsorThemes.length === 0) {
             console.warn('[Insights API] No sponsor themes found, returning empty results')
-            return NextResponse.json({ results: [] })
+            return NextResponse.json({ results: [], status: 'ok' })
         }
 
         const sponsorThemeIds = sponsorThemes.map(st => st.id)
@@ -126,7 +127,7 @@ export async function GET(request: Request) {
 
         if (targetThemeIds.length === 0) {
             console.warn('[Insights API] No distributed themes found for sponsor, returning empty results')
-            return NextResponse.json({ results: [] })
+            return NextResponse.json({ results: [], status: 'ok' })
         }
 
         // 4. Fetch Data from PostHog
@@ -178,6 +179,7 @@ export async function GET(request: Request) {
             // Degrade gracefully to avoid 500 on our API; front側でwarningを見てモック表示
             return NextResponse.json({
                 results: [],
+                status: 'degraded',
                 warning: `PostHog API error: ${response.status}`
             })
         }
@@ -410,7 +412,7 @@ export async function GET(request: Request) {
                 }
         }))
 
-        return NextResponse.json({ results: enrichedResults })
+        return NextResponse.json({ results: enrichedResults, status: 'ok' })
 
     } catch (error) {
         console.error('Insights API Error:', error)

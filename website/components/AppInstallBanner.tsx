@@ -1,103 +1,95 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react'
+import Image from 'next/image'
 
-type Platform = 'ios' | 'android' | null;
+type Platform = 'ios' | 'android' | null
 
 interface StoreConfig {
-  url: string;
-  label: string;
+  url: string
+  label: string
 }
 
 const STORE_URLS: Record<'ios' | 'android', StoreConfig> = {
   ios: {
-    url: 'https://apps.apple.com/jp/app/短歌アプリ-よみびより/id6754638890',
+    url: 'https://apps.apple.com/jp/app/%E3%82%88%E3%81%BF%E3%81%B3%E3%82%88%E3%82%8A/id6754638890',
     label: 'App Store',
   },
   android: {
     url: 'https://play.google.com/store/apps/details?id=com.yomibiyori.app&pcampaignid=web_share',
     label: 'Google Play',
   },
-};
+}
 
-const BANNER_DISMISSED_KEY = 'app-install-banner-dismissed';
-const DEEP_LINK_URL = 'yomibiyori://';
-const TIMEOUT_MS = 2500;
+const BANNER_DISMISSED_KEY = 'app-install-banner-dismissed'
+const DEEP_LINK_URL = 'yomibiyori://'
+const TIMEOUT_MS = 2500
+
+function detectPlatform(): Platform {
+  if (typeof window === 'undefined') return null
+
+  if (localStorage.getItem(BANNER_DISMISSED_KEY)) {
+    return null
+  }
+
+  const ua = navigator.userAgent
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios'
+  if (/Android/i.test(ua)) return 'android'
+  return null
+}
 
 export function AppInstallBanner() {
-  const [platform, setPlatform] = useState<Platform>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [platform] = useState<Platform>(() => detectPlatform())
+  const [isVisible, setIsVisible] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
 
   useEffect(() => {
-    // すでに閉じている場合は表示しない
-    if (typeof window !== 'undefined' && localStorage.getItem(BANNER_DISMISSED_KEY)) {
-      return;
-    }
+    if (!platform) return
 
-    const ua = navigator.userAgent;
+    const timer = window.setTimeout(() => {
+      setIsVisible(true)
+      setIsAnimating(true)
+    }, 1500)
 
-    // iOS検出（iPhone, iPad, iPod）
-    // Safariにはネイティブバナーがあるが、Chrome等では表示されないのでカスタムバナーを表示
-    if (/iPhone|iPad|iPod/i.test(ua)) {
-      setPlatform('ios');
-      // 少し遅延させてアニメーション表示
-      setTimeout(() => {
-        setIsVisible(true);
-        setIsAnimating(true);
-      }, 1500);
-    }
-    // Android検出
-    else if (/Android/i.test(ua) && STORE_URLS.android.url) {
-      setPlatform('android');
-      setTimeout(() => {
-        setIsVisible(true);
-        setIsAnimating(true);
-      }, 1500);
-    }
-  }, []);
+    return () => window.clearTimeout(timer)
+  }, [platform])
 
   const handleDismiss = () => {
-    setIsAnimating(false);
+    setIsAnimating(false)
     setTimeout(() => {
-      setIsVisible(false);
-      localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
-    }, 300);
-  };
+      setIsVisible(false)
+      localStorage.setItem(BANNER_DISMISSED_KEY, 'true')
+    }, 300)
+  }
 
   const handleOpenApp = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      if (!platform) return;
+      e.preventDefault()
+      if (!platform) return
 
-      const storeUrl = STORE_URLS[platform].url;
-      let isAppOpened = false;
+      const storeUrl = STORE_URLS[platform].url
+      let isAppOpened = false
 
       const handleVisibilityChange = () => {
         if (document.hidden) {
-          isAppOpened = true;
+          isAppOpened = true
         }
-      };
+      }
 
-      document.addEventListener('visibilitychange', handleVisibilityChange);
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      window.location.href = DEEP_LINK_URL
 
-      // ディープリンクを試行
-      window.location.href = DEEP_LINK_URL;
-
-      // タイムアウト後にストアへリダイレクト
       setTimeout(() => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
         if (!isAppOpened) {
-          window.location.href = storeUrl;
+          window.location.href = storeUrl
         }
-      }, TIMEOUT_MS);
+      }, TIMEOUT_MS)
     },
-    [platform]
-  );
+    [platform],
+  )
 
-  if (!isVisible || !platform) return null;
+  if (!isVisible || !platform) return null
 
   return (
     <div
@@ -107,28 +99,23 @@ export function AppInstallBanner() {
     >
       <div className="bg-white/95 backdrop-blur-xl shadow-md border-b border-[var(--color-border)] px-4 py-3">
         <div className="max-w-screen-lg mx-auto flex items-center gap-3">
-          {/* アプリアイコン */}
           <div className="flex-shrink-0">
             <Image
               src="/icon-192.png"
-              alt="よみびより"
+              alt="yomibiyori"
               width={44}
               height={44}
               className="rounded-lg shadow-sm"
             />
           </div>
 
-          {/* テキスト */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-[var(--color-igusa)] text-sm">
-              よみびより
-            </h3>
+            <h3 className="font-bold text-[var(--color-igusa)] text-sm">よみびより</h3>
             <p className="text-xs text-[var(--color-text-secondary)] leading-snug">
-              アプリでもっと便利に
+              アプリでもっと快適に
             </p>
           </div>
 
-          {/* ボタン群 */}
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={handleOpenApp}
@@ -149,16 +136,12 @@ export function AppInstallBanner() {
                 stroke="currentColor"
                 className="w-4 h-4"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

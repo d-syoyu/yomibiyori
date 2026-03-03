@@ -5,6 +5,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { NavLink, ADMIN_NAV_ITEMS } from '../../components/ui/NavLink'
@@ -98,9 +99,9 @@ export default function AdminLayout({
         <div className="page-container">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
-              <a href="/" className="text-2xl font-bold text-[var(--color-igusa)] font-serif hover:text-[var(--color-igusa-light)] transition-colors">
+              <Link href="/" className="text-2xl font-bold text-[var(--color-igusa)] font-serif hover:text-[var(--color-igusa-light)] transition-colors">
                 よみびより
-              </a>
+              </Link>
               <span className="text-sm text-[var(--color-text-muted)] border-l border-[var(--color-border)] pl-4">
                 管理画面
               </span>

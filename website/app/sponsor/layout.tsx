@@ -5,6 +5,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SupportWidget from '../../components/sponsor/SupportWidget'
@@ -33,20 +34,40 @@ export default function SponsorLayout({
   const [impersonation, setImpersonation] = useState<ImpersonationData | null>(null)
 
   useEffect(() => {
-    // Check for impersonation first
-    const impersonationData = getImpersonation()
-    setImpersonation(impersonationData)
-    checkUser(impersonationData)
+    checkUser()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function checkUser(impersonationData: ImpersonationData | null) {
+  async function checkUser() {
     try {
       // Get current session
       const { data: { session } } = await supabase.auth.getSession()
+      const impersonationData = getImpersonation()
 
       // If impersonating, handle admin access first
       if (impersonationData) {
+        if (!session) {
+          endImpersonation()
+          setImpersonation(null)
+          toast.error('Session expired. Please sign in again.')
+          router.push('/sponsor-login')
+          return
+        }
+
+        const { data: adminUser, error: adminUserError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+
+        if (adminUserError || adminUser?.role !== 'admin') {
+          endImpersonation()
+          setImpersonation(null)
+          toast.error('Impersonation is only available for admins.')
+          router.push('/sponsor-login')
+          return
+        }
+
         // Admin is impersonating - verify sponsor exists and allow access
         const { data: sponsorData } = await supabase
           .from('sponsors')
@@ -56,13 +77,13 @@ export default function SponsorLayout({
 
         if (sponsorData) {
           // Valid impersonation - set user as the sponsor
+          setImpersonation(impersonationData)
           setUser({
             id: impersonationData.sponsorId,
-            email: session?.user?.email || 'admin@example.com',
+            email: session.user.email || 'admin@example.com',
             role: 'sponsor',
             display_name: sponsorData.company_name,
           })
-          setLoading(false)
           return
         } else {
           // Sponsor not found, end impersonation
@@ -144,9 +165,9 @@ export default function SponsorLayout({
         <div className="page-container">
           <div className="flex flex-col md:flex-row justify-between items-center min-h-16 py-2 gap-2">
             <div className="flex items-center gap-4">
-              <a href="/" className="text-2xl font-bold text-[var(--color-igusa)] font-serif hover:text-[var(--color-igusa-light)] transition-colors">
+              <Link href="/" className="text-2xl font-bold text-[var(--color-igusa)] font-serif hover:text-[var(--color-igusa-light)] transition-colors">
                 よみびより
-              </a>
+              </Link>
               <span className="text-sm text-[var(--color-text-muted)] border-l border-[var(--color-border)] pl-4">
                 スポンサー管理
               </span>

@@ -201,6 +201,7 @@ export default function SponsorInsightsPage() {
         total_submissions: 0,
         avg_engagement_rate: 0,
     })
+    const [insightsWarning, setInsightsWarning] = useState<string | null>(null)
 
     useEffect(() => {
         fetchInsights()
@@ -209,12 +210,11 @@ export default function SponsorInsightsPage() {
     async function fetchInsights() {
         try {
             setLoading(true)
+            setInsightsWarning(null)
 
-            // Check for impersonation first
             const impersonation = getImpersonation()
             const { data: { session } } = await supabase.auth.getSession()
 
-            // Determine sponsor ID - use impersonation if available, otherwise session
             let sponsorId: string
             if (impersonation) {
                 sponsorId = impersonation.sponsorId
@@ -228,10 +228,7 @@ export default function SponsorInsightsPage() {
                 .from('sponsor_campaigns')
                 .select('id')
                 .eq('sponsor_id', sponsorId)
-
-            if (campaignsError) {
-                throw campaignsError
-            }
+            if (campaignsError) throw campaignsError
 
             if (!campaigns || campaigns.length === 0) {
                 setThemes([])
@@ -239,17 +236,12 @@ export default function SponsorInsightsPage() {
             }
 
             const campaignIds = campaigns.map(c => c.id)
-
-            // 承認済みスポンサーお題のIDリストを取得
             const { data: sponsorThemes, error: sponsorThemesError } = await supabase
                 .from('sponsor_themes')
                 .select('id')
                 .in('campaign_id', campaignIds)
                 .in('status', ['approved', 'published'])
-
-            if (sponsorThemesError) {
-                throw sponsorThemesError
-            }
+            if (sponsorThemesError) throw sponsorThemesError
 
             if (!sponsorThemes || sponsorThemes.length === 0) {
                 setThemes([])
@@ -257,44 +249,30 @@ export default function SponsorInsightsPage() {
             }
 
             const sponsorThemeIds = sponsorThemes.map(st => st.id)
-
-            // themesテーブルから、sponsor_theme_idが一致するお題を取得
             const { data: distributedThemes, error: themesError } = await supabase
                 .from('themes')
                 .select('id, text, date, sponsor_theme_id')
                 .in('sponsor_theme_id', sponsorThemeIds)
                 .order('date', { ascending: false })
-
-            if (themesError) {
-                throw themesError
-            }
+            if (themesError) throw themesError
 
             if (!distributedThemes || distributedThemes.length === 0) {
                 setThemes([])
                 return
             }
 
-            // text_575 という名前に変換（PostHogとの整合性のため）
             const formattedThemes = distributedThemes.map(theme => ({
                 id: theme.id,
                 text_575: theme.text,
-                date: theme.date
+                date: theme.date,
             }))
 
-            // 2. Fetch metrics from API (PostHog)
             let insightsData: ThemeInsight[] = []
-            let usedMockData = false
+            let usedFallback = false
 
             try {
-                console.log('[Insights] Fetching data from API...')
-
-                // セッションからアクセストークンを取得
                 const { data: { session: currentSession } } = await supabase.auth.getSession()
                 const accessToken = currentSession?.access_token
-
-                console.log('[Insights] Access token available:', !!accessToken)
-
-                // なりすまし中はsponsor_idをクエリパラメータで渡す
                 const apiUrl = impersonation
                     ? `/api/sponsor/insights?sponsor_id=${sponsorId}`
                     : '/api/sponsor/insights'
@@ -302,31 +280,17 @@ export default function SponsorInsightsPage() {
                 const res = await fetch(apiUrl, {
                     credentials: 'include',
                     cache: 'no-store',
-                    headers: accessToken ? {
-                        'Authorization': `Bearer ${accessToken}`
-                    } : {}
+                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 })
-                console.log('[Insights] API response status:', res.status, res.statusText)
-
                 const apiResult = await res.json()
-                console.log('[Insights] API result structure:', {
-                    hasWarning: 'warning' in apiResult,
-                    hasResults: 'results' in apiResult,
-                    hasError: 'error' in apiResult,
-                    resultsCount: apiResult.results?.length ?? 'N/A'
-                })
 
                 if (apiResult.error) {
-                    console.error('[Insights] API returned error, using mock data:', apiResult.error)
-                    usedMockData = true
-                } else if (apiResult.warning) {
-                    console.warn('[Insights] API returned warning, using mock data:', apiResult.warning)
-                    usedMockData = true
+                    setInsightsWarning('Unable to load analytics data.')
+                    usedFallback = true
+                } else if (apiResult.warning || apiResult.status === 'degraded') {
+                    setInsightsWarning('Analytics data is currently unavailable.')
+                    usedFallback = true
                 } else if (apiResult.results && Array.isArray(apiResult.results)) {
-                    console.log('[Insights] Using real data from PostHog')
-                    console.log('[Insights] API results:', apiResult.results)
-
-                    // Map API results to themes
                     type ApiMetrics = {
                         theme_id: string
                         impressions: number
@@ -340,17 +304,15 @@ export default function SponsorInsightsPage() {
                             regions: Record<string, number>
                         }
                     }
+
                     const metricsMap = new Map<string, ApiMetrics>(
                         apiResult.results.map((r: ApiMetrics) => [r.theme_id, r])
                     )
-
-                    console.log('[Insights] Metrics map:', Object.fromEntries(metricsMap))
 
                     insightsData = formattedThemes.map(theme => {
                         const metrics = metricsMap.get(theme.id)
                         const impressions = metrics?.impressions || 0
                         const submissions = metrics?.submissions || 0
-                        const sponsor_link_clicks = metrics?.sponsor_link_clicks || 0
 
                         return {
                             id: theme.id,
@@ -358,72 +320,50 @@ export default function SponsorInsightsPage() {
                             date: theme.date,
                             impressions,
                             submissions,
-                            sponsor_link_clicks,
-                        likes: metrics?.total_likes || 0,
-                        engagement_rate: impressions > 0 ? (submissions / impressions) * 100 : 0,
-                        total_likes: metrics?.total_likes || 0,
-                        avg_likes_per_work: metrics?.avg_likes_per_work || 0,
-                        top_work: metrics?.top_work || null,
-                        demographics: metrics?.demographics ?? {
-                            age_groups: {},
-                            regions: {}
+                            sponsor_link_clicks: metrics?.sponsor_link_clicks || 0,
+                            likes: metrics?.total_likes || 0,
+                            engagement_rate: impressions > 0 ? (submissions / impressions) * 100 : 0,
+                            total_likes: metrics?.total_likes || 0,
+                            avg_likes_per_work: metrics?.avg_likes_per_work || 0,
+                            top_work: metrics?.top_work || null,
+                            demographics: metrics?.demographics ?? {
+                                age_groups: {},
+                                regions: {},
+                            },
                         }
-                    }
                     })
-                    usedMockData = false
                 } else {
-                    console.warn('[Insights] API returned unexpected format, using mock data')
-                    usedMockData = true
+                    setInsightsWarning('Invalid analytics response format.')
+                    usedFallback = true
                 }
             } catch (e) {
-                console.error('[Insights] Failed to fetch from API, using mock data:', e)
-                usedMockData = true
+                console.error('[Insights] Failed to fetch from API:', e)
+                setInsightsWarning('Network error while loading analytics data.')
+                usedFallback = true
             }
 
-            if (usedMockData) {
-                console.log('Using mock data for insights')
-                insightsData = formattedThemes.map(theme => {
-                    const impressions = Math.floor(Math.random() * 5000) + 500
-                    const submissions = Math.floor(impressions * (Math.random() * 0.1 + 0.05))
-                    const totalLikes = Math.floor(submissions * (Math.random() * 0.5 + 0.2))
-
-                    return {
-                        id: theme.id,
-                        text_575: theme.text_575,
-                        date: theme.date,
-                        impressions,
-                        submissions,
-                        sponsor_link_clicks: Math.floor(impressions * (Math.random() * 0.02 + 0.01)),
-                        likes: totalLikes,
-                        engagement_rate: (submissions / impressions) * 100,
-                        total_likes: totalLikes,
-                        avg_likes_per_work: submissions > 0 ? Number((totalLikes / submissions).toFixed(1)) : 0,
-                        top_work: submissions > 0 ? {
-                            text: '春の風\n桜舞い散る',
-                            likes: Math.floor(totalLikes * 0.3),
-                            author_name: 'サンプルユーザー'
-                        } : null,
-                        demographics: {
-                            age_groups: {
-                                '10代': Math.floor(submissions * 0.1),
-                                '20代': Math.floor(submissions * 0.3),
-                                '30代': Math.floor(submissions * 0.4),
-                                '40代': Math.floor(submissions * 0.1),
-                                '50代以上': Math.floor(submissions * 0.1),
-                            },
-                            regions: {
-                                '東京都': Math.floor(submissions * 0.4),
-                                '大阪府': Math.floor(submissions * 0.2),
-                                'その他': Math.floor(submissions * 0.4),
-                            }
-                        }
-                    }
-                })
+            if (usedFallback) {
+                insightsData = formattedThemes.map(theme => ({
+                    id: theme.id,
+                    text_575: theme.text_575,
+                    date: theme.date,
+                    impressions: 0,
+                    submissions: 0,
+                    sponsor_link_clicks: 0,
+                    likes: 0,
+                    engagement_rate: 0,
+                    total_likes: 0,
+                    avg_likes_per_work: 0,
+                    top_work: null,
+                    demographics: {
+                        age_groups: {},
+                        regions: {},
+                    },
+                }))
             }
 
             setThemes(insightsData)
 
-            // Calculate summary
             const totalImp = insightsData.reduce((sum, t) => sum + t.impressions, 0)
             const totalSub = insightsData.reduce((sum, t) => sum + t.submissions, 0)
             const avgRate = insightsData.length > 0
@@ -433,17 +373,22 @@ export default function SponsorInsightsPage() {
             setSummary({
                 total_impressions: totalImp,
                 total_submissions: totalSub,
-                avg_engagement_rate: avgRate
+                avg_engagement_rate: avgRate,
             })
-
         } catch (error) {
             console.error('Failed to fetch insights:', error)
-    } finally {
-        setLoading(false)
+            setInsightsWarning('Failed to initialize insights page. Please reload.')
+        } finally {
+            setLoading(false)
+        }
     }
-}
 
     function handleExportCsv() {
+        if (insightsWarning) {
+            alert('CSV export is unavailable while analytics data is degraded.')
+            return
+        }
+
         if (themes.length === 0) {
             alert('エクスポートするデータがありません')
             return
@@ -534,6 +479,16 @@ export default function SponsorInsightsPage() {
                 </p>
             </header>
 
+            {insightsWarning && (
+                <section
+                    className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+                    role="status"
+                    aria-live="polite"
+                >
+                    {insightsWarning}
+                </section>
+            )}
+
             {/* Summary Cards */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="card bg-gradient-to-br from-white to-[var(--color-washi)] relative hover:z-20">
@@ -591,7 +546,12 @@ export default function SponsorInsightsPage() {
                 <div className="px-6 pb-4 flex justify-end">
                     <button
                         onClick={handleExportCsv}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--color-igusa)] text-[var(--color-igusa)] hover:bg-[var(--color-igusa)] hover:text-white transition-colors text-sm font-medium shadow-sm bg-white cursor-pointer"
+                        disabled={Boolean(insightsWarning)}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium shadow-sm transition-colors ${
+                            insightsWarning
+                                ? 'border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-washi)] cursor-not-allowed'
+                                : 'border-[var(--color-igusa)] text-[var(--color-igusa)] hover:bg-[var(--color-igusa)] hover:text-white bg-white cursor-pointer'
+                        }`}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />

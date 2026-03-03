@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -45,16 +45,9 @@ function isWebView(): boolean {
 }
 
 export function DownloadClient() {
-  const [platform, setPlatform] = useState<Platform>('desktop');
-  const [isLoading, setIsLoading] = useState(true);
+  const [platform] = useState<Platform>(() => detectPlatform());
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [inWebView, setInWebView] = useState(false);
-
-  useEffect(() => {
-    setPlatform(detectPlatform());
-    setInWebView(isWebView());
-    setIsLoading(false);
-  }, []);
+  const [inWebView] = useState<boolean>(() => isWebView());
 
   const handleOpenApp = useCallback(() => {
     if (platform === 'desktop') return;
@@ -85,16 +78,6 @@ export function DownloadClient() {
       setIsRedirecting(false);
     }, TIMEOUT_MS);
   }, [platform]);
-
-  if (isLoading) {
-    return (
-      <main className="flex-grow relative z-10 flex items-center justify-center min-h-screen">
-        <div className="animate-pulse">
-          <div className="w-24 h-24 bg-[var(--color-washi-dark)] rounded-2xl" />
-        </div>
-      </main>
-    );
-  }
 
   const isMobile = platform === 'ios' || platform === 'android';
   const storeConfig = isMobile ? STORE_CONFIG[platform] : null;

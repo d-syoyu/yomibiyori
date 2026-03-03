@@ -6,8 +6,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { getImpersonation, ImpersonationData } from '@/lib/impersonation'
+import { endImpersonation, getImpersonation, ImpersonationData } from '@/lib/impersonation'
 
 export interface SponsorAuthState {
   /** The sponsor ID (either logged in user or impersonated sponsor) */
@@ -48,49 +49,63 @@ export function useSponsorAuth(): SponsorAuthState {
   })
 
   useEffect(() => {
-    async function initAuth() {
-      try {
-        // Check for impersonation first
-        const impersonation = getImpersonation()
-        const { data: { session } } = await supabase.auth.getSession()
+    const emptyState: SponsorAuthState = {
+      sponsorId: null,
+      isImpersonating: false,
+      impersonation: null,
+      loading: false,
+      accessToken: null,
+    }
 
-        if (impersonation) {
-          // Admin is impersonating a sponsor
-          setState({
+    async function resolveState(session: Session | null): Promise<SponsorAuthState> {
+      const impersonation = getImpersonation()
+
+      if (impersonation) {
+        if (!session) {
+          endImpersonation()
+          return emptyState
+        }
+
+        const { data: adminUser, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+
+        if (!error && adminUser?.role === 'admin') {
+          return {
             sponsorId: impersonation.sponsorId,
             isImpersonating: true,
             impersonation,
             loading: false,
-            accessToken: session?.access_token || null,
-          })
-        } else if (session) {
-          // Regular sponsor login
-          setState({
-            sponsorId: session.user.id,
-            isImpersonating: false,
-            impersonation: null,
-            loading: false,
             accessToken: session.access_token,
-          })
-        } else {
-          // Not authenticated
-          setState({
-            sponsorId: null,
-            isImpersonating: false,
-            impersonation: null,
-            loading: false,
-            accessToken: null,
-          })
+          }
         }
-      } catch (error) {
-        console.error('Failed to initialize sponsor auth:', error)
-        setState({
-          sponsorId: null,
+
+        endImpersonation()
+      }
+
+      if (session) {
+        return {
+          sponsorId: session.user.id,
           isImpersonating: false,
           impersonation: null,
           loading: false,
-          accessToken: null,
-        })
+          accessToken: session.access_token,
+        }
+      }
+
+      return emptyState
+    }
+
+    async function initAuth() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const nextState = await resolveState(session)
+        setState(nextState)
+      } catch (error) {
+        console.error('Failed to initialize sponsor auth:', error)
+        setState(emptyState)
       }
     }
 
@@ -99,30 +114,8 @@ export function useSponsorAuth(): SponsorAuthState {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        const impersonation = getImpersonation()
-
-        if (impersonation) {
-          setState(prev => ({
-            ...prev,
-            accessToken: session?.access_token || null,
-          }))
-        } else if (session) {
-          setState({
-            sponsorId: session.user.id,
-            isImpersonating: false,
-            impersonation: null,
-            loading: false,
-            accessToken: session.access_token,
-          })
-        } else {
-          setState({
-            sponsorId: null,
-            isImpersonating: false,
-            impersonation: null,
-            loading: false,
-            accessToken: null,
-          })
-        }
+        const nextState = await resolveState(session)
+        setState(nextState)
       }
     )
 
