@@ -29,7 +29,7 @@ import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { VALIDATION_MESSAGES } from '../constants/errorMessages';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
-import { identifyUser, trackEvent, EventNames } from '../utils/analytics';
+import { identifyUser, trackEvent, EventNames, buildPersonProperties } from '../utils/analytics';
 import { logger } from '../utils/logger';
 import api from '../services/api';
 import CategoryIcon from '../components/CategoryIcon';
@@ -58,9 +58,7 @@ export default function LoginScreen() {
     }
 
     try {
-      await identifyUser(user.user_id, {
-        display_name: user.display_name,
-      });
+      await identifyUser(user.user_id, buildPersonProperties(user));
     } catch (identifyError) {
       logger.error('[LoginScreen] Failed to identify user:', identifyError);
     }

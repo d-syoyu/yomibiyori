@@ -187,6 +187,26 @@ export const resetAnalytics = (): void => {
   }
 };
 
+const _GENDER_MAP: Record<string, string> = { male: '男性', female: '女性', other: 'その他' };
+
+/**
+ * Build PostHog person properties from user profile fields
+ */
+export const buildPersonProperties = (profile: {
+  display_name?: string | null;
+  birth_year?: number | null;
+  gender?: string | null;
+  prefecture?: string | null;
+}): Record<string, string | boolean | null> => {
+  const currentYear = new Date().getFullYear();
+  const props: Record<string, string | boolean | null> = {};
+  if (profile.display_name) props.display_name = profile.display_name;
+  if (profile.birth_year) props.age_group = `${Math.floor((currentYear - profile.birth_year) / 10) * 10}代`;
+  if (profile.gender) props.gender = _GENDER_MAP[profile.gender] ?? profile.gender;
+  if (profile.prefecture) props.prefecture = profile.prefecture;
+  return props;
+};
+
 /**
  * Standard event names
  */
