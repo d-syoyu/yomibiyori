@@ -12,6 +12,8 @@ from app.core.analytics import build_person_properties, get_posthog_client, iden
 from app.db.session import SessionLocal
 from app.models.user import User
 
+SAMPLE_EMAIL_DOMAIN = "@yomibiyori.app"
+
 
 def _build_person_properties(user: User) -> dict:
     return build_person_properties(
@@ -23,7 +25,31 @@ def _build_person_properties(user: User) -> dict:
     )
 
 
-def run(*, dry_run: bool, batch_size: int) -> None:
+def _build_user_query(*, sample_only: bool, include_no_demographics: bool):
+    stmt = select(User).where(User.analytics_opt_out.is_(False))
+
+    if sample_only:
+        return (
+            stmt.where(User.email.ilike(f"%{SAMPLE_EMAIL_DOMAIN}"))
+            .order_by(User.created_at)
+        )
+
+    if include_no_demographics:
+        return stmt.order_by(User.created_at)
+
+    return (
+        stmt.where(
+            or_(
+                User.birth_year.isnot(None),
+                User.gender.isnot(None),
+                User.prefecture.isnot(None),
+            )
+        )
+        .order_by(User.created_at)
+    )
+
+
+def run(*, dry_run: bool, batch_size: int, sample_only: bool, include_no_demographics: bool) -> None:
     client = get_posthog_client()
     if client is None and not dry_run:
         print("[Backfill] PostHog client could not be initialized. Check POSTHOG_API_KEY.")
@@ -31,17 +57,9 @@ def run(*, dry_run: bool, batch_size: int) -> None:
 
     session = SessionLocal()
     try:
-        stmt = (
-            select(User)
-            .where(User.analytics_opt_out.is_(False))
-            .where(
-                or_(
-                    User.birth_year.isnot(None),
-                    User.gender.isnot(None),
-                    User.prefecture.isnot(None),
-                )
-            )
-            .order_by(User.created_at)
+        stmt = _build_user_query(
+            sample_only=sample_only,
+            include_no_demographics=include_no_demographics,
         )
         users = session.execute(stmt).scalars().all()
     finally:
@@ -49,6 +67,10 @@ def run(*, dry_run: bool, batch_size: int) -> None:
 
     total = len(users)
     print(f"[Backfill] users={total}")
+    print(
+        "[Backfill] mode=",
+        "sample_only" if sample_only else "all_users" if include_no_demographics else "users_with_demographics",
+    )
 
     if dry_run:
         print("[Backfill] dry-run mode: no data will be sent to PostHog")
@@ -90,9 +112,27 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Backfill demographics person properties in PostHog")
     parser.add_argument("--dry-run", action="store_true", help="Preview affected users without sending data")
     parser.add_argument("--batch", type=int, default=100, help="Batch size to send (default: 100)")
+    parser.add_argument(
+        "--sample-only",
+        action="store_true",
+        help="Backfill all opted-in sample users with @yomibiyori.app emails, even without demographics",
+    )
+    parser.add_argument(
+        "--include-no-demographics",
+        action="store_true",
+        help="Backfill all opted-in users, even if demographics are empty",
+    )
     args = parser.parse_args()
 
-    run(dry_run=args.dry_run, batch_size=args.batch)
+    if args.sample_only and args.include_no_demographics:
+        parser.error("--sample-only and --include-no-demographics cannot be used together")
+
+    run(
+        dry_run=args.dry_run,
+        batch_size=args.batch,
+        sample_only=args.sample_only,
+        include_no_demographics=args.include_no_demographics,
+    )
 
 
 if __name__ == "__main__":
