@@ -30,7 +30,7 @@ import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../
 import { useToastStore } from '../stores/useToastStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { VALIDATION_MESSAGES, SUCCESS_MESSAGES } from '../constants/errorMessages';
-import { trackEvent, EventNames } from '../utils/analytics';
+import { trackEvent, trackComposeFunnelEvent, EventNames } from '../utils/analytics';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Composition'>;
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -58,7 +58,7 @@ export default function CompositionScreen({ route }: Props) {
 
       // お題が表示された時点でtheme_viewedイベントを送信
       if (theme?.id) {
-        trackEvent(EventNames.THEME_VIEWED, {
+        trackComposeFunnelEvent(EventNames.COMPOSE_THEME_VIEWED, {
           theme_id: theme.id,
           category: theme.category,
         });
@@ -98,8 +98,14 @@ export default function CompositionScreen({ route }: Props) {
 
       console.log('[CompositionScreen] Work created successfully', { work_id: work.id });
 
-      // Note: work_created event is tracked by backend API to avoid duplicate events
-      // The backend ensures the event is only sent after successful DB insertion
+      trackComposeFunnelEvent(EventNames.WORK_CREATE_SUCCEEDED_UI, {
+        work_id: work.id,
+        theme_id: theme.id,
+        category: theme.category,
+        text_length: line1.trim().length + line2.trim().length + 1,
+      });
+
+      // Note: work_created remains tracked by the backend as the source-of-truth event.
 
       // 投稿成功
       showSuccess(SUCCESS_MESSAGES.workCreated);

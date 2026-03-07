@@ -130,6 +130,7 @@ export default function AppreciationScreen({ route }: Props) {
       trackEvent(EventNames.THEME_VIEWED, {
         theme_id: theme.id,
         category: theme.category,
+        view_context: 'appreciation',
       });
 
       const worksData = await api.getWorksByTheme(theme.id, { limit: 50, order_by: 'fair_score' });

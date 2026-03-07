@@ -12,7 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ThemeCategory, HomeStackParamList } from '../types';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import CategoryIcon from '../components/CategoryIcon';
-import { trackEvent, EventNames } from '../utils/analytics';
+import { trackEvent, trackComposeFunnelEvent, EventNames } from '../utils/analytics';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList, 'CategorySelection'>;
 
@@ -30,6 +30,10 @@ export default function CategorySelectionScreen() {
     useCallback(() => {
       trackEvent(EventNames.SCREEN_VIEWED, {
         screen_name: 'CategorySelection',
+      });
+      trackComposeFunnelEvent(EventNames.COMPOSE_ENTRY_VIEWED, {
+        screen_name: 'CategorySelection',
+        entry_point: 'home',
       });
     }, [])
   );

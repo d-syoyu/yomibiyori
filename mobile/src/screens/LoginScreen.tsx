@@ -53,7 +53,7 @@ export default function LoginScreen() {
 
   const identifyCurrentUser = async () => {
     const user = useAuthStore.getState().user;
-    if (!user?.user_id) {
+    if (!user?.user_id || user.analytics_opt_out) {
       return;
     }
 

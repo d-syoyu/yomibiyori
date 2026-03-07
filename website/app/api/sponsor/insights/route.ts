@@ -142,7 +142,8 @@ export async function GET(request: Request) {
         // Use POST to avoid URL length issues and ensure properties filter is respected
         const payload = {
             events: [
-                { id: 'theme_viewed', math: 'total', name: 'Impressions' },
+                { id: 'theme_viewed', math: 'total', name: 'Appreciation Impressions' },
+                { id: 'compose_theme_viewed', math: 'total', name: 'Composition Impressions' },
                 { id: 'work_created', math: 'total', name: 'Submissions' },
                 { id: 'sponsor_link_clicked', math: 'total', name: 'Sponsor Link Clicks' }
             ],
@@ -247,6 +248,8 @@ export async function GET(request: Request) {
 
                 // Check multiple conditions for robustness
                 const isImpression = eventId === 'theme_viewed' ||
+                                     eventId === 'compose_theme_viewed' ||
+                                     label.includes('compose_theme_viewed') ||
                                      label.includes('theme_viewed') ||
                                      label.includes('Impressions')
 

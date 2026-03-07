@@ -111,8 +111,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Store user profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
 
-      // Set analytics user context for sample account detection
-      setAnalyticsUserContext(userProfile.email);
+      setAnalyticsUserContext({
+        email: userProfile.email,
+        analyticsOptOut: userProfile.analytics_opt_out,
+        isAuthenticated: true,
+      });
 
       set({
         isAuthenticated: true,
@@ -165,8 +168,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Store user profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
 
-      // Set analytics user context for sample account detection
-      setAnalyticsUserContext(userProfile.email);
+      setAnalyticsUserContext({
+        email: userProfile.email,
+        analyticsOptOut: userProfile.analytics_opt_out,
+        isAuthenticated: true,
+      });
 
       set({
         isAuthenticated: true,
@@ -219,8 +225,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Store user profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
 
-      // Set analytics user context for sample account detection
-      setAnalyticsUserContext(userProfile.email);
+      setAnalyticsUserContext({
+        email: userProfile.email,
+        analyticsOptOut: userProfile.analytics_opt_out,
+        isAuthenticated: true,
+      });
 
       set({
         isAuthenticated: true,
@@ -276,6 +285,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 開発モード (Expo Go) ではテストユーザーで自動ログイン
     if (IS_DEV) {
       logger.debug('[Auth] Development mode: Using test user');
+      setAnalyticsUserContext({
+        email: DEV_TEST_USER.email,
+        analyticsOptOut: DEV_TEST_USER.analytics_opt_out,
+        isAuthenticated: true,
+      });
       set({
         isAuthenticated: true,
         user: DEV_TEST_USER,
@@ -321,11 +335,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const freshProfile = await api.getUserProfile();
           logger.debug('[Auth] Token verified successfully');
 
-          // Set analytics user context for sample account detection
-          setAnalyticsUserContext(freshProfile.email);
+          setAnalyticsUserContext({
+            email: freshProfile.email,
+            analyticsOptOut: freshProfile.analytics_opt_out,
+            isAuthenticated: true,
+          });
 
           // Identify user in PostHog to merge anonymous events
-          if (freshProfile.user_id) {
+          if (freshProfile.user_id && !freshProfile.analytics_opt_out) {
             await identifyUser(freshProfile.user_id, buildPersonProperties(freshProfile));
           }
 
@@ -369,11 +386,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 const freshProfile = await api.getUserProfile();
                 logger.debug('[Auth] Profile fetched with new token');
 
-                // Set analytics user context for sample account detection
-                setAnalyticsUserContext(freshProfile.email);
+                setAnalyticsUserContext({
+                  email: freshProfile.email,
+                  analyticsOptOut: freshProfile.analytics_opt_out,
+                  isAuthenticated: true,
+                });
 
                 // Identify user in PostHog to merge anonymous events
-                if (freshProfile.user_id) {
+                if (freshProfile.user_id && !freshProfile.analytics_opt_out) {
                   await identifyUser(freshProfile.user_id, buildPersonProperties(freshProfile));
                 }
 
@@ -406,11 +426,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           logger.debug('[Auth] Token verification failed, using cached profile');
           logger.debug('[Auth] Error:', profileErr);
 
-          // Set analytics user context for sample account detection
-          setAnalyticsUserContext(user.email);
+          setAnalyticsUserContext({
+            email: user.email,
+            analyticsOptOut: user.analytics_opt_out,
+            isAuthenticated: true,
+          });
 
           // Identify user in PostHog to merge anonymous events
-          if (user.user_id) {
+          if (user.user_id && !user.analytics_opt_out) {
             await identifyUser(user.user_id, buildPersonProperties(user));
           }
 
@@ -441,6 +464,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Update stored profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(updatedProfile));
 
+      setAnalyticsUserContext({
+        email: updatedProfile.email,
+        analyticsOptOut: updatedProfile.analytics_opt_out,
+        isAuthenticated: true,
+      });
+
+      if (updatedProfile.user_id && !updatedProfile.analytics_opt_out) {
+        await identifyUser(updatedProfile.user_id, buildPersonProperties(updatedProfile));
+      }
+
       set({
         user: updatedProfile,
         isLoading: false,
@@ -464,6 +497,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Update stored profile securely
       await setSecureItem(USER_PROFILE_KEY, JSON.stringify(freshProfile));
+
+      setAnalyticsUserContext({
+        email: freshProfile.email,
+        analyticsOptOut: freshProfile.analytics_opt_out,
+        isAuthenticated: true,
+      });
+
+      if (freshProfile.user_id && !freshProfile.analytics_opt_out) {
+        await identifyUser(freshProfile.user_id, buildPersonProperties(freshProfile));
+      }
 
       set({
         user: freshProfile,

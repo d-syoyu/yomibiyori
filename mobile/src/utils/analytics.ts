@@ -12,6 +12,9 @@ let posthogClient: PostHog | null = null;
 
 // Current user context for analytics
 let currentUserEmail: string | null = null;
+let currentUserOptOut = false;
+let currentUserAuthenticated = false;
+let identifiedUserId: string | null = null;
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as {
   posthogApiKey?: string;
@@ -48,13 +51,34 @@ const getEmailDomain = (email: string | null): string | null => {
   return email.split('@').pop()?.toLowerCase() ?? null;
 };
 
+interface AnalyticsUserContext {
+  email: string | null;
+  analyticsOptOut?: boolean;
+  isAuthenticated?: boolean;
+}
+
 /**
- * Set current user context for analytics
- * Call this after login/signup to enable automatic sample account detection
+ * Set current user context for analytics.
+ * Call this after login/signup/session restore to keep tracking rules aligned with the profile.
  */
-export const setAnalyticsUserContext = (email: string | null): void => {
+export const setAnalyticsUserContext = ({
+  email,
+  analyticsOptOut = false,
+  isAuthenticated = false,
+}: AnalyticsUserContext): void => {
   currentUserEmail = email;
-  logger.debug('[Analytics] User context set:', email ? getEmailDomain(email) : 'null');
+  currentUserOptOut = analyticsOptOut;
+  currentUserAuthenticated = isAuthenticated;
+
+  if (!isAuthenticated || analyticsOptOut) {
+    identifiedUserId = null;
+  }
+
+  logger.debug('[Analytics] User context set:', {
+    emailDomain: email ? getEmailDomain(email) : 'null',
+    analyticsOptOut,
+    isAuthenticated,
+  });
 };
 
 /**
@@ -62,6 +86,9 @@ export const setAnalyticsUserContext = (email: string | null): void => {
  */
 export const clearAnalyticsUserContext = (): void => {
   currentUserEmail = null;
+  currentUserOptOut = false;
+  currentUserAuthenticated = false;
+  identifiedUserId = null;
   logger.debug('[Analytics] User context cleared');
 };
 
@@ -137,6 +164,11 @@ export const trackEvent = (
     return;
   }
 
+  if (currentUserOptOut) {
+    logger.debug('[Analytics] Skipping event for opted-out user:', eventName);
+    return;
+  }
+
   try {
     const enrichedProps = enrichWithUserContext(properties);
     posthogClient.capture(eventName, sanitizeProperties(enrichedProps));
@@ -157,6 +189,11 @@ export const identifyUser = async (
     return;
   }
 
+  if (currentUserOptOut) {
+    logger.debug('[Analytics] Skipping identify for opted-out user');
+    return;
+  }
+
   try {
     const distinctId = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
@@ -164,7 +201,9 @@ export const identifyUser = async (
       { encoding: Crypto.CryptoEncoding.HEX }
     );
     posthogClient.identify(distinctId, sanitizeProperties(properties));
+    identifiedUserId = userId;
   } catch (error) {
+    identifiedUserId = null;
     logger.error('[Analytics] Failed to identify user:', error);
   }
 };
@@ -185,6 +224,32 @@ export const resetAnalytics = (): void => {
   } catch (error) {
     logger.error('[Analytics] Failed to reset analytics:', error);
   }
+};
+
+const canTrackComposeFunnelEvent = (): boolean => (
+  !!posthogClient &&
+  currentUserAuthenticated &&
+  !currentUserOptOut &&
+  !!identifiedUserId
+);
+
+export const trackComposeFunnelEvent = (
+  eventName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  properties?: Record<string, any>
+): void => {
+  if (!canTrackComposeFunnelEvent()) {
+    logger.debug('[Analytics] Skipping compose funnel event:', {
+      eventName,
+      hasClient: !!posthogClient,
+      currentUserAuthenticated,
+      currentUserOptOut,
+      isIdentified: !!identifiedUserId,
+    });
+    return;
+  }
+
+  trackEvent(eventName, properties);
 };
 
 const _GENDER_MAP: Record<string, string> = { male: '男性', female: '女性', other: 'その他' };
@@ -213,6 +278,8 @@ export const buildPersonProperties = (profile: {
 export const EventNames = {
   // Content consumption
   THEME_VIEWED: 'theme_viewed',
+  COMPOSE_ENTRY_VIEWED: 'compose_entry_viewed',
+  COMPOSE_THEME_VIEWED: 'compose_theme_viewed',
   RANKING_VIEWED: 'ranking_viewed',
   MY_POEMS_VIEWED: 'my_poems_viewed',
   WORK_VIEWED: 'work_viewed',
@@ -223,6 +290,7 @@ export const EventNames = {
 
   // Content creation
   WORK_CREATED: 'work_created',
+  WORK_CREATE_SUCCEEDED_UI: 'work_create_succeeded_ui',
 
   // Navigation
   SCREEN_VIEWED: 'screen_viewed',

@@ -119,7 +119,7 @@ export default function App() {
 
         // Identify user if already logged in
         const user = useAuthStore.getState().user;
-        if (user?.user_id) {
+        if (user?.user_id && !user.analytics_opt_out) {
           identifyUser(user.user_id, buildPersonProperties(user)).catch(error => {
             console.error('[App] Failed to identify user for analytics:', error);
           });
