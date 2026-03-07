@@ -201,7 +201,13 @@ export async function GET(request: Request) {
         // Each item represents a specific event filtered by a specific breakdown value (theme_id).
         // We need to aggregate these by theme_id.
 
-        const metricsByTheme: Record<string, { impressions: number; submissions: number; sponsor_link_clicks: number }> = {}
+        const metricsByTheme: Record<string, {
+            impressions: number
+            appreciation_impressions: number
+            composition_impressions: number
+            submissions: number
+            sponsor_link_clicks: number
+        }> = {}
 
         if (Array.isArray(data.result)) {
             console.log('[PostHog API] Processing', data.result.length, 'result items')
@@ -238,7 +244,13 @@ export async function GET(request: Request) {
                 }
 
                 if (!metricsByTheme[themeId]) {
-                    metricsByTheme[themeId] = { impressions: 0, submissions: 0, sponsor_link_clicks: 0 }
+                    metricsByTheme[themeId] = {
+                        impressions: 0,
+                        appreciation_impressions: 0,
+                        composition_impressions: 0,
+                        submissions: 0,
+                        sponsor_link_clicks: 0
+                    }
                 }
 
                 // Identify event type based on multiple possible fields
@@ -247,11 +259,13 @@ export async function GET(request: Request) {
                 const label = item.label || ''
 
                 // Check multiple conditions for robustness
-                const isImpression = eventId === 'theme_viewed' ||
-                                     eventId === 'compose_theme_viewed' ||
-                                     label.includes('compose_theme_viewed') ||
-                                     label.includes('theme_viewed') ||
-                                     label.includes('Impressions')
+                const isAppreciationImpression = eventId === 'theme_viewed' ||
+                                                label.includes('theme_viewed') ||
+                                                label.includes('Appreciation Impressions')
+
+                const isCompositionImpression = eventId === 'compose_theme_viewed' ||
+                                               label.includes('compose_theme_viewed') ||
+                                               label.includes('Composition Impressions')
 
                 const isSubmission = eventId === 'work_created' ||
                                      label.includes('work_created') ||
@@ -271,7 +285,11 @@ export async function GET(request: Request) {
                     actualCount = item.count || 0
                 }
 
-                if (isImpression) {
+                if (isAppreciationImpression) {
+                    metricsByTheme[themeId].appreciation_impressions += actualCount
+                    metricsByTheme[themeId].impressions += actualCount
+                } else if (isCompositionImpression) {
+                    metricsByTheme[themeId].composition_impressions += actualCount
                     metricsByTheme[themeId].impressions += actualCount
                 } else if (isSubmission) {
                     metricsByTheme[themeId].submissions += actualCount
@@ -319,6 +337,10 @@ export async function GET(request: Request) {
                 return {
                     theme_id: themeId,
                     impressions: metrics.impressions,
+                    impression_breakdown: {
+                        appreciation: metrics.appreciation_impressions,
+                        composition: metrics.composition_impressions,
+                    },
                     submissions: metrics.submissions,
                     total_likes: 0,
                     avg_likes_per_work: 0,
@@ -413,6 +435,10 @@ export async function GET(request: Request) {
             return {
                 theme_id: themeId,
                 impressions: metrics.impressions,
+                impression_breakdown: {
+                    appreciation: metrics.appreciation_impressions,
+                    composition: metrics.composition_impressions,
+                },
                 submissions: metrics.submissions,
                 total_likes: totalLikes,
                 avg_likes_per_work: Number(avgLikes.toFixed(1)),

@@ -169,6 +169,10 @@ interface ThemeInsight {
     text_575: string
     date: string
     impressions: number
+    impression_breakdown: {
+        appreciation: number
+        composition: number
+    }
     submissions: number
     sponsor_link_clicks: number
     likes: number
@@ -295,6 +299,10 @@ export default function SponsorInsightsPage() {
                     type ApiMetrics = {
                         theme_id: string
                         impressions: number
+                        impression_breakdown: {
+                            appreciation: number
+                            composition: number
+                        }
                         submissions: number
                         sponsor_link_clicks: number
                         total_likes: number
@@ -321,6 +329,10 @@ export default function SponsorInsightsPage() {
                             text_575: theme.text_575,
                             date: theme.date,
                             impressions,
+                            impression_breakdown: metrics?.impression_breakdown ?? {
+                                appreciation: 0,
+                                composition: 0,
+                            },
                             submissions,
                             sponsor_link_clicks: metrics?.sponsor_link_clicks || 0,
                             likes: metrics?.total_likes || 0,
@@ -351,6 +363,10 @@ export default function SponsorInsightsPage() {
                     text_575: theme.text_575,
                     date: theme.date,
                     impressions: 0,
+                    impression_breakdown: {
+                        appreciation: 0,
+                        composition: 0,
+                    },
                     submissions: 0,
                     sponsor_link_clicks: 0,
                     likes: 0,
@@ -551,6 +567,9 @@ export default function SponsorInsightsPage() {
                 <div className="p-6 border-b border-[var(--color-border)] flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <h2 className="text-xl font-bold text-[var(--color-text-primary)]">お題別パフォーマンス</h2>
                 </div>
+                <div className="px-6 pt-4 text-sm text-[var(--color-text-secondary)]">
+                    表示回数をクリックすると、鑑賞画面と投稿画面の内訳を下に表示します。
+                </div>
                 <div className="px-6 pb-4 flex justify-end">
                     <button
                         onClick={handleExportCsv}
@@ -631,8 +650,16 @@ export default function SponsorInsightsPage() {
                                         <td className="p-4 text-left text-sm text-[var(--color-text-secondary)]">
                                             {new Date(theme.date).toLocaleDateString('ja-JP')}
                                         </td>
-                                        <td className="p-4 text-left text-[var(--color-text-primary)]">
-                                            {theme.impressions.toLocaleString()}
+                                        <td className="p-4 text-left">
+                                            <button
+                                                className="text-[var(--color-igusa)] hover:underline font-medium cursor-pointer"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedTheme(theme);
+                                                }}
+                                            >
+                                                {theme.impressions.toLocaleString()}
+                                            </button>
                                         </td>
                                         <td className="p-4 text-left text-[var(--color-text-primary)]">
                                             {theme.submissions.toLocaleString()}
@@ -675,6 +702,42 @@ export default function SponsorInsightsPage() {
                     </table>
                 </div>
             </section>
+
+            {selectedTheme && (
+                <section className="card p-0 relative hover:z-20 animate-fade-in">
+                    <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+                            表示回数の内訳: <span className="font-serif ml-2">{selectedTheme.text_575}</span>
+                        </h2>
+                    </div>
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5">
+                            <p className="text-sm text-[var(--color-text-secondary)] mb-2">総表示回数</p>
+                            <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
+                                {selectedTheme.impressions.toLocaleString()}
+                            </p>
+                        </div>
+                        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-washi)] p-5">
+                            <p className="text-sm text-[var(--color-text-secondary)] mb-2">鑑賞画面での表示</p>
+                            <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
+                                {selectedTheme.impression_breakdown.appreciation.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                                <code>theme_viewed</code>
+                            </p>
+                        </div>
+                        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-sakura)]/20 p-5">
+                            <p className="text-sm text-[var(--color-text-secondary)] mb-2">投稿画面での表示</p>
+                            <p className="text-3xl font-bold text-[var(--color-text-primary)] font-serif">
+                                {selectedTheme.impression_breakdown.composition.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                                <code>compose_theme_viewed</code>
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Demographics Analysis Section */}
             {selectedTheme && selectedTheme.demographics && (

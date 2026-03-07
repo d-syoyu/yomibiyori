@@ -119,6 +119,10 @@ export interface ThemeInsight {
   text_575: string
   date: string
   impressions: number
+  impression_breakdown: {
+    appreciation: number
+    composition: number
+  }
   submissions: number
   sponsor_link_clicks: number
   likes: number
@@ -133,6 +137,7 @@ export interface ThemeInsight {
   demographics?: {
     age_groups: Record<string, number>
     regions: Record<string, number>
+    genders: Record<string, number>
   }
 }
 
