@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import Like, Theme, User, Work
+from app.services import likes as likes_service
 from app.services import works as works_service
 
 
@@ -38,12 +39,21 @@ def _freeze_datetime(monkeypatch: pytest.MonkeyPatch, target: datetime) -> None:
     monkeypatch.setattr(works_service, "datetime", _FixedDateTime)
 
 
-def _create_user(session: Session) -> User:
+def _create_user(
+    session: Session,
+    *,
+    birth_year: int | None = None,
+    gender: str | None = None,
+    prefecture: str | None = None,
+) -> User:
     now = datetime.now(timezone.utc)
     user = User(
         id=str(uuid4()),
         name="Test User",
         email=f"tester-{uuid4()}@example.com",
+        birth_year=birth_year,
+        gender=gender,
+        prefecture=prefecture,
         notify_theme_release=True,
         notify_ranking_result=True,
         created_at=now,
@@ -102,6 +112,41 @@ def test_submit_work_success(
 
     stored_work = db_session.query(Work).one()
     assert stored_work.text == poem
+
+
+def test_submit_work_tracks_demographic_event_properties(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _create_user(db_session, birth_year=1998, gender="male", prefecture="東京都")
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 15))
+
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 15, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    captured = {}
+
+    def fake_track_event(*, distinct_id, event_name, properties, prehashed_distinct_id=False):  # type: ignore[no-untyped-def]
+        captured["distinct_id"] = distinct_id
+        captured["event_name"] = event_name
+        captured["properties"] = properties
+
+    monkeypatch.setattr(works_service, "track_event", fake_track_event)
+
+    response = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "twilight hush colors the quiet sky"},
+        headers=_auth_headers(user.id),
+    )
+
+    assert response.status_code == 201
+    assert captured["event_name"] == works_service.EventNames.WORK_CREATED
+    assert captured["properties"]["birth_year"] == 1998
+    assert captured["properties"]["age_group"] == "20代"
+    assert captured["properties"]["gender"] == "男性"
+    assert captured["properties"]["prefecture"] == "東京都"
 
 
 def test_submit_work_conflict(
@@ -331,6 +376,49 @@ def test_like_work_success(
     assert redis_client.zscore(ranking_key, work_id) == 1.0
     assert redis_client.hget(f"metrics:{work_id}", "likes") == "1"
     assert redis_client.hget(f"metrics:{work_id}", "impressions") == "0"
+
+
+def test_like_work_tracks_demographic_event_properties(
+    client: TestClient,
+    db_session: Session,
+    redis_client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    author = _create_user(db_session)
+    liker = _create_user(db_session, birth_year=1988, gender="other", prefecture="大阪府")
+    theme = _create_theme(db_session, theme_date=date(2025, 1, 19))
+
+    settings = get_settings()
+    _freeze_datetime(monkeypatch, datetime(2025, 1, 19, 12, 0, tzinfo=settings.timezone))
+    monkeypatch.setattr(works_service, "_current_theme_for_submission", lambda session: theme)
+
+    captured = {}
+
+    def fake_track_event(*, distinct_id, event_name, properties, prehashed_distinct_id=False):  # type: ignore[no-untyped-def]
+        captured["distinct_id"] = distinct_id
+        captured["event_name"] = event_name
+        captured["properties"] = properties
+
+    monkeypatch.setattr(likes_service, "track_event", fake_track_event)
+
+    creation = client.post(
+        "/api/v1/works",
+        json={"theme_id": theme.id, "text": "lantern light traces whispered stories"},
+        headers=_auth_headers(author.id),
+    )
+    work_id = creation.json()["id"]
+
+    response = client.post(
+        f"/api/v1/works/{work_id}/like",
+        headers=_auth_headers(liker.id),
+    )
+
+    assert response.status_code == 200
+    assert captured["event_name"] == likes_service.EventNames.WORK_LIKED
+    assert captured["properties"]["birth_year"] == 1988
+    assert captured["properties"]["age_group"] == "30代"
+    assert captured["properties"]["gender"] == "その他"
+    assert captured["properties"]["prefecture"] == "大阪府"
 
 
 def test_toggle_like_add_remove_readd(

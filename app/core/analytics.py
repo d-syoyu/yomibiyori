@@ -3,6 +3,7 @@ Analytics Module
 PostHog integration for event tracking and user behavior analysis
 """
 
+from datetime import date, datetime
 import hashlib
 import os
 from typing import Any, Dict, Optional
@@ -11,6 +12,11 @@ from posthog import Posthog
 
 # PostHog client initialization
 _posthog_client: Optional[Posthog] = None
+_GENDER_LABELS = {
+    "male": "\u7537\u6027",
+    "female": "\u5973\u6027",
+    "other": "\u305d\u306e\u4ed6",
+}
 
 
 def _hash_distinct_id(value: str) -> str:
@@ -154,7 +160,95 @@ def get_email_domain(email: Optional[str]) -> Optional[str]:
     return email.split("@")[-1].lower()
 
 
-# Event names constants
+def get_age_group(birth_year: int | None, *, current_year: int | None = None) -> str | None:
+    """Return a Japanese age-group label such as `20代`."""
+
+    if birth_year is None:
+        return None
+
+    resolved_year = current_year if current_year is not None else date.today().year
+    age = resolved_year - birth_year
+    if age < 0:
+        return None
+    return f"{(age // 10) * 10}\u4ee3"
+
+
+def get_gender_label(gender: str | None) -> str | None:
+    """Return the display label used in PostHog."""
+
+    if not gender:
+        return None
+    return _GENDER_LABELS.get(gender, gender)
+
+
+def build_person_properties(
+    *,
+    display_name: str | None,
+    email: str | None,
+    birth_year: int | None = None,
+    gender: str | None = None,
+    prefecture: str | None = None,
+    created_at: datetime | str | None = None,
+    include_has_display_name: bool = False,
+) -> Dict[str, Any]:
+    """Build normalized PostHog person properties."""
+
+    properties: Dict[str, Any] = {
+        "is_sample_account": is_sample_account(email),
+        "email_domain": get_email_domain(email),
+    }
+    if display_name:
+        properties["display_name"] = display_name
+    if include_has_display_name:
+        properties["has_display_name"] = bool(display_name)
+
+    if created_at is not None:
+        properties["created_at"] = created_at.isoformat() if isinstance(created_at, datetime) else created_at
+
+    age_group = get_age_group(birth_year)
+    if age_group:
+        properties["age_group"] = age_group
+
+    gender_label = get_gender_label(gender)
+    if gender_label:
+        properties["gender"] = gender_label
+
+    if prefecture:
+        properties["prefecture"] = prefecture
+
+    return properties
+
+
+def build_event_user_properties(
+    *,
+    email: str | None,
+    birth_year: int | None = None,
+    gender: str | None = None,
+    prefecture: str | None = None,
+) -> Dict[str, Any]:
+    """Build normalized event properties derived from a user's demographics."""
+
+    properties: Dict[str, Any] = {
+        "is_sample_account": is_sample_account(email),
+        "email_domain": get_email_domain(email),
+    }
+    if birth_year is not None:
+        properties["birth_year"] = birth_year
+
+    age_group = get_age_group(birth_year)
+    if age_group:
+        properties["age_group"] = age_group
+
+    gender_label = get_gender_label(gender)
+    if gender_label:
+        properties["gender"] = gender_label
+
+    if prefecture:
+        properties["prefecture"] = prefecture
+
+    return properties
+
+
 class EventNames:
     """Standard event names for tracking"""
 

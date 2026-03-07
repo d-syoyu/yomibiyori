@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import logger
-from app.core.analytics import track_event, EventNames, is_sample_account, get_email_domain
+from app.core.analytics import EventNames, build_event_user_properties, track_event
 from app.models import Like, User, Work
 from app.schemas.work import (
     WorkLikeBatchResponse,
@@ -96,14 +96,13 @@ def like_work(
                 "work_id": work_id,
                 "theme_id": str(work.theme_id),
                 "total_likes": likes_count,
-                "is_sample_account": is_sample_account(user.email),
-                "email_domain": get_email_domain(user.email),
+                **build_event_user_properties(
+                    email=user.email,
+                    birth_year=user.birth_year,
+                    gender=user.gender,
+                    prefecture=user.prefecture,
+                ),
             }
-            # Add user attributes if available
-            if user.birth_year:
-                properties["birth_year"] = user.birth_year
-            if user.prefecture:
-                properties["prefecture"] = user.prefecture
 
             track_event(
                 distinct_id=user_id,
@@ -164,13 +163,13 @@ def unlike_work(
                 "work_id": work_id,
                 "theme_id": str(work.theme_id),
                 "total_likes": likes_count,
-                "is_sample_account": is_sample_account(user.email),
-                "email_domain": get_email_domain(user.email),
+                **build_event_user_properties(
+                    email=user.email,
+                    birth_year=user.birth_year,
+                    gender=user.gender,
+                    prefecture=user.prefecture,
+                ),
             }
-            if user.birth_year:
-                properties["birth_year"] = user.birth_year
-            if user.prefecture:
-                properties["prefecture"] = user.prefecture
 
             track_event(
                 distinct_id=user_id,

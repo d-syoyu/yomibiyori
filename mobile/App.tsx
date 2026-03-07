@@ -19,7 +19,7 @@ import Navigation from './src/navigation';
 import api from './src/services/api';
 import useAuthStore from './src/stores/useAuthStore';
 import LoadingScreen from './src/components/LoadingScreen';
-import { initAnalytics, identifyUser } from './src/utils/analytics';
+import { buildPersonProperties, identifyUser, initAnalytics } from './src/utils/analytics';
 import { configureNotificationHandler, registerForPushNotifications } from './src/utils/pushNotifications';
 
 // スプラッシュスクリーンを自動で非表示にしない
@@ -120,9 +120,7 @@ export default function App() {
         // Identify user if already logged in
         const user = useAuthStore.getState().user;
         if (user?.user_id) {
-          identifyUser(user.user_id, {
-            display_name: user.display_name,
-          }).catch(error => {
+          identifyUser(user.user_id, buildPersonProperties(user)).catch(error => {
             console.error('[App] Failed to identify user for analytics:', error);
           });
         }

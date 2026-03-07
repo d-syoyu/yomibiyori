@@ -16,7 +16,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.analytics import track_event, identify_user, EventNames, is_sample_account, get_email_domain
+from app.core.analytics import (
+    EventNames,
+    build_person_properties,
+    get_email_domain,
+    identify_user,
+    is_sample_account,
+    track_event,
+)
 from app.db.session import set_request_user_context
 from app.models import User
 from app.schemas.auth import (
@@ -389,13 +396,18 @@ def signup_user(session: Session, *, payload: SignUpRequest) -> SignUpResponse:
 
     if not user.analytics_opt_out:
         try:
+            person_properties = build_person_properties(
+                display_name=user.name,
+                email=user.email,
+                birth_year=user.birth_year,
+                gender=user.gender,
+                prefecture=user.prefecture,
+                created_at=user.created_at,
+                include_has_display_name=True,
+            )
             identify_user(
                 distinct_id=str(user.id),
-                properties={
-                    "display_name": user.name,
-                    "created_at": user.created_at.isoformat() if user.created_at else None,
-                    "has_display_name": bool(user.name),
-                },
+                properties=person_properties,
             )
             track_event(
                 distinct_id=str(user.id),
@@ -489,6 +501,18 @@ def login_user(session: Session, *, payload: LoginRequest) -> LoginResponse:
 
     if not user.analytics_opt_out:
         try:
+            identify_user(
+                distinct_id=str(user.id),
+                properties=build_person_properties(
+                    display_name=user.name,
+                    email=user.email,
+                    birth_year=user.birth_year,
+                    gender=user.gender,
+                    prefecture=user.prefecture,
+                    created_at=user.created_at,
+                    include_has_display_name=True,
+                ),
+            )
             track_event(
                 distinct_id=str(user.id),
                 event_name=EventNames.USER_LOGGED_IN,
@@ -943,13 +967,18 @@ def process_oauth_callback(session: Session, *, payload: OAuthCallbackRequest) -
 
     if not user.analytics_opt_out:
         try:
+            person_properties = build_person_properties(
+                display_name=user.name,
+                email=user.email,
+                birth_year=user.birth_year,
+                gender=user.gender,
+                prefecture=user.prefecture,
+                created_at=user.created_at,
+                include_has_display_name=True,
+            )
             identify_user(
                 distinct_id=str(user.id),
-                properties={
-                    "display_name": user.name,
-                    "has_display_name": bool(user.name),
-                    "created_at": user.created_at.isoformat() if user.created_at else None,
-                },
+                properties=person_properties,
             )
             if is_new:
                 track_event(
@@ -1055,6 +1084,13 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
             if user.prefecture:
                 person_properties["prefecture"] = user.prefecture
 
+            person_properties = build_person_properties(
+                display_name=user.name,
+                email=user.email,
+                birth_year=user.birth_year,
+                gender=user.gender,
+                prefecture=user.prefecture,
+            )
             identify_user(distinct_id=str(user.id), properties=person_properties)
             track_event(
                 distinct_id=str(user.id),

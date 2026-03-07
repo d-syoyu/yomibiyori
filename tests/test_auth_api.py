@@ -36,12 +36,24 @@ def _bearer(user_id: str, role: str = "authenticated") -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _create_user(session: Session, *, user_id: str | None = None, name: str = "Poet", email: str | None = None) -> User:
+def _create_user(
+    session: Session,
+    *,
+    user_id: str | None = None,
+    name: str = "Poet",
+    email: str | None = None,
+    birth_year: int | None = None,
+    gender: str | None = None,
+    prefecture: str | None = None,
+) -> User:
     now = datetime.now(timezone.utc)
     user = User(
         id=user_id or str(uuid4()),
         name=name,
         email=email or f"user-{uuid4()}@example.com",
+        birth_year=birth_year,
+        gender=gender,
+        prefecture=prefecture,
         notify_theme_release=True,
         notify_ranking_result=True,
         created_at=now,
@@ -117,6 +129,77 @@ def test_signup_supabase_error_propagates(client: TestClient, monkeypatch: pytes
     )
     assert response.status_code == 400
     assert response.json()["error"]["detail"] == "User already registered"
+
+
+def test_login_identifies_user_with_demographics(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "supabase_anon_key", "anon-key")
+    monkeypatch.setattr(settings, "supabase_request_timeout", 1.0)
+
+    user = _create_user(
+        db_session,
+        name="Returning Poet",
+        email="login@example.com",
+        birth_year=1994,
+        gender="female",
+        prefecture="東京都",
+    )
+    response_payload = {
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "user_metadata": {"display_name": user.name},
+        },
+        "access_token": "access-token",
+        "refresh_token": "refresh-token",
+        "token_type": "bearer",
+        "expires_in": 3600,
+    }
+
+    captured = SimpleNamespace(identify=None, track=None)
+
+    def fake_post(url, json, headers, timeout):  # type: ignore[no-untyped-def]
+        return _DummyResponse(200, response_payload)
+
+    def fake_identify(*, distinct_id, properties, prehashed_distinct_id=False):  # type: ignore[no-untyped-def]
+        captured.identify = {
+            "distinct_id": distinct_id,
+            "properties": properties,
+            "prehashed_distinct_id": prehashed_distinct_id,
+        }
+
+    def fake_track(*, distinct_id, event_name, properties, prehashed_distinct_id=False):  # type: ignore[no-untyped-def]
+        captured.track = {
+            "distinct_id": distinct_id,
+            "event_name": event_name,
+            "properties": properties,
+            "prehashed_distinct_id": prehashed_distinct_id,
+        }
+
+    monkeypatch.setattr(auth_service.requests, "post", fake_post)
+    monkeypatch.setattr(auth_service, "identify_user", fake_identify)
+    monkeypatch.setattr(auth_service, "track_event", fake_track)
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "login@example.com", "password": "SecurePass1!"},
+    )
+
+    assert response.status_code == 200
+    assert captured.identify is not None
+    identify_props = captured.identify["properties"]
+    assert identify_props["display_name"] == "Returning Poet"
+    assert identify_props["age_group"] == "30代"
+    assert identify_props["gender"] == "女性"
+    assert identify_props["prefecture"] == "東京都"
+    assert identify_props["has_display_name"] is True
+
+    assert captured.track is not None
+    assert captured.track["event_name"] == auth_service.EventNames.USER_LOGGED_IN
 
 
 def test_get_profile_success(client: TestClient, db_session: Session) -> None:

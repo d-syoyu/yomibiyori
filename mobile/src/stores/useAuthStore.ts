@@ -374,9 +374,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
                 // Identify user in PostHog to merge anonymous events
                 if (freshProfile.user_id) {
-                  await identifyUser(freshProfile.user_id, {
-                    display_name: freshProfile.display_name,
-                  });
+                  await identifyUser(freshProfile.user_id, buildPersonProperties(freshProfile));
                 }
 
                 set({
