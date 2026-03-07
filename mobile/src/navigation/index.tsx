@@ -7,11 +7,12 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '../stores/useAuthStore';
 import { useTutorialStore } from '../stores/useTutorialStore';
+import { trackAuthenticatedAppActive } from '../utils/analytics';
 import type { RootStackParamList, MainTabParamList, HomeStackParamList, MyPoemsStackParamList } from '../types';
 
 // Import screens
@@ -239,6 +240,26 @@ export default function Navigation() {
       return () => clearTimeout(timer);
     }
   }, [isLoading, tutorialCompleted]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    void trackAuthenticatedAppActive();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        void trackAuthenticatedAppActive();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   // Handle tutorial close
   const handleTutorialClose = () => {

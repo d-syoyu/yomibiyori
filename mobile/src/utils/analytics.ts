@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import PostHog from 'posthog-react-native';
 import { logger } from './logger';
+import { getSecureItem, setSecureItem } from './secureStorage';
 
 let posthogClient: PostHog | null = null;
 
@@ -15,6 +16,10 @@ let currentUserEmail: string | null = null;
 let currentUserOptOut = false;
 let currentUserAuthenticated = false;
 let identifiedUserId: string | null = null;
+let activeEventPromise: Promise<void> | null = null;
+
+const APP_ACTIVE_DATE_KEY_PREFIX = 'yomibiyori.analytics.appActiveDate';
+const APP_ACTIVE_TIMEZONE = 'Asia/Tokyo';
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as {
   posthogApiKey?: string;
@@ -202,6 +207,7 @@ export const identifyUser = async (
     );
     posthogClient.identify(distinctId, sanitizeProperties(properties));
     identifiedUserId = userId;
+    await trackAuthenticatedAppActive();
   } catch (error) {
     identifiedUserId = null;
     logger.error('[Analytics] Failed to identify user:', error);
@@ -232,6 +238,51 @@ const canTrackComposeFunnelEvent = (): boolean => (
   !currentUserOptOut &&
   !!identifiedUserId
 );
+
+const getCurrentJstDate = (): string => {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_ACTIVE_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  return formatter.format(new Date());
+};
+
+export const trackAuthenticatedAppActive = async (): Promise<void> => {
+  if (!canTrackComposeFunnelEvent() || !identifiedUserId) {
+    return;
+  }
+
+  if (activeEventPromise) {
+    await activeEventPromise;
+    return;
+  }
+
+  activeEventPromise = (async () => {
+    const activityDate = getCurrentJstDate();
+    const storageKey = `${APP_ACTIVE_DATE_KEY_PREFIX}.${identifiedUserId}`;
+    const lastTrackedDate = await getSecureItem(storageKey);
+
+    if (lastTrackedDate === activityDate) {
+      return;
+    }
+
+    trackEvent(EventNames.APP_ACTIVE_AUTHENTICATED, {
+      activity_date: activityDate,
+    });
+    await setSecureItem(storageKey, activityDate);
+  })();
+
+  try {
+    await activeEventPromise;
+  } catch (error) {
+    logger.error('[Analytics] Failed to track authenticated app active event:', error);
+  } finally {
+    activeEventPromise = null;
+  }
+};
 
 export const trackComposeFunnelEvent = (
   eventName: string,
@@ -299,6 +350,7 @@ export const EventNames = {
   // Authentication
   LOGIN_ATTEMPTED: 'login_attempted',
   SIGNUP_ATTEMPTED: 'signup_attempted',
+  APP_ACTIVE_AUTHENTICATED: 'app_active_authenticated',
 
   // Errors
   ERROR_OCCURRED: 'error_occurred',
