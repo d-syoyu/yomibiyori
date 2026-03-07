@@ -183,6 +183,7 @@ interface ThemeInsight {
     demographics?: {
         age_groups: Record<string, number>
         regions: Record<string, number>
+        genders: Record<string, number>
     }
 }
 
@@ -302,6 +303,7 @@ export default function SponsorInsightsPage() {
                         demographics: {
                             age_groups: Record<string, number>
                             regions: Record<string, number>
+                            genders: Record<string, number>
                         }
                     }
 
@@ -329,6 +331,7 @@ export default function SponsorInsightsPage() {
                             demographics: metrics?.demographics ?? {
                                 age_groups: {},
                                 regions: {},
+                                genders: {},
                             },
                         }
                     })
@@ -358,6 +361,7 @@ export default function SponsorInsightsPage() {
                     demographics: {
                         age_groups: {},
                         regions: {},
+                        genders: {},
                     },
                 }))
             }
@@ -395,6 +399,7 @@ export default function SponsorInsightsPage() {
         }
 
         const ageBuckets = ['10代', '20代', '30代', '40代', '50代', '60代', '70代', '80代', '未設定']
+        const genderLabels = ['男性', '女性', 'その他', '未設定']
         const prefectures = [
             '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
             '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
@@ -420,11 +425,13 @@ export default function SponsorInsightsPage() {
             'トップ句のいいね',
             'トップ作者',
             ...ageBuckets.map(a => `年代:${a}`),
+            ...genderLabels.map(g => `性別:${g}`),
             ...prefectures.map(p => `地域:${p}`)
         ]
 
         const rows = themes.map(theme => {
             const ageGroups = theme.demographics?.age_groups ?? {}
+            const gendersMap = theme.demographics?.genders ?? {}
             const regions = theme.demographics?.regions ?? {}
             const getCount = (m: Record<string, number>, k: string) => m[k] ?? 0
 
@@ -440,8 +447,9 @@ export default function SponsorInsightsPage() {
                 theme.top_work?.text ?? '',
                 theme.top_work?.likes ?? '',
                 theme.top_work?.author_name ?? '',
-                ...ageBuckets.map(a => getCount(ageGroups, a)),  // 未設定は0
-                ...prefectures.map(p => getCount(regions, p))     // 未設定は0
+                ...ageBuckets.map(a => getCount(ageGroups, a)),
+                ...genderLabels.map(g => getCount(gendersMap, g)),
+                ...prefectures.map(p => getCount(regions, p))
             ]
         })
 
@@ -676,7 +684,7 @@ export default function SponsorInsightsPage() {
                             ユーザー属性分析: <span className="font-serif ml-2">{selectedTheme.text_575}</span>
                         </h2>
                     </div>
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Age Groups */}
                         <div>
                             <h3 className="text-lg font-medium text-[var(--color-text-secondary)] mb-4">年代別投稿数</h3>
@@ -687,6 +695,24 @@ export default function SponsorInsightsPage() {
                                     <DemographicsChart
                                         type="pie"
                                         data={Object.entries(selectedTheme.demographics.age_groups)
+                                            .sort((a, b) => b[1] - a[1])
+                                            .map(([name, value]) => ({ name, value }))
+                                        }
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Gender */}
+                        <div>
+                            <h3 className="text-lg font-medium text-[var(--color-text-secondary)] mb-4">性別別投稿数</h3>
+                            <div className="h-[300px]">
+                                {Object.entries(selectedTheme.demographics.genders ?? {}).length === 0 ? (
+                                    <p className="text-[var(--color-text-muted)] text-sm">データがありません</p>
+                                ) : (
+                                    <DemographicsChart
+                                        type="pie"
+                                        data={Object.entries(selectedTheme.demographics.genders ?? {})
                                             .sort((a, b) => b[1] - a[1])
                                             .map(([name, value]) => ({ name, value }))
                                         }

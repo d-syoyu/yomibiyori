@@ -1035,23 +1035,31 @@ def update_user_profile(session: Session, *, user_id: str, payload: UpdateProfil
 
     session.refresh(user)
 
-    # Track profile update event (only if not opted out)
+    # Sync person properties and track profile update (only if not opted out)
     if not user.analytics_opt_out:
         try:
-            track_properties = {
+            from datetime import date as _date
+
+            _gender_map = {"male": "男性", "female": "女性", "other": "その他"}
+
+            person_properties: dict[str, Any] = {
                 "display_name": user.name,
                 "is_sample_account": is_sample_account(user.email),
                 "email_domain": get_email_domain(user.email),
             }
             if user.birth_year:
-                track_properties["birth_year"] = user.birth_year
+                age = _date.today().year - user.birth_year
+                person_properties["age_group"] = f"{(age // 10) * 10}代"
+            if user.gender:
+                person_properties["gender"] = _gender_map.get(user.gender, user.gender)
             if user.prefecture:
-                track_properties["prefecture"] = user.prefecture
+                person_properties["prefecture"] = user.prefecture
 
+            identify_user(distinct_id=str(user.id), properties=person_properties)
             track_event(
                 distinct_id=str(user.id),
                 event_name=EventNames.PROFILE_UPDATED,
-                properties=track_properties
+                properties=person_properties,
             )
         except Exception as e:
             print(f"[Analytics] Failed to track profile update: {e}")

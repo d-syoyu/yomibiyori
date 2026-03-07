@@ -304,7 +304,8 @@ export async function GET(request: Request) {
                         name,
                         email,
                         birth_year,
-                        prefecture
+                        prefecture,
+                        gender
                     )
                 `)
                 .eq('theme_id', themeId)
@@ -322,7 +323,8 @@ export async function GET(request: Request) {
                     ranking_entries: 0,
                     demographics: {
                         age_groups: {},
-                        regions: {}
+                        regions: {},
+                        genders: {}
                     }
                 }
             }
@@ -339,6 +341,7 @@ export async function GET(request: Request) {
             // Demographics Aggregation
             const ageGroups: Record<string, number> = {}
             const regions: Record<string, number> = {}
+            const genders: Record<string, number> = {}
             const currentYear = new Date().getFullYear()
 
             interface UserInfo {
@@ -346,6 +349,7 @@ export async function GET(request: Request) {
                 email?: string | null
                 birth_year?: number | null
                 prefecture?: string | null
+                gender?: string | null
             }
             worksWithLikes.forEach(work => {
                 const user = work.user as UserInfo | null
@@ -367,6 +371,13 @@ export async function GET(request: Request) {
                 } else {
                     regions['未設定'] = (regions['未設定'] || 0) + 1
                 }
+
+                // Gender
+                const genderLabel = user.gender === 'male' ? '男性'
+                    : user.gender === 'female' ? '女性'
+                    : user.gender === 'other' ? 'その他'
+                    : '未設定'
+                genders[genderLabel] = (genders[genderLabel] || 0) + 1
             })
 
             // Get top work by likes
@@ -407,7 +418,8 @@ export async function GET(request: Request) {
                     sponsor_link_clicks: metrics.sponsor_link_clicks,
                     demographics: {
                         age_groups: ageGroups,
-                        regions: regions
+                        regions: regions,
+                        genders: genders
                     }
                 }
         }))

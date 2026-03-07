@@ -24,6 +24,7 @@ const sections = [
       "いいねや閲覧などの活動履歴",
       "デバイス情報、IPアドレス、利用環境に関する情報",
       "アプリ内の行動データ（PostHog経由で匿名化された分析データ）",
+      "プロフィールに任意登録いただいた年代・性別・居住地（都道府県）※スポンサー向けの匿名統計に使用",
     ],
   },
   {
@@ -41,6 +42,7 @@ const sections = [
       "ランキングやレコメンデーション機能の提供",
       "不正行為の検出と防止",
       "統計分析とサービス改善のための匿名化されたデータ分析",
+      "スポンサー向けインサイト提供のための匿名化された属性統計（年代・性別・居住地）",
       "プッシュ通知の配信",
       "お問い合わせへの対応",
     ],
@@ -96,7 +98,7 @@ const sections = [
 const thirdPartyServices = [
   { name: "Supabase", purpose: "認証・データベース" },
   { name: "Upstash", purpose: "Redis" },
-  { name: "PostHog", purpose: "匿名化された分析データ" },
+  { name: "PostHog", purpose: "匿名化された分析データ（行動ログ・属性統計）" },
   { name: "OpenAI / Anthropic Claude / XAI Grok", purpose: "テーマ生成機能" },
 ];
 
