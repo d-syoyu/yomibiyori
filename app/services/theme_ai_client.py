@@ -192,8 +192,34 @@ class OpenAIThemeJudge:
 
     api_key: str
     model: str = "gpt-5-mini"
-    endpoint: str = "https://api.openai.com/v1/chat/completions"
+    endpoint: str = "https://api.openai.com/v1/responses"
     timeout: float = 10.0
+
+    @staticmethod
+    def _extract_output_text(payload_json: dict[str, Any]) -> str:
+        output_text = payload_json.get("output_text")
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text.strip()
+
+        output = payload_json.get("output")
+        if not isinstance(output, list):
+            return ""
+
+        parts: list[str] = []
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+            content = item.get("content")
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                text = block.get("text")
+                if isinstance(text, str) and text.strip():
+                    parts.append(text.strip())
+
+        return "\n".join(parts).strip()
 
     def choose_candidate(
         self,
@@ -212,41 +238,64 @@ class OpenAIThemeJudge:
         )
         recent_themes_text = "\n".join(f"- {theme.replace(chr(10), ' / ')}" for theme in recent_themes) or "- なし"
 
+        prompt = (
+            "あなたは短歌アプリ『よみびより』のお題選定者です。"
+            "XAIが作った上の句候補から、ユーザーが下の句を続けたくなるものを1つだけ選んでください。"
+            "評価軸は以下です。"
+            "1. 参加したくなる 2. 口語で自然 3. 情景が浮かぶ 4. 余白がある "
+            "5. 抽象語が少ない 6. 5-7-5として妥当。"
+            "返答は必ずJSONのみです。\n\n"
+            f"カテゴリー: {category}\n"
+            f"対象日: {target_date.isoformat()}\n"
+            f"最近のお題:\n{recent_themes_text}\n\n"
+            f"候補一覧:\n{candidate_text}\n\n"
+            "次のJSONスキーマに従って返してください。"
+        )
         payload = {
             "model": self.model,
-            "response_format": {"type": "json_object"},
-            "max_completion_tokens": 400,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "あなたは短歌アプリ『よみびより』のお題選定者です。"
-                        "XAIが作った上の句候補から、ユーザーが下の句を続けたくなるものを1つだけ選んでください。"
-                        "評価軸は以下です。"
-                        "1. 参加したくなる 2. 口語で自然 3. 情景が浮かぶ 4. 余白がある "
-                        "5. 抽象語が少ない 6. 5-7-5として妥当。"
-                        "出力は必ずJSONのみで返してください。"
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"カテゴリー: {category}\n"
-                        f"対象日: {target_date.isoformat()}\n"
-                        f"最近のお題:\n{recent_themes_text}\n\n"
-                        f"候補一覧:\n{candidate_text}\n\n"
-                        "次のJSONだけを返してください。\n"
-                        '{'
-                        '"selected_index": 0, '
-                        '"reason": "短い理由", '
-                        '"scores": ['
-                        '{"index": 0, "participation": 1, "naturalness": 1, "imagery": 1, "openness": 1, "concreteness": 1, "mora_validity": 1}'
-                        ']'
-                        '}\n'
-                        "selected_index は候補の index をそのまま返してください。"
-                    ),
-                },
-            ],
+            "input": prompt,
+            "max_output_tokens": 400,
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": "theme_judgment",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "selected_index": {"type": "integer"},
+                            "reason": {"type": "string"},
+                            "scores": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "index": {"type": "integer"},
+                                        "participation": {"type": "integer"},
+                                        "naturalness": {"type": "integer"},
+                                        "imagery": {"type": "integer"},
+                                        "openness": {"type": "integer"},
+                                        "concreteness": {"type": "integer"},
+                                        "mora_validity": {"type": "integer"},
+                                    },
+                                    "required": [
+                                        "index",
+                                        "participation",
+                                        "naturalness",
+                                        "imagery",
+                                        "openness",
+                                        "concreteness",
+                                        "mora_validity",
+                                    ],
+                                    "additionalProperties": False,
+                                },
+                            },
+                        },
+                        "required": ["selected_index", "reason", "scores"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
         }
 
         headers = {
@@ -279,12 +328,8 @@ class OpenAIThemeJudge:
         except ValueError as exc:
             raise ThemeAIClientError("OpenAI judge API returned invalid JSON") from exc
 
-        try:
-            content = payload_json["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ThemeAIClientError("OpenAI judge response missing message content") from exc
-
-        if not isinstance(content, str) or not content.strip():
+        content = self._extract_output_text(payload_json)
+        if not content:
             raise ThemeAIClientError("OpenAI judge returned empty content")
 
         try:

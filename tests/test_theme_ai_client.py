@@ -75,16 +75,10 @@ def test_resolve_theme_ai_client_requires_api_key(monkeypatch: pytest.MonkeyPatc
         resolve_theme_ai_client()
 
 
-def test_openai_theme_judge_uses_max_completion_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_openai_theme_judge_uses_responses_api_payload(monkeypatch: pytest.MonkeyPatch) -> None:
     captured_payload: dict[str, object] = {}
     payload = {
-        "choices": [
-            {
-                "message": {
-                    "content": '{"selected_index": 0, "reason": "ok", "scores": [{"index": 0, "participation": 5}]}'
-                }
-            }
-        ]
+        "output_text": '{"selected_index": 0, "reason": "ok", "scores": [{"index": 0, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
     }
 
     def fake_post(url, *, json=None, headers=None, timeout=None):
@@ -108,8 +102,10 @@ def test_openai_theme_judge_uses_max_completion_tokens(monkeypatch: pytest.Monke
 
     assert result.selected_index == 0
     assert captured_payload["model"] == "gpt-5-mini"
-    assert "max_completion_tokens" in captured_payload
-    assert "max_tokens" not in captured_payload
+    assert "max_output_tokens" in captured_payload
+    assert "max_completion_tokens" not in captured_payload
+    assert "input" in captured_payload
+    assert "text" in captured_payload
 
 
 def test_xai_theme_client_uses_openai_judge_selection(
@@ -137,13 +133,7 @@ def test_xai_theme_client_uses_openai_judge_selection(
         ]
     }
     judge_payload = {
-        "choices": [
-            {
-                "message": {
-                    "content": '{"selected_index": 1, "reason": "参加したくなる余白がある", "scores": [{"index": 1, "participation": 5}]}'
-                }
-            }
-        ]
+        "output_text": '{"selected_index": 1, "reason": "参加したくなる余白がある", "scores": [{"index": 1, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
     }
 
     def fake_post(url, *args, **kwargs):
@@ -209,22 +199,10 @@ def test_xai_theme_client_retries_when_openai_picks_invalid_mora_candidate(
     judge_responses = iter(
         [
             {
-                "choices": [
-                    {
-                        "message": {
-                            "content": '{"selected_index": 0, "reason": "最も強い", "scores": [{"index": 0, "mora_validity": 5}]}'
-                        }
-                    }
-                ]
+                "output_text": '{"selected_index": 0, "reason": "最も強い", "scores": [{"index": 0, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
             },
             {
-                "choices": [
-                    {
-                        "message": {
-                            "content": '{"selected_index": 1, "reason": "余白がある", "scores": [{"index": 1, "mora_validity": 5}]}'
-                        }
-                    }
-                ]
+                "output_text": '{"selected_index": 1, "reason": "余白がある", "scores": [{"index": 1, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
             },
         ]
     )
@@ -269,7 +247,7 @@ def test_xai_theme_client_falls_back_when_openai_judge_returns_invalid_json(
             }
         ]
     }
-    judge_payload = {"choices": [{"message": {"content": "not json"}}]}
+    judge_payload = {"output_text": "not json"}
 
     def fake_post(url, *args, **kwargs):
         payload = xai_payload if "api.x.ai" in url else judge_payload
@@ -350,13 +328,7 @@ def test_xai_theme_client_filters_out_past_theme_duplicates(
         ]
     }
     judge_payload = {
-        "choices": [
-            {
-                "message": {
-                    "content": '{"selected_index": 1, "reason": "重複していない", "scores": [{"index": 1, "participation": 5}]}'
-                }
-            }
-        ]
+        "output_text": '{"selected_index": 1, "reason": "重複していない", "scores": [{"index": 1, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
     }
 
     def fake_post(url, *args, **kwargs):
