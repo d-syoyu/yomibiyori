@@ -256,12 +256,10 @@ class OpenAIThemeJudge:
         recent_themes_text = "\n".join(f"- {theme.replace(chr(10), ' / ')}" for theme in recent_themes) or "- なし"
 
         prompt = (
-            "あなたは短歌アプリ『よみびより』のお題選定者です。"
-            "XAIが作った上の句候補から、ユーザーが下の句を続けたくなるものを1つだけ選んでください。"
-            "評価軸は以下です。"
-            "1. 参加したくなる 2. 口語で自然 3. 情景が浮かぶ 4. 余白がある "
-            "5. 抽象語が少ない 6. 5-7-5として妥当。"
-            "返答は必ずJSONのみです。\n\n"
+            "短歌アプリ『よみびより』のお題選定です。"
+            "3候補から、最も下の句を続けたくなるものを1つ選んでください。"
+            "評価軸は、参加したくなる、口語で自然、情景がある、余白がある、抽象語が少ない、5-7-5として妥当、です。"
+            "返答はJSONのみです。\n\n"
             f"カテゴリー: {category}\n"
             f"対象日: {target_date.isoformat()}\n"
             f"最近のお題:\n{recent_themes_text}\n\n"
@@ -272,6 +270,7 @@ class OpenAIThemeJudge:
             "model": self.model,
             "input": prompt,
             "max_output_tokens": 1200,
+            "reasoning": {"effort": "minimal"},
             "text": {
                 "format": {
                     "type": "json_schema",

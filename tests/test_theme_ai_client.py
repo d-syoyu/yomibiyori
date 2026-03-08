@@ -108,6 +108,7 @@ def test_openai_theme_judge_uses_responses_api_payload(monkeypatch: pytest.Monke
     assert "max_completion_tokens" not in captured_payload
     assert "input" in captured_payload
     assert "text" in captured_payload
+    assert captured_payload["reasoning"] == {"effort": "minimal"}
 
 
 def test_split_xai_candidates_ignores_trailing_separator() -> None:
