@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -77,13 +78,25 @@ def password_reset_page():
 
 app.include_router(api_router, prefix="/api/v1")
 
+
+def _resolve_upload_dir(configured_dir: str) -> Path:
+    """Return a writable upload directory for local file serving."""
+    candidate = Path(configured_dir)
+    try:
+        candidate.mkdir(parents=True, exist_ok=True)
+        return candidate
+    except PermissionError:
+        fallback = Path(tempfile.gettempdir()) / "yomibiyori-uploads"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
 # ローカル開発時のアップロードファイル配信
 _settings = get_settings()
 if _settings.app_env == "development":
     from fastapi.staticfiles import StaticFiles
 
-    _uploads_dir = Path(_settings.local_upload_dir)
-    _uploads_dir.mkdir(parents=True, exist_ok=True)
+    _uploads_dir = _resolve_upload_dir(_settings.local_upload_dir)
     app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 
