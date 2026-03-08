@@ -323,7 +323,7 @@ class OpenAIThemeJudge:
         try:
             response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
         except requests.RequestException as exc:  # pragma: no cover - network failure path
-            raise ThemeAIClientError("Failed to call OpenAI judge endpoint") from exc
+            raise ThemeAIClientError(f"Failed to call OpenAI judge endpoint: {exc}") from exc
 
         try:
             response.raise_for_status()
