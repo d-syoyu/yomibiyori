@@ -14,6 +14,7 @@ from app.services.theme_ai_client import (
     OpenAIThemeClient,
     ThemeAIClientError,
     XAIThemeClient,
+    _filter_xai_candidates,
     _split_xai_candidates,
     resolve_theme_ai_client,
 )
@@ -123,6 +124,20 @@ def test_split_xai_candidates_ignores_trailing_separator() -> None:
     ]
 
 
+def test_split_xai_candidates_filters_invalid_mora_candidates() -> None:
+    candidates = _split_xai_candidates(
+        "デート前に\n鏡の前でさ\n髪いじって\n---\n"
+        "傘なくて\nにわか雨降る\n君と僕\n---\n"
+        "寝過ごして\n電車の中で\n目が覚める"
+    )
+
+    filtered = _filter_xai_candidates(candidates, past_themes=None)
+    assert [candidate.text for candidate in filtered] == [
+        "傘なくて\nにわか雨降る\n君と僕",
+        "寝過ごして\n電車の中で\n目が覚める",
+    ]
+
+
 def test_xai_theme_client_uses_openai_judge_selection(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
@@ -171,7 +186,7 @@ def test_xai_theme_client_uses_openai_judge_selection(
     assert '"openai_reason": "参加したくなる余白がある"' in caplog.text
 
 
-def test_xai_theme_client_retries_when_openai_picks_invalid_mora_candidate(
+def test_xai_theme_client_filters_invalid_mora_before_openai_judging(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from app.core import config as config_module
@@ -181,49 +196,25 @@ def test_xai_theme_client_retries_when_openai_picks_invalid_mora_candidate(
     monkeypatch.setattr(settings, "openai_eval_model", "gpt-eval")
     monkeypatch.setattr(settings, "openai_eval_timeout", 3.0)
 
-    xai_responses = iter(
-        [
+    xai_payload = {
+        "choices": [
             {
-                "choices": [
-                    {
-                        "message": {
-                            "content": (
-                                "すれ違う\nいつもの駅で\nまた会えたよ\n---\n"
-                                "傘なくて\nにわか雨降る\n君と僕\n---\n"
-                                "寝過ごして\n電車の中で\n目が覚める"
-                            )
-                        }
-                    }
-                ]
-            },
-            {
-                "choices": [
-                    {
-                        "message": {
-                            "content": (
-                                "コンビニで\nアイスを買って\n帰る道\n---\n"
-                                "すれ違う\nいつもの駅で\nまた会えた\n---\n"
-                                "片一方\nなくしたピアス\nどこ行った"
-                            )
-                        }
-                    }
-                ]
-            },
+                "message": {
+                    "content": (
+                        "すれ違う\nいつもの駅で\nまた会えたよ\n---\n"
+                        "傘なくて\nにわか雨降る\n君と僕\n---\n"
+                        "寝過ごして\n電車の中で\n目が覚める"
+                    )
+                }
+            }
         ]
-    )
-    judge_responses = iter(
-        [
-            {
-                "output_text": '{"selected_index": 0, "reason": "最も強い", "scores": [{"index": 0, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
-            },
-            {
-                "output_text": '{"selected_index": 1, "reason": "余白がある", "scores": [{"index": 1, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
-            },
-        ]
-    )
+    }
+    judge_payload = {
+        "output_text": '{"selected_index": 2, "reason": "余白がある", "scores": [{"index": 2, "participation": 5, "naturalness": 5, "imagery": 5, "openness": 5, "concreteness": 5, "mora_validity": 5}]}'
+    }
 
     def fake_post(url, *args, **kwargs):
-        payload = next(xai_responses) if "api.x.ai" in url else next(judge_responses)
+        payload = xai_payload if "api.x.ai" in url else judge_payload
         return SimpleNamespace(
             status_code=200,
             json=lambda payload=payload: payload,
@@ -235,7 +226,7 @@ def test_xai_theme_client_retries_when_openai_picks_invalid_mora_candidate(
     client = XAIThemeClient(api_key="xai-key", timeout=5.0)
     verse = client.generate(category="恋愛", target_date=date(2025, 1, 11))
 
-    assert verse == "すれ違う\nいつもの駅で\nまた会えた"
+    assert verse == "寝過ごして\n電車の中で\n目が覚める"
 
 
 def test_xai_theme_client_falls_back_when_openai_judge_returns_invalid_json(

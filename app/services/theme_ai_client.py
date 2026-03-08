@@ -173,6 +173,8 @@ def _filter_xai_candidates(
             continue
         if len(candidate.text.splitlines()) != 3:
             continue
+        if not validate_575(candidate.text)[0]:
+            continue
 
         seen_keys.add(normalized_key)
         filtered.append(candidate)
