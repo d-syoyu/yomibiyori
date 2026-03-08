@@ -10,6 +10,7 @@ import pytest
 
 from app.services.theme_ai_client import (
     DummyThemeAIClient,
+    OpenAIThemeJudge,
     OpenAIThemeClient,
     ThemeAIClientError,
     XAIThemeClient,
@@ -72,6 +73,43 @@ def test_resolve_theme_ai_client_requires_api_key(monkeypatch: pytest.MonkeyPatc
 
     with pytest.raises(ThemeAIClientError):
         resolve_theme_ai_client()
+
+
+def test_openai_theme_judge_uses_max_completion_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_payload: dict[str, object] = {}
+    payload = {
+        "choices": [
+            {
+                "message": {
+                    "content": '{"selected_index": 0, "reason": "ok", "scores": [{"index": 0, "participation": 5}]}'
+                }
+            }
+        ]
+    }
+
+    def fake_post(url, *, json=None, headers=None, timeout=None):
+        nonlocal captured_payload
+        captured_payload = json or {}
+        return SimpleNamespace(
+            status_code=200,
+            text='{"ok":true}',
+            json=lambda: payload,
+            raise_for_status=lambda: None,
+        )
+
+    monkeypatch.setattr("app.services.theme_ai_client.requests.post", fake_post)
+
+    judge = OpenAIThemeJudge(api_key="test-key", model="gpt-5-mini", timeout=5.0)
+    result = judge.choose_candidate(
+        category="恋愛",
+        target_date=date(2025, 1, 12),
+        candidates=[SimpleNamespace(index=0, text="すれ違う\nいつもの駅で\nまた会えた")],
+    )
+
+    assert result.selected_index == 0
+    assert captured_payload["model"] == "gpt-5-mini"
+    assert "max_completion_tokens" in captured_payload
+    assert "max_tokens" not in captured_payload
 
 
 def test_xai_theme_client_uses_openai_judge_selection(

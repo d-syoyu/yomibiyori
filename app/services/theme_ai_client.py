@@ -191,7 +191,7 @@ class OpenAIThemeJudge:
     """OpenAI-based judge that selects the best XAI candidate."""
 
     api_key: str
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-5-mini"
     endpoint: str = "https://api.openai.com/v1/chat/completions"
     timeout: float = 10.0
 
@@ -216,7 +216,7 @@ class OpenAIThemeJudge:
             "model": self.model,
             "response_format": {"type": "json_object"},
             "temperature": 0.0,
-            "max_tokens": 400,
+            "max_completion_tokens": 400,
             "messages": [
                 {
                     "role": "system",
@@ -263,6 +263,16 @@ class OpenAIThemeJudge:
         try:
             response.raise_for_status()
         except requests.HTTPError as exc:
+            response_text = None
+            try:
+                response_text = response.text
+            except Exception:
+                response_text = None
+
+            if response_text:
+                raise ThemeAIClientError(
+                    f"OpenAI judge API returned {response.status_code}: {response_text[:500]}"
+                ) from exc
             raise ThemeAIClientError(f"OpenAI judge API returned {response.status_code}") from exc
 
         try:
