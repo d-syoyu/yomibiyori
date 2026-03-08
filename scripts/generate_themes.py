@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime
-
-from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.core.config import get_settings
-from app.db.session import SessionLocal
 from app.services.theme_generation import ThemeGenerationError, generate_all_categories
 from app.services.theme_ai_client import resolve_theme_ai_client, ThemeAIClientError
 
@@ -25,6 +22,11 @@ def _parse_args() -> argparse.Namespace:
         "--dry-run",
         action="store_true",
         help="Execute without committing changes to the database.",
+    )
+    parser.add_argument(
+        "--overwrite-existing-ai",
+        action="store_true",
+        help="Regenerate and overwrite existing AI themes for the target date.",
     )
     return parser.parse_args()
 
@@ -55,6 +57,7 @@ def main() -> int:
         results = generate_all_categories(
             ai_client,
             target_date=target_date,
+            overwrite_existing_ai=args.overwrite_existing_ai,
         )
     except ThemeGenerationError as exc:
         print(f"[ERROR] Theme generation failed: {exc}")
@@ -62,10 +65,22 @@ def main() -> int:
         traceback.print_exc()
         raise SystemExit(1) from exc
 
-    print(f"Generated {len(results)} theme(s) for date {resolved_date}:")
-    for result in results:
+    print(f"Generated {len(results.results)} theme(s) for date {resolved_date}:")
+    for result in results.results:
         status = "created" if result.was_created else "updated"
         print(f" - [{status}] {result.category}: {result.generated_text}")
+
+    if results.skipped_categories:
+        print(f"Skipped existing categories: {', '.join(results.skipped_categories)}")
+
+    if results.missing_categories:
+        print(
+            "[ERROR] Missing themes remain after generation: "
+            f"{', '.join(results.missing_categories)}"
+        )
+        if results.failed_categories:
+            print(f"[ERROR] Failed categories: {', '.join(results.failed_categories)}")
+        raise SystemExit(1)
 
     return 0
 
