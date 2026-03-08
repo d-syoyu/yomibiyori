@@ -30,7 +30,7 @@ jobs:
           CLAUDE_TIMEOUT: "30.0"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_EVAL_MODEL: "gpt-5-mini"
-          OPENAI_EVAL_TIMEOUT: "10.0"
+          OPENAI_EVAL_TIMEOUT: "45.0"
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           XAI_TIMEOUT: "300.0"
           THEME_AI_PROVIDER: "xai"

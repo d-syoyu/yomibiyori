@@ -172,7 +172,7 @@ class Settings(BaseSettings):
         description="OpenAI model used for theme evaluation.",
     )
     openai_eval_timeout: float = Field(
-        default=10.0,
+        default=45.0,
         alias="OPENAI_EVAL_TIMEOUT",
         description="Timeout in seconds for OpenAI theme evaluation calls.",
         ge=1.0,
