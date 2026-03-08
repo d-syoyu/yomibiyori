@@ -815,6 +815,7 @@ class XAIThemeClient(ThemeAIClient):
                 "filtered_candidates": [candidate.text for candidate in filtered_candidates],
                 "openai_selected_index": None,
                 "openai_reason": None,
+                "judge_error": None,
                 "fallback_used": False,
                 "final_counts": None,
                 "failure_type": None,
@@ -853,9 +854,11 @@ class XAIThemeClient(ThemeAIClient):
                     continue
                 except ThemeAIClientError as exc:
                     log_payload["failure_type"] = "openai_judge_failed"
+                    log_payload["judge_error"] = str(exc)
                     last_error = str(exc)
             else:
                 log_payload["failure_type"] = "openai_judge_unavailable"
+                log_payload["judge_error"] = "OpenAI judge is not configured"
                 last_error = "OpenAI judge is not configured"
 
             fallback_selection = _select_local_fallback(filtered_candidates)
