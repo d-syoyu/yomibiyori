@@ -108,6 +108,10 @@ class ThemeJudgeResult:
     selected_index: int
     reason: str
     scores: list[dict[str, Any]]
+    raw_status: str | None = None
+    raw_output_types: list[str] | None = None
+    raw_incomplete_details: dict[str, Any] | None = None
+    raw_refusal: str | None = None
 
 
 def _strip_code_fence(text: str) -> str:
@@ -196,30 +200,41 @@ class OpenAIThemeJudge:
     timeout: float = 10.0
 
     @staticmethod
-    def _extract_output_text(payload_json: dict[str, Any]) -> str:
+    def _extract_output_text(payload_json: dict[str, Any]) -> tuple[str, list[str], str | None]:
         output_text = payload_json.get("output_text")
         if isinstance(output_text, str) and output_text.strip():
-            return output_text.strip()
+            return output_text.strip(), [], None
 
         output = payload_json.get("output")
         if not isinstance(output, list):
-            return ""
+            return "", [], None
 
         parts: list[str] = []
+        output_types: list[str] = []
+        refusal_text: str | None = None
         for item in output:
             if not isinstance(item, dict):
                 continue
+            item_type = item.get("type")
+            if isinstance(item_type, str):
+                output_types.append(item_type)
             content = item.get("content")
             if not isinstance(content, list):
                 continue
             for block in content:
                 if not isinstance(block, dict):
                     continue
+                block_type = block.get("type")
+                if isinstance(block_type, str):
+                    output_types.append(block_type)
+                refusal = block.get("refusal")
+                if isinstance(refusal, str) and refusal.strip():
+                    refusal_text = refusal.strip()
                 text = block.get("text")
                 if isinstance(text, str) and text.strip():
                     parts.append(text.strip())
 
-        return "\n".join(parts).strip()
+        return "\n".join(parts).strip(), output_types, refusal_text
 
     def choose_candidate(
         self,
@@ -328,9 +343,19 @@ class OpenAIThemeJudge:
         except ValueError as exc:
             raise ThemeAIClientError("OpenAI judge API returned invalid JSON") from exc
 
-        content = self._extract_output_text(payload_json)
+        content, output_types, refusal_text = self._extract_output_text(payload_json)
         if not content:
-            raise ThemeAIClientError("OpenAI judge returned empty content")
+            status = payload_json.get("status")
+            incomplete_details = payload_json.get("incomplete_details")
+            debug_payload = {
+                "status": status if isinstance(status, str) else None,
+                "output_types": output_types,
+                "incomplete_details": incomplete_details if isinstance(incomplete_details, dict) else None,
+                "refusal": refusal_text,
+            }
+            raise ThemeAIClientError(
+                f"OpenAI judge returned empty content: {json.dumps(debug_payload, ensure_ascii=False, sort_keys=True)}"
+            )
 
         try:
             parsed = json.loads(_strip_code_fence(content))
@@ -359,6 +384,12 @@ class OpenAIThemeJudge:
             selected_index=selected_index,
             reason=reason.strip(),
             scores=[score for score in scores if isinstance(score, dict)],
+            raw_status=payload_json.get("status") if isinstance(payload_json.get("status"), str) else None,
+            raw_output_types=output_types,
+            raw_incomplete_details=payload_json.get("incomplete_details")
+            if isinstance(payload_json.get("incomplete_details"), dict)
+            else None,
+            raw_refusal=refusal_text,
         )
 
 
