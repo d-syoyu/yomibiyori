@@ -215,7 +215,6 @@ class OpenAIThemeJudge:
         payload = {
             "model": self.model,
             "response_format": {"type": "json_object"},
-            "temperature": 0.0,
             "max_completion_tokens": 400,
             "messages": [
                 {
