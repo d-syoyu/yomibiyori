@@ -14,6 +14,7 @@ from app.services.theme_ai_client import (
     OpenAIThemeClient,
     ThemeAIClientError,
     XAIThemeClient,
+    _split_xai_candidates,
     resolve_theme_ai_client,
 )
 
@@ -103,9 +104,22 @@ def test_openai_theme_judge_uses_responses_api_payload(monkeypatch: pytest.Monke
     assert result.selected_index == 0
     assert captured_payload["model"] == "gpt-5-mini"
     assert "max_output_tokens" in captured_payload
+    assert captured_payload["max_output_tokens"] == 1200
     assert "max_completion_tokens" not in captured_payload
     assert "input" in captured_payload
     assert "text" in captured_payload
+
+
+def test_split_xai_candidates_ignores_trailing_separator() -> None:
+    candidates = _split_xai_candidates(
+        "君の声\n近く感じてさ\n切れなくて\n---\n"
+        "アイス買って\nきみにあげたら\n口ついちゃ\n---"
+    )
+
+    assert [candidate.text for candidate in candidates] == [
+        "君の声\n近く感じてさ\n切れなくて",
+        "アイス買って\nきみにあげたら\n口ついちゃ",
+    ]
 
 
 def test_xai_theme_client_uses_openai_judge_selection(

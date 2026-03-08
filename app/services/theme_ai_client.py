@@ -128,6 +128,8 @@ def _clean_candidate_block(block: str) -> str:
         line = raw_line.strip()
         if not line:
             continue
+        if line == XAI_CANDIDATE_SEPARATOR:
+            continue
         line = XAI_CANDIDATE_PREFIX_PATTERN.sub("", line)
         lines.append(line)
     return "\n".join(lines).strip()
@@ -269,7 +271,7 @@ class OpenAIThemeJudge:
         payload = {
             "model": self.model,
             "input": prompt,
-            "max_output_tokens": 400,
+            "max_output_tokens": 1200,
             "text": {
                 "format": {
                     "type": "json_schema",
