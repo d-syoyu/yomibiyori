@@ -35,13 +35,13 @@ class TestWeekdayCategorySchedule:
             schedule = get_weekday_category_schedule()
 
             assert schedule == DEFAULT_WEEKDAY_CATEGORY_SCHEDULE
-            assert schedule[0] == "romance"   # Monday
-            assert schedule[1] == "season"    # Tuesday
-            assert schedule[2] == "daily"     # Wednesday
-            assert schedule[3] == "romance"   # Thursday
-            assert schedule[4] == "daily"     # Friday
-            assert schedule[5] == "humor"     # Saturday
-            assert schedule[6] == "humor"     # Sunday
+            assert schedule[0] == "恋愛"     # Monday
+            assert schedule[1] == "季節"     # Tuesday
+            assert schedule[2] == "日常"     # Wednesday
+            assert schedule[3] == "恋愛"     # Thursday
+            assert schedule[4] == "日常"     # Friday
+            assert schedule[5] == "ユーモア"  # Saturday
+            assert schedule[6] == "ユーモア"  # Sunday
 
     def test_custom_schedule_from_env(self):
         """Test that custom schedule can be set via environment variable."""
@@ -84,7 +84,7 @@ class TestGetCategoryForToday:
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
             category = get_category_for_today()
-            assert category == "romance"
+            assert category == "恋愛"
 
     def test_tuesday_returns_season(self):
         """Test Tuesday returns season category."""
@@ -96,7 +96,7 @@ class TestGetCategoryForToday:
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
             category = get_category_for_today()
-            assert category == "season"
+            assert category == "季節"
 
     def test_wednesday_returns_daily(self):
         """Test Wednesday returns daily category."""
@@ -108,7 +108,7 @@ class TestGetCategoryForToday:
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
             category = get_category_for_today()
-            assert category == "daily"
+            assert category == "日常"
 
     def test_thursday_returns_romance(self):
         """Test Thursday returns romance category."""
@@ -120,7 +120,7 @@ class TestGetCategoryForToday:
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
             category = get_category_for_today()
-            assert category == "romance"
+            assert category == "恋愛"
 
     def test_friday_returns_daily(self):
         """Test Friday returns daily category."""
@@ -132,7 +132,7 @@ class TestGetCategoryForToday:
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
             category = get_category_for_today()
-            assert category == "daily"
+            assert category == "日常"
 
     def test_saturday_returns_humor(self):
         """Test Saturday returns humor category."""
@@ -144,7 +144,7 @@ class TestGetCategoryForToday:
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
             category = get_category_for_today()
-            assert category == "humor"
+            assert category == "ユーモア"
 
     def test_sunday_returns_humor(self):
         """Test Sunday returns humor category."""
@@ -156,7 +156,7 @@ class TestGetCategoryForToday:
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
             category = get_category_for_today()
-            assert category == "humor"
+            assert category == "ユーモア"
 
 
 class TestGenerateTweetText:
@@ -166,7 +166,7 @@ class TestGenerateTweetText:
         """Test that tweet contains app promotion message."""
         # Create a mock theme
         mock_theme = MagicMock()
-        mock_theme.category = "romance"
+        mock_theme.category = "恋愛"
         mock_theme.date = datetime(2025, 12, 11, tzinfo=timezone(timedelta(hours=9)))
         mock_theme.sponsored = False
         mock_theme.sponsor_company_name = None
@@ -175,12 +175,12 @@ class TestGenerateTweetText:
 
         # Check that the promotion message is included
         assert "ほかのお題もよみびよりアプリで" in tweet_text
-        assert "apps.apple.com" in tweet_text
+        assert "https://yomibiyori.app/download" in tweet_text
 
     def test_tweet_contains_category_hashtag(self):
         """Test that tweet contains appropriate category hashtag."""
         mock_theme = MagicMock()
-        mock_theme.category = "season"
+        mock_theme.category = "季節"
         mock_theme.date = datetime(2025, 12, 11, tzinfo=timezone(timedelta(hours=9)))
         mock_theme.sponsored = False
         mock_theme.sponsor_company_name = None
@@ -193,7 +193,7 @@ class TestGenerateTweetText:
     def test_sponsored_theme_includes_sponsor_name(self):
         """Test that sponsored theme includes sponsor company name."""
         mock_theme = MagicMock()
-        mock_theme.category = "daily"
+        mock_theme.category = "日常"
         mock_theme.date = datetime(2025, 12, 11, tzinfo=timezone(timedelta(hours=9)))
         mock_theme.sponsored = True
         mock_theme.sponsor_company_name = "テスト株式会社"

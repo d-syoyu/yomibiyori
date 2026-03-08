@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import date
-from typing import Protocol
+from typing import Any, Protocol, Sequence
 
 import anthropic
 import requests
@@ -84,6 +85,227 @@ def get_season_info(target_date: date) -> str:
 
 class ThemeAIClientError(RuntimeError):
     """Raised when an AI client cannot produce a valid theme."""
+
+
+XAI_CANDIDATE_SEPARATOR = "---"
+XAI_DISALLOWED_MARKERS = ("候補", "音数", "モーラ", "5-7-5", "説明", "理由")
+XAI_CANDIDATE_PREFIX_PATTERN = re.compile(r"^\s*(?:候補|案)?\s*\d+\s*[:：.\-、)]\s*")
+XAI_CODE_FENCE_PATTERN = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$")
+
+
+@dataclass(slots=True)
+class ThemeCandidate:
+    """A single theme candidate produced by XAI."""
+
+    index: int
+    text: str
+
+
+@dataclass(slots=True)
+class ThemeJudgeResult:
+    """Selection result returned by the OpenAI judge."""
+
+    selected_index: int
+    reason: str
+    scores: list[dict[str, Any]]
+
+
+def _strip_code_fence(text: str) -> str:
+    return XAI_CODE_FENCE_PATTERN.sub("", text).strip()
+
+
+def _normalize_theme_key(text: str) -> str:
+    return re.sub(r"\s+", "", text).strip()
+
+
+def _clean_candidate_block(block: str) -> str:
+    lines: list[str] = []
+    for raw_line in block.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        line = XAI_CANDIDATE_PREFIX_PATTERN.sub("", line)
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def _split_xai_candidates(content: str) -> list[ThemeCandidate]:
+    cleaned = _strip_code_fence(content)
+    if not cleaned:
+        return []
+
+    blocks = re.split(rf"\n\s*{re.escape(XAI_CANDIDATE_SEPARATOR)}\s*\n", cleaned)
+    candidates: list[ThemeCandidate] = []
+    for index, block in enumerate(blocks):
+        text = _clean_candidate_block(block)
+        if text:
+            candidates.append(ThemeCandidate(index=index, text=text))
+    return candidates
+
+
+def _is_instruction_leak(text: str) -> bool:
+    normalized = text.replace(" ", "")
+    return any(marker in normalized for marker in XAI_DISALLOWED_MARKERS)
+
+
+def _filter_xai_candidates(
+    candidates: Sequence[ThemeCandidate],
+    *,
+    past_themes: Sequence[str] | None = None,
+) -> list[ThemeCandidate]:
+    past_keys = {_normalize_theme_key(theme) for theme in (past_themes or [])}
+    seen_keys: set[str] = set()
+    filtered: list[ThemeCandidate] = []
+
+    for candidate in candidates:
+        normalized_key = _normalize_theme_key(candidate.text)
+        if not normalized_key:
+            continue
+        if normalized_key in seen_keys or normalized_key in past_keys:
+            continue
+        if _is_instruction_leak(candidate.text):
+            continue
+        if len(candidate.text.splitlines()) != 3:
+            continue
+
+        seen_keys.add(normalized_key)
+        filtered.append(candidate)
+
+    return filtered
+
+
+def _select_local_fallback(candidates: Sequence[ThemeCandidate]) -> tuple[ThemeCandidate, list[int]] | None:
+    for candidate in candidates:
+        is_valid, counts = validate_575(candidate.text)
+        if is_valid:
+            return candidate, counts
+    return None
+
+
+def _log_xai_selection(event: str, payload: dict[str, Any], *, level: int = 20) -> None:
+    logger.log(level, "[XAISelection] %s %s", event, json.dumps(payload, ensure_ascii=False, sort_keys=True))
+
+
+@dataclass(slots=True)
+class OpenAIThemeJudge:
+    """OpenAI-based judge that selects the best XAI candidate."""
+
+    api_key: str
+    model: str = "gpt-4o-mini"
+    endpoint: str = "https://api.openai.com/v1/chat/completions"
+    timeout: float = 10.0
+
+    def choose_candidate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        candidates: Sequence[ThemeCandidate],
+        past_themes: Sequence[str] | None = None,
+    ) -> ThemeJudgeResult:
+        if not candidates:
+            raise ThemeAIClientError("OpenAI judge requires at least one candidate")
+
+        recent_themes = list(past_themes or [])[:5]
+        candidate_text = "\n\n".join(
+            f"candidate_{candidate.index}:\n{candidate.text}" for candidate in candidates
+        )
+        recent_themes_text = "\n".join(f"- {theme.replace(chr(10), ' / ')}" for theme in recent_themes) or "- なし"
+
+        payload = {
+            "model": self.model,
+            "response_format": {"type": "json_object"},
+            "temperature": 0.0,
+            "max_tokens": 400,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "あなたは短歌アプリ『よみびより』のお題選定者です。"
+                        "XAIが作った上の句候補から、ユーザーが下の句を続けたくなるものを1つだけ選んでください。"
+                        "評価軸は以下です。"
+                        "1. 参加したくなる 2. 口語で自然 3. 情景が浮かぶ 4. 余白がある "
+                        "5. 抽象語が少ない 6. 5-7-5として妥当。"
+                        "出力は必ずJSONのみで返してください。"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"カテゴリー: {category}\n"
+                        f"対象日: {target_date.isoformat()}\n"
+                        f"最近のお題:\n{recent_themes_text}\n\n"
+                        f"候補一覧:\n{candidate_text}\n\n"
+                        "次のJSONだけを返してください。\n"
+                        '{'
+                        '"selected_index": 0, '
+                        '"reason": "短い理由", '
+                        '"scores": ['
+                        '{"index": 0, "participation": 1, "naturalness": 1, "imagery": 1, "openness": 1, "concreteness": 1, "mora_validity": 1}'
+                        ']'
+                        '}\n'
+                        "selected_index は候補の index をそのまま返してください。"
+                    ),
+                },
+            ],
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+        except requests.RequestException as exc:  # pragma: no cover - network failure path
+            raise ThemeAIClientError("Failed to call OpenAI judge endpoint") from exc
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise ThemeAIClientError(f"OpenAI judge API returned {response.status_code}") from exc
+
+        try:
+            payload_json = response.json()
+        except ValueError as exc:
+            raise ThemeAIClientError("OpenAI judge API returned invalid JSON") from exc
+
+        try:
+            content = payload_json["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ThemeAIClientError("OpenAI judge response missing message content") from exc
+
+        if not isinstance(content, str) or not content.strip():
+            raise ThemeAIClientError("OpenAI judge returned empty content")
+
+        try:
+            parsed = json.loads(_strip_code_fence(content))
+        except json.JSONDecodeError as exc:
+            raise ThemeAIClientError("OpenAI judge returned non-JSON content") from exc
+
+        selected_index = parsed.get("selected_index")
+        if isinstance(selected_index, str) and selected_index.isdigit():
+            selected_index = int(selected_index)
+        if not isinstance(selected_index, int):
+            raise ThemeAIClientError("OpenAI judge selected_index is invalid")
+
+        valid_indexes = {candidate.index for candidate in candidates}
+        if selected_index not in valid_indexes:
+            raise ThemeAIClientError("OpenAI judge selected_index is out of range")
+
+        reason = parsed.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ThemeAIClientError("OpenAI judge reason is missing")
+
+        scores = parsed.get("scores")
+        if not isinstance(scores, list):
+            scores = []
+
+        return ThemeJudgeResult(
+            selected_index=selected_index,
+            reason=reason.strip(),
+            scores=[score for score in scores if isinstance(score, dict)],
+        )
 
 
 def count_syllables(text: str) -> int:
@@ -430,6 +652,16 @@ class XAIThemeClient(ThemeAIClient):
         ),
     }
 
+    def _build_openai_judge(self) -> OpenAIThemeJudge | None:
+        settings = get_settings()
+        if not settings.openai_api_key:
+            return None
+        return OpenAIThemeJudge(
+            api_key=settings.openai_api_key,
+            model=settings.openai_eval_model,
+            timeout=settings.openai_eval_timeout,
+        )
+
     def generate(
         self,
         *,
@@ -437,10 +669,7 @@ class XAIThemeClient(ThemeAIClient):
         target_date: date,
         past_themes: list[str] | None = None,
     ) -> str:
-        """Generate a haiku theme with 5-7-5 syllable validation.
-
-        Retries up to MAX_RETRIES times if the generated haiku does not match 5-7-5.
-        """
+        """Generate XAI candidates, then let OpenAI judge select the final theme."""
         MAX_RETRIES = 20
 
         # カテゴリーに応じたプロンプトを取得
@@ -505,12 +734,14 @@ class XAIThemeClient(ThemeAIClient):
                     "role": "user",
                     "content": (
                         f"以下の条件で、ユーザーが下の句を続けたくなる「上の句」を作成してください。\n"
-                        f"**作成前に必ず一音ずつ数えて、5-7-5を厳密に確認してください。**\n\n"
+                        f"**作成前に必ず一音ずつ数えて、5-7-5を厳密に確認してください。**\n"
+                        f"**3候補を作り、候補と候補の間は必ず `---` だけを1行で入れてください。説明文や番号は不要です。**\n\n"
                         f"【音数の厳守（絶対条件）】\n"
                         f"- 1行目：必ず正確に5音（例: す・れ・ち・が・う）\n"
                         f"- 2行目：必ず正確に7音（例: い・つ・も・の・え・き・で）\n"
                         f"- 3行目：必ず正確に5音（例: ま・た・あ・え・た）\n"
-                        f"- 音数が合わない句は絶対に出力しないでください\n\n"
+                        f"- 音数が合わない句は絶対に出力しないでください\n"
+                        f"- 3候補とも、少しずつ切り口を変えてください\n\n"
                         f"【1. 「詩」ではなく「つぶやき」】\n"
                         f"- 詩的な表現、芸術的な熟語、古風な言い回しは禁止です。\n"
                         f"- 友達とのLINEや、独り言のような自然な「話し言葉」にしてください。\n"
@@ -530,14 +761,19 @@ class XAIThemeClient(ThemeAIClient):
                         f"{category_instruction}"
                         f"{past_themes_instruction}\n\n"
                         f"【出力形式】\n"
-                        f"- 必ず3行（1行目5音/2行目7音/3行目5音）\n"
-                        f"- 句のみ出力（音数カウントや説明は不要）\n"
-                        f"- 例: すれ違う\\nいつもの駅で\\nまた会えた"
+                        f"- 3候補を出力する\n"
+                        f"- 各候補は必ず3行（1行目5音/2行目7音/3行目5音）\n"
+                        f"- 候補の間は `---` の1行だけで区切る\n"
+                        f"- 句のみ出力（音数カウント、候補番号、説明、理由は不要）\n"
+                        f"- 例:\n"
+                        f"すれ違う\\nいつもの駅で\\nまた会えた\\n---\\n"
+                        f"傘なくて\\nにわか雨降る\\n君と僕\\n---\\n"
+                        f"寝過ごして\\n電車の中で\\n目が覚める"
                     ),
                 },
             ],
             "temperature": 1.0,
-            "max_tokens": 200,
+            "max_tokens": 320,
         }
 
         headers = {
@@ -545,8 +781,8 @@ class XAIThemeClient(ThemeAIClient):
             "Content-Type": "application/json",
         }
 
-        last_content = None
-        last_counts = None
+        judge = self._build_openai_judge()
+        last_error: str | None = None
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -570,24 +806,69 @@ class XAIThemeClient(ThemeAIClient):
                 raise ThemeAIClientError("X.ai API response missing message content") from exc
 
             content = content.strip()
-            is_valid, counts = validate_575(content)
+            raw_candidates = _split_xai_candidates(content)
+            filtered_candidates = _filter_xai_candidates(raw_candidates, past_themes=past_themes)
+            log_payload: dict[str, Any] = {
+                "category": category,
+                "attempt": attempt,
+                "xai_candidates": [candidate.text for candidate in raw_candidates],
+                "filtered_candidates": [candidate.text for candidate in filtered_candidates],
+                "openai_selected_index": None,
+                "openai_reason": None,
+                "fallback_used": False,
+                "final_counts": None,
+                "failure_type": None,
+            }
 
-            lines = content.split('\n')
-            lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
+            if not filtered_candidates:
+                log_payload["failure_type"] = "no_filtered_candidates"
+                _log_xai_selection("retry", log_payload, level=30)
+                last_error = "XAI produced no usable candidates"
+                continue
 
-            if is_valid:
-                logger.info(f"[XAI] Success on attempt {attempt}: {lines_detail}")
-                return content
+            judge_result: ThemeJudgeResult | None = None
+            if judge is not None:
+                try:
+                    judge_result = judge.choose_candidate(
+                        category=category,
+                        target_date=target_date,
+                        candidates=filtered_candidates,
+                        past_themes=past_themes,
+                    )
+                    log_payload["openai_selected_index"] = judge_result.selected_index
+                    log_payload["openai_reason"] = judge_result.reason
 
-            # Not valid, log and retry
-            last_content = content
-            last_counts = counts
-            logger.warning(f"[XAI] Attempt {attempt}/{MAX_RETRIES} failed: expected [5,7,5], got {counts}")
-            logger.warning(f"[XAI] Lines: {lines_detail}")
+                    selected_candidate = next(
+                        candidate for candidate in filtered_candidates if candidate.index == judge_result.selected_index
+                    )
+                    is_valid, counts = validate_575(selected_candidate.text)
+                    log_payload["final_counts"] = counts
+                    if is_valid:
+                        _log_xai_selection("selected_by_openai", log_payload)
+                        return selected_candidate.text
 
-        # All retries exhausted, return last attempt with warning
-        logger.error(f"[XAI] All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")
-        return last_content or ""
+                    log_payload["failure_type"] = "openai_selected_candidate_invalid_mora"
+                    _log_xai_selection("retry", log_payload, level=30)
+                    last_error = "OpenAI selected a candidate that failed local mora validation"
+                    continue
+                except ThemeAIClientError as exc:
+                    log_payload["failure_type"] = "openai_judge_failed"
+                    last_error = str(exc)
+            else:
+                log_payload["failure_type"] = "openai_judge_unavailable"
+                last_error = "OpenAI judge is not configured"
+
+            fallback_selection = _select_local_fallback(filtered_candidates)
+            if fallback_selection is not None:
+                fallback_candidate, counts = fallback_selection
+                log_payload["fallback_used"] = True
+                log_payload["final_counts"] = counts
+                _log_xai_selection("selected_by_fallback", log_payload)
+                return fallback_candidate.text
+
+            _log_xai_selection("retry", log_payload, level=30)
+
+        raise ThemeAIClientError(last_error or "XAI failed to produce a valid theme candidate")
 
 
 @dataclass(slots=True)

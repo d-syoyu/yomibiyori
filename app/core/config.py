@@ -166,6 +166,17 @@ class Settings(BaseSettings):
         description="Timeout in seconds for OpenAI API calls.",
         ge=1.0,
     )
+    openai_eval_model: str = Field(
+        default="gpt-5-mini",
+        alias="OPENAI_EVAL_MODEL",
+        description="OpenAI model used for theme evaluation.",
+    )
+    openai_eval_timeout: float = Field(
+        default=10.0,
+        alias="OPENAI_EVAL_TIMEOUT",
+        description="Timeout in seconds for OpenAI theme evaluation calls.",
+        ge=1.0,
+    )
     anthropic_api_key: str | None = Field(
         default=None,
         alias="ANTHROPIC_API_KEY",
