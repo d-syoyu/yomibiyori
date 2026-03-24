@@ -131,6 +131,9 @@ def generate_with_retry(
             return validated_text
         except (ThemeAIClientError, ValueError) as exc:
             last_error = exc
+            logger.warning(
+                f"Theme generation attempt {attempt}/{max_attempts} failed for '{category}': {exc}"
+            )
             if attempt >= max_attempts:
                 break
             if delay_seconds > 0:

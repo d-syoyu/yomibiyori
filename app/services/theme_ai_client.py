@@ -1141,7 +1141,14 @@ class PLaMoThemeClient(ThemeAIClient):
             try:
                 response.raise_for_status()
             except requests.HTTPError as exc:
-                raise ThemeAIClientError(f"PLaMo API returned {response.status_code}") from exc
+                body = ""
+                try:
+                    body = response.text[:500]
+                except Exception:
+                    pass
+                raise ThemeAIClientError(
+                    f"PLaMo API returned {response.status_code}: {body}"
+                ) from exc
 
             try:
                 payload_json = response.json()
