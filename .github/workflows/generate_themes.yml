@@ -34,6 +34,7 @@ jobs:
           PLAMO_API_KEY: ${{ secrets.PLAMO_API_KEY }}
           PLAMO_TIMEOUT: "300.0"
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          XAI_MODEL: "grok-4.20-0309-reasoning"
           XAI_TIMEOUT: "300.0"
           THEME_AI_PROVIDER: "plamo"
           THEME_CATEGORIES: ${{ secrets.THEME_CATEGORIES }}

@@ -172,7 +172,7 @@ class XAIWorkClient(WorkAIClient):
     """X.ai Grok-backed lower verse generator."""
 
     api_key: str
-    model: str = "grok-4-1-fast-reasoning"
+    model: str = "grok-4.20-0309-reasoning"
     endpoint: str = "https://api.x.ai/v1/chat/completions"
     timeout: float = 30.0
 
@@ -313,12 +313,20 @@ class XAIWorkClient(WorkAIClient):
 
 @dataclass(slots=True)
 class PLaMoWorkClient(WorkAIClient):
-    """PLaMo 2.2 Prime-backed lower verse generator (OpenAI-compatible API)."""
+    """PLaMo ideation → XAI composition pipeline for lower verse (7-7).
+
+    Stage 1: PLaMo generates creative ideas for the lower verse.
+    Stage 2: XAI composes a strict 7-7 verse from those ideas.
+    """
 
     api_key: str
     model: str = "plamo-2.2-prime"
     endpoint: str = "https://api.platform.preferredai.jp/v1/chat/completions"
     timeout: float = 30.0
+    xai_api_key: str = ""
+    xai_model: str = "grok-4.20-0309-reasoning"
+    xai_endpoint: str = "https://api.x.ai/v1/chat/completions"
+    xai_timeout: float = 300.0
 
     # カテゴリ別の下の句スタイルガイド（他クライアントと統一）
     CATEGORY_STYLES = {
@@ -328,15 +336,14 @@ class PLaMoWorkClient(WorkAIClient):
         "ユーモア": "予想外のオチ、ツッコミどころ満載の展開、笑いを誘う大胆な表現で締めくくって。",
     }
 
-    def generate(self, *, upper_verse: str, category: str, username: str, persona: str = "") -> str:
-        """Generate a 7-7 lower verse with syllable validation."""
-        MAX_RETRIES = 10
-
-        # ペルソナが指定されていない場合はユーザー名をそのまま使用
-        if not persona:
-            persona = f"「{username}」という名前の詩人として、あなた独自の感性で表現します。"
-
-        # カテゴリに応じたスタイルガイド
+    def _call_plamo_ideation(
+        self,
+        *,
+        upper_verse: str,
+        category: str,
+        persona: str,
+    ) -> str:
+        """Stage 1: Ask PLaMo for creative lower verse ideas."""
         style_guide = self.CATEGORY_STYLES.get(
             category,
             "読む人の想像力を刺激する、印象的な表現で完結させて。"
@@ -344,6 +351,67 @@ class PLaMoWorkClient(WorkAIClient):
 
         payload = {
             "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "あなたは創造力豊かなアイデア出しの達人です。\n"
+                        "上の句（5-7-5）に対する下の句のアイデアを提案します。\n"
+                        "7-7の句を作る必要はありません。展開のアイデアや使える言葉を出してください。\n"
+                        f"ペルソナ: {persona}"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"以下の上の句に対する下の句（7-7）のアイデアを5つ提案してください。\n\n"
+                        f"【上の句】\n{upper_verse}\n\n"
+                        f"【カテゴリ】{category}\n"
+                        f"【表現スタイル】\n{style_guide}\n\n"
+                        f"【出力形式】\n"
+                        f"各アイデアを1行ずつ出力。具体的なシーンの展開や使える言葉を含めてください。\n"
+                        f"例:\n"
+                        f"既読つけたまま返事を待つ夜の長さ\n"
+                        f"振り向いたら目が合って慌てて逸らす\n"
+                        f"スマホの画面を何度も確認する手"
+                    ),
+                },
+            ],
+            "temperature": 1.2,
+            "max_tokens": 400,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+            payload_json = response.json()
+            content = payload_json["choices"][0]["message"]["content"]
+            return content.strip()
+        except (requests.RequestException, requests.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
+            raise WorkAIClientError(f"PLaMo ideation failed: {exc}") from exc
+
+    def _call_xai_compose(
+        self,
+        *,
+        ideas: str,
+        upper_verse: str,
+        category: str,
+        username: str,
+        persona: str,
+    ) -> str:
+        """Stage 2: Ask XAI to compose a strict 7-7 verse from PLaMo ideas."""
+        style_guide = self.CATEGORY_STYLES.get(
+            category,
+            "読む人の想像力を刺激する、印象的な表現で完結させて。"
+        )
+
+        payload = {
+            "model": self.xai_model,
             "messages": [
                 {
                     "role": "system",
@@ -363,12 +431,12 @@ class PLaMoWorkClient(WorkAIClient):
                 {
                     "role": "user",
                     "content": (
-                        f"以下の上の句に対して、下の句（7-7）を作成してください。\n"
-                        f"**作成前に必ず一音ずつ数えて、7-7を厳密に確認してください。**\n\n"
+                        f"以下のアイデアを参考にして、上の句に対する下の句（7-7）を作成してください。\n"
+                        f"**アイデアの言葉やシーンを活かしつつ、7-7の音数を厳密に守ってください。**\n\n"
                         f"【上の句】\n{upper_verse}\n\n"
+                        f"【参考アイデア（PLaMo生成）】\n{ideas}\n\n"
                         f"【カテゴリ】{category}\n"
                         f"【このカテゴリでの表現スタイル】\n{style_guide}\n\n"
-                        f"【あなたのペルソナ】\n{persona}\n\n"
                         f"【音数の厳守（絶対条件）】\n"
                         f"- 1行目：必ず正確に7音\n"
                         f"- 2行目：必ず正確に7音\n"
@@ -389,54 +457,66 @@ class PLaMoWorkClient(WorkAIClient):
         }
 
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {self.xai_api_key}",
             "Content-Type": "application/json",
         }
 
+        try:
+            response = requests.post(self.xai_endpoint, json=payload, headers=headers, timeout=self.xai_timeout)
+            response.raise_for_status()
+            payload_json = response.json()
+            content = payload_json["choices"][0]["message"]["content"]
+            return content.strip()
+        except (requests.RequestException, requests.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
+            raise WorkAIClientError(f"XAI composition failed: {exc}") from exc
+
+    def generate(self, *, upper_verse: str, category: str, username: str, persona: str = "") -> str:
+        """PLaMo ideation → XAI composition pipeline for 7-7 lower verse."""
+        MAX_RETRIES = 10
+
+        if not persona:
+            persona = f"「{username}」という名前の詩人として、あなた独自の感性で表現します。"
+
         last_content = None
         last_counts = None
-        last_error = None
+        ideas: str | None = None
 
         for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
-            except requests.RequestException as exc:
-                last_error = f"Network error: {exc}"
-                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Network error: {exc}")
-                if attempt == MAX_RETRIES:
-                    raise WorkAIClientError(f"Failed to call PLaMo API endpoint after {MAX_RETRIES} attempts: {exc}") from exc
+            # Stage 1: PLaMo ideation (refresh ideas every 3 attempts)
+            if ideas is None or attempt % 3 == 1:
+                try:
+                    ideas = self._call_plamo_ideation(
+                        upper_verse=upper_verse,
+                        category=category,
+                        persona=persona,
+                    )
+                    print(f"[Work generation] [PLaMo ideation] attempt={attempt}, ideas={ideas[:150]!r}")
+                except WorkAIClientError as exc:
+                    print(f"[Work generation] [FAIL] PLaMo ideation failed: {exc}")
+                    ideas = None
+                    if attempt == MAX_RETRIES:
+                        raise
+                    continue
+
+            if ideas is None:
                 continue
 
+            # Stage 2: XAI composition
             try:
-                response.raise_for_status()
-            except requests.HTTPError as exc:
-                last_error = f"HTTP {response.status_code}: {response.text[:200]}"
-                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - HTTP error: {response.status_code}")
+                content = self._call_xai_compose(
+                    ideas=ideas,
+                    upper_verse=upper_verse,
+                    category=category,
+                    username=username,
+                    persona=persona,
+                )
+            except WorkAIClientError as exc:
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - XAI compose: {exc}")
                 if attempt == MAX_RETRIES:
-                    raise WorkAIClientError(f"PLaMo API returned {response.status_code}") from exc
+                    raise
                 continue
 
-            try:
-                payload_json = response.json()
-            except ValueError as exc:
-                last_error = f"Invalid JSON: {exc}"
-                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Invalid JSON response")
-                if attempt == MAX_RETRIES:
-                    raise WorkAIClientError("PLaMo API returned invalid JSON") from exc
-                continue
-
-            try:
-                content = payload_json["choices"][0]["message"]["content"]
-            except (KeyError, IndexError, TypeError) as exc:
-                last_error = f"Missing content: {exc}"
-                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Missing message content")
-                if attempt == MAX_RETRIES:
-                    raise WorkAIClientError("PLaMo API response missing message content") from exc
-                continue
-
-            content = content.strip()
             is_valid, counts = validate_77(content)
-
             lines = content.split('\n')
             lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
 
@@ -444,13 +524,11 @@ class PLaMoWorkClient(WorkAIClient):
                 print(f"[Work generation] [OK] Success on attempt {attempt}: {lines_detail}")
                 return content
 
-            # Not valid, log and retry
             last_content = content
             last_counts = counts
             print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} failed: expected [7,7], got {counts}")
             print(f"[Work generation]    Lines: {lines_detail}")
 
-        # All retries exhausted, return last attempt with warning
         print(f"[Work generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")
         return last_content or ""
 
@@ -567,15 +645,21 @@ def resolve_work_ai_client() -> WorkAIClient:
     settings = get_settings()
     provider = (settings.theme_ai_provider or "xai").lower()
 
-    # PLaMo is the default and preferred provider
+    # PLaMo is the default and preferred provider (PLaMo ideation → XAI composition)
     if provider == "plamo":
         api_key = settings.plamo_api_key
         if not api_key:
             raise WorkAIClientError("PLAMO_API_KEY is not configured")
+        xai_key = settings.xai_api_key
+        if not xai_key:
+            raise WorkAIClientError("XAI_API_KEY is required for PLaMo pipeline (used for composition)")
         return PLaMoWorkClient(
             api_key=api_key,
             model=settings.plamo_model,
             timeout=settings.plamo_timeout,
+            xai_api_key=xai_key,
+            xai_model=settings.xai_model,
+            xai_timeout=settings.xai_timeout,
         )
 
     if provider == "xai":

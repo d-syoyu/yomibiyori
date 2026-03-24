@@ -259,12 +259,14 @@ class OpenAIThemeJudge:
 
         prompt = (
             "短歌アプリ『よみびより』のお題選定です。"
-            "3候補から、最も下の句を続けたくなるものを1つ選んでください。"
-            "評価軸は、参加したくなる、口語で自然、情景がある、余白がある、抽象語が少ない、5-7-5として妥当、です。"
+            "3候補から、最も下の句を続けたくなるものを1つ選んでください。\n"
+            "評価軸は、参加したくなる、口語で自然、情景がある、余白がある、抽象語が少ない、5-7-5として妥当、です。\n"
+            "【重要】最近のお題と似たシーン・モチーフ・言葉を使っている候補は大幅に減点してください。"
+            "毎日違う切り口・視点のお題を出すことが重要です。"
             "返答はJSONのみです。\n\n"
             f"カテゴリー: {category}\n"
             f"対象日: {target_date.isoformat()}\n"
-            f"最近のお題:\n{recent_themes_text}\n\n"
+            f"最近のお題（これらと似た句は避ける）:\n{recent_themes_text}\n\n"
             f"候補一覧:\n{candidate_text}\n\n"
             "次のJSONスキーマに従って返してください。"
         )
@@ -295,6 +297,7 @@ class OpenAIThemeJudge:
                                         "openness": {"type": "integer"},
                                         "concreteness": {"type": "integer"},
                                         "mora_validity": {"type": "integer"},
+                                        "freshness": {"type": "integer"},
                                     },
                                     "required": [
                                         "index",
@@ -304,6 +307,7 @@ class OpenAIThemeJudge:
                                         "openness",
                                         "concreteness",
                                         "mora_validity",
+                                        "freshness",
                                     ],
                                     "additionalProperties": False,
                                 },
@@ -704,7 +708,7 @@ class XAIThemeClient(ThemeAIClient):
     """X.ai Grok-backed theme generator (OpenAI-compatible API)."""
 
     api_key: str
-    model: str = "grok-4-1-fast-reasoning"
+    model: str = "grok-4.20-0309-reasoning"
     endpoint: str = "https://api.x.ai/v1/chat/completions"
     timeout: float = 30.0
 
@@ -963,15 +967,49 @@ class XAIThemeClient(ThemeAIClient):
 
 @dataclass(slots=True)
 class PLaMoThemeClient(ThemeAIClient):
-    """PLaMo 2.2 Prime-backed theme generator (OpenAI-compatible API)."""
+    """PLaMo ideation → XAI composition → Judge selection pipeline.
+
+    Stage 1: PLaMo generates creative scene ideas and keywords.
+    Stage 2: XAI composes strict 5-7-5 candidates from those ideas.
+    Stage 3: OpenAI Judge selects the best candidate.
+    """
 
     api_key: str
     model: str = "plamo-2.2-prime"
     endpoint: str = "https://api.platform.preferredai.jp/v1/chat/completions"
     timeout: float = 30.0
+    xai_api_key: str = ""
+    xai_model: str = "grok-4.20-0309-reasoning"
+    xai_endpoint: str = "https://api.x.ai/v1/chat/completions"
+    xai_timeout: float = 300.0
 
-    # カテゴリー別のプロンプト定義（XAIと統一：「つぶやき」「具体的」重視）
-    CATEGORY_PROMPTS = {
+    # カテゴリー別のアイデア生成プロンプト（PLaMo用：着想・キーワード重視）
+    CATEGORY_IDEA_PROMPTS = {
+        "恋愛": (
+            "恋愛・片思い・デート・別れなど、恋にまつわる「あるある」な日常シーンを5つ提案してください。"
+            "LINEの既読スルー、帰り道に手が触れた瞬間、好きな人のSNSチェックなど、"
+            "具体的で誰もが共感できるシチュエーションと、使える言葉・モチーフを含めてください。"
+        ),
+        "季節": (
+            "今の季節（{season_info}）ならではの日常的な光景・音・匂い・体験を5つ提案してください。"
+            "桜・紅葉のような定番ではなく、「エアコンのリモコン探す」「日焼け止めの匂い」のように、"
+            "生活の中で季節を感じる瞬間と、使える具体的な言葉・モチーフを含めてください。"
+        ),
+        "日常": (
+            "通勤・通学、食事、仕事、家事などの日常シーンから、"
+            "「あーあ」とため息をつく瞬間や、ふとした発見を5つ提案してください。"
+            "コンビニおでん、電車の乗り過ごし、冷蔵庫の奥の何か、など"
+            "具体的なシチュエーションと使える言葉・モチーフを含めてください。"
+        ),
+        "ユーモア": (
+            "思わずツッコミたくなる「あるある」や「大喜利のフリ」になるシーンを5つ提案してください。"
+            "自虐ネタ、シュールな状況、社会風刺、世代間ギャップ、"
+            "「わかる…」と苦笑いするような皮肉など、笑える具体的な場面と言葉・モチーフを含めてください。"
+        ),
+    }
+
+    # カテゴリー別のXAI作句プロンプト（XAIThemeClientと統一）
+    CATEGORY_COMPOSE_PROMPTS = {
         "恋愛": (
             "恋愛・片思い・デート・別れなど、恋にまつわるシーンを「つぶやき」として表現してください。"
             "「LINEで送るような言葉」や「心の中の独り言」のように、"
@@ -1011,39 +1049,121 @@ class PLaMoThemeClient(ThemeAIClient):
             timeout=settings.openai_eval_timeout,
         )
 
-    def generate(
+    def _call_plamo_ideation(
         self,
         *,
         category: str,
         target_date: date,
         past_themes: list[str] | None = None,
     ) -> str:
-        """Generate PLaMo candidates, then let OpenAI judge select the final theme."""
-        MAX_RETRIES = 20
-
-        # カテゴリーに応じたプロンプトを取得
-        category_instruction = self.CATEGORY_PROMPTS.get(
-            category,
-            f"「{category}」というテーマで現代的な表現を使ってください。"
-        )
-        # 季節情報をプロンプトに挿入
+        """Stage 1: Ask PLaMo for creative scene ideas and keywords."""
         season_info = get_season_info(target_date)
-        category_instruction = category_instruction.format(season_info=season_info)
+        idea_prompt = self.CATEGORY_IDEA_PROMPTS.get(
+            category,
+            f"「{category}」に関連する日常的なシーン・言葉・モチーフを5つ提案してください。"
+        ).format(season_info=season_info)
 
-        # 過去のお題を避けるための指示を構築
-        past_themes_instruction = ""
+        past_instruction = ""
         if past_themes:
-            recent_themes = past_themes[:10]
-            past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
-            past_themes_instruction = (
-                f"\n\n【重要：過去のお題との重複禁止】\n"
-                f"以下は過去に出題されたお題です。これらと同じ・類似のお題は絶対に作らないでください。\n"
-                f"新しい視点、新しい言葉の組み合わせで、まだ詠まれていないお題を創作してください。\n"
-                f"{past_list}"
+            recent = past_themes[:10]
+            past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent)
+            past_instruction = (
+                f"\n\n【重要：過去のお題との差別化】\n"
+                f"以下は直近に出題されたお題です。これらと**同じシーン、同じモチーフ、同じ言葉、似た展開**のアイデアは絶対に出さないでください。\n"
+                f"例：過去に「コンビニ」のお題があったなら、コンビニ関連のアイデアは全て避ける。\n"
+                f"例：過去に「電車」のお題があったなら、通勤電車や乗り過ごしなど電車関連は全て避ける。\n"
+                f"まったく新しい切り口・場所・モノ・動作をベースにしたアイデアだけを出してください。\n\n"
+                f"過去のお題一覧：\n{past_list}"
             )
 
         payload = {
             "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "あなたは創造力豊かなアイデア出しの達人です。\n"
+                        "川柳・俳句の「お題」のための短いキーワードセットを提案します。\n"
+                        "句を作る必要はありません。「場所＋モノ＋動作」の3語セットだけを出してください。"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"{idea_prompt}{past_instruction}\n\n"
+                        f"【出力形式】\n"
+                        f"各アイデアを「場所、モノ、動作」の3語セットで1行ずつ出力してください。短く。\n"
+                        f"例:\n"
+                        f"バス停、傘、忘れた\n"
+                        f"台所、冷蔵庫、開けっぱなし\n"
+                        f"教室、チャイム、居眠り\n"
+                        f"ベランダ、洗濯物、雨\n"
+                        f"自販機、お釣り、落とした"
+                    ),
+                },
+            ],
+            "temperature": 1.2,
+            "max_tokens": 500,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+        except requests.RequestException as exc:
+            raise ThemeAIClientError("Failed to call PLaMo API for ideation") from exc
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            body = ""
+            try:
+                body = response.text[:500]
+            except Exception:
+                pass
+            raise ThemeAIClientError(
+                f"PLaMo ideation API returned {response.status_code}: {body}"
+            ) from exc
+
+        try:
+            payload_json = response.json()
+            content = payload_json["choices"][0]["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise ThemeAIClientError("PLaMo ideation response is malformed") from exc
+
+        return content.strip()
+
+    def _call_xai_compose(
+        self,
+        *,
+        ideas: str,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
+        """Stage 2: Ask XAI to compose strict 5-7-5 candidates from PLaMo ideas."""
+        season_info = get_season_info(target_date)
+        category_instruction = self.CATEGORY_COMPOSE_PROMPTS.get(
+            category,
+            f"「{category}」というテーマで現代的な表現を使ってください。"
+        ).format(season_info=season_info)
+
+        past_themes_instruction = ""
+        if past_themes:
+            recent = past_themes[:10]
+            past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent)
+            past_themes_instruction = (
+                f"\n\n【重要：過去のお題と似た句の禁止】\n"
+                f"以下は直近に出題されたお題です。これらと**同じモチーフ・同じ場面・似た言葉遣い**の句は作らないでください。\n"
+                f"まったく違うモノ・場所・動作を題材にしてください。\n"
+                f"{past_list}"
+            )
+
+        payload = {
+            "model": self.xai_model,
             "messages": [
                 {
                     "role": "system",
@@ -1081,9 +1201,10 @@ class PLaMoThemeClient(ThemeAIClient):
                 {
                     "role": "user",
                     "content": (
-                        f"以下の条件で、ユーザーが下の句を続けたくなる「上の句」を作成してください。\n"
-                        f"**作成前に必ず一音ずつ数えて、5-7-5を厳密に確認してください。**\n"
+                        f"以下のキーワードからインスピレーションを得て、ユーザーが下の句を続けたくなる「上の句」を作成してください。\n"
+                        f"**キーワードはあくまでヒントです。音数（5-7-5）を最優先で厳密に守ってください。**\n"
                         f"**3候補を作り、候補と候補の間は必ず `---` だけを1行で入れてください。説明文や番号は不要です。**\n\n"
+                        f"【インスピレーション用キーワード】\n{ideas}\n\n"
                         f"【音数の厳守（絶対条件）】\n"
                         f"- 1行目：必ず正確に5音（例: す・れ・ち・が・う）\n"
                         f"- 2行目：必ず正確に7音（例: い・つ・も・の・え・き・で）\n"
@@ -1097,14 +1218,10 @@ class PLaMoThemeClient(ThemeAIClient):
                         f"- NG例: 静寂に 包まれし夜の 星月夜\n\n"
                         f"【2. 「未完の文」で終わらせる（余白を作る）】\n"
                         f"- 上の句（5-7-5）だけで意味を完結させないでください。\n"
-                        f"- 「〜なのに」「〜だけど」「〜て」や接続詞などで終わり、ユーザーが下の句で続きを書きやすくしてください。\n"
-                        f"- OK例: あと5分 布団にいたい 寒いから（→「遅刻するよ」「二度寝確定」など続きが書きやすい）\n"
-                        f"- NG例: 冬の朝 布団のぬくもり 心地よし（→完結しているので続きにくい）\n\n"
+                        f"- 「〜なのに」「〜だけど」「〜て」や接続詞などで終わり、ユーザーが下の句で続きを書きやすくしてください。\n\n"
                         f"【3. 「映像」か「音」を描写（抽象概念の禁止）】\n"
                         f"- 「愛」「未来」「希望」「絶望」などの抽象的な言葉は禁止です。\n"
-                        f"- 具体的な「モノ」「動作」「聞こえる音」を描写してください。\n"
-                        f"- OK例: 片一方 なくしたピアス どこ行った\n"
-                        f"- NG例: 悲しみは いつか癒えると言うけれど\n\n"
+                        f"- 具体的な「モノ」「動作」「聞こえる音」を描写してください。\n\n"
                         f"【テーマ】\n"
                         f"{category_instruction}"
                         f"{past_themes_instruction}\n\n"
@@ -1125,50 +1242,91 @@ class PLaMoThemeClient(ThemeAIClient):
         }
 
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {self.xai_api_key}",
             "Content-Type": "application/json",
         }
 
+        try:
+            response = requests.post(self.xai_endpoint, json=payload, headers=headers, timeout=self.xai_timeout)
+        except requests.RequestException as exc:
+            raise ThemeAIClientError(f"Failed to call XAI API for composition: {exc}") from exc
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            body = ""
+            try:
+                body = response.text[:500]
+            except Exception:
+                pass
+            raise ThemeAIClientError(f"XAI composition API returned {response.status_code}: {body}") from exc
+
+        try:
+            payload_json = response.json()
+            content = payload_json["choices"][0]["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise ThemeAIClientError("XAI composition response is malformed") from exc
+
+        return content.strip()
+
+    def generate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
+        """PLaMo ideation → XAI composition → Judge selection pipeline."""
+        MAX_RETRIES = 20
+
         judge = self._build_openai_judge()
         last_error: str | None = None
+        ideas: str | None = None
 
         for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
-            except requests.RequestException as exc:
-                raise ThemeAIClientError("Failed to call PLaMo API endpoint") from exc
-
-            try:
-                response.raise_for_status()
-            except requests.HTTPError as exc:
-                body = ""
+            # Stage 1: PLaMo ideation (refresh ideas every 5 attempts)
+            if ideas is None or attempt % 5 == 1:
                 try:
-                    body = response.text[:500]
-                except Exception:
-                    pass
-                raise ThemeAIClientError(
-                    f"PLaMo API returned {response.status_code}: {body}"
-                ) from exc
+                    ideas = self._call_plamo_ideation(
+                        category=category,
+                        target_date=target_date,
+                        past_themes=past_themes,
+                    )
+                    logger.info(
+                        f"[PLaMo ideation] category={category}, attempt={attempt}, "
+                        f"ideas={ideas[:200]!r}"
+                    )
+                except ThemeAIClientError as exc:
+                    logger.warning(f"[PLaMo ideation] failed: {exc}")
+                    last_error = f"PLaMo ideation failed: {exc}"
+                    ideas = None
+                    continue
 
+            if ideas is None:
+                continue
+
+            # Stage 2: XAI composition
             try:
-                payload_json = response.json()
-            except ValueError as exc:
-                raise ThemeAIClientError("PLaMo API returned invalid JSON") from exc
+                content = self._call_xai_compose(
+                    ideas=ideas,
+                    category=category,
+                    target_date=target_date,
+                    past_themes=past_themes,
+                )
+            except ThemeAIClientError as exc:
+                logger.warning(f"[XAI compose] attempt {attempt} failed: {exc}")
+                last_error = f"XAI composition failed: {exc}"
+                continue
 
-            try:
-                content = payload_json["choices"][0]["message"]["content"]
-            except (KeyError, IndexError, TypeError) as exc:
-                raise ThemeAIClientError("PLaMo API response missing message content") from exc
-
-            content = content.strip()
+            # Stage 3: Filter + Judge (same as XAIThemeClient)
             raw_candidates = _split_xai_candidates(content)
             filtered_candidates = _filter_xai_candidates(raw_candidates, past_themes=past_themes)
             log_payload: dict[str, Any] = {
-                "provider": "plamo",
+                "provider": "plamo+xai",
                 "category": category,
                 "attempt": attempt,
-                "candidates": [candidate.text for candidate in raw_candidates],
-                "filtered_candidates": [candidate.text for candidate in filtered_candidates],
+                "candidates": [c.text for c in raw_candidates],
+                "filtered_candidates": [c.text for c in filtered_candidates],
                 "openai_selected_index": None,
                 "openai_reason": None,
                 "judge_error": None,
@@ -1180,7 +1338,7 @@ class PLaMoThemeClient(ThemeAIClient):
             if not filtered_candidates:
                 log_payload["failure_type"] = "no_filtered_candidates"
                 _log_xai_selection("retry", log_payload, level=30)
-                last_error = "PLaMo produced no usable candidates"
+                last_error = "PLaMo+XAI produced no usable candidates"
                 continue
 
             judge_result: ThemeJudgeResult | None = None
@@ -1196,7 +1354,7 @@ class PLaMoThemeClient(ThemeAIClient):
                     log_payload["openai_reason"] = judge_result.reason
 
                     selected_candidate = next(
-                        candidate for candidate in filtered_candidates if candidate.index == judge_result.selected_index
+                        c for c in filtered_candidates if c.index == judge_result.selected_index
                     )
                     is_valid, counts = validate_575(selected_candidate.text)
                     log_payload["final_counts"] = counts
@@ -1227,7 +1385,7 @@ class PLaMoThemeClient(ThemeAIClient):
 
             _log_xai_selection("retry", log_payload, level=30)
 
-        raise ThemeAIClientError(last_error or "PLaMo failed to produce a valid theme candidate")
+        raise ThemeAIClientError(last_error or "PLaMo+XAI pipeline failed to produce a valid theme")
 
 
 @dataclass(slots=True)
@@ -1418,10 +1576,16 @@ def resolve_theme_ai_client() -> ThemeAIClient:
         api_key = settings.plamo_api_key
         if not api_key:
             raise ThemeAIClientError("PLAMO_API_KEY is not configured")
+        xai_key = settings.xai_api_key
+        if not xai_key:
+            raise ThemeAIClientError("XAI_API_KEY is required for PLaMo pipeline (used for composition)")
         return PLaMoThemeClient(
             api_key=api_key,
             model=settings.plamo_model,
             timeout=settings.plamo_timeout,
+            xai_api_key=xai_key,
+            xai_model=settings.xai_model,
+            xai_timeout=settings.xai_timeout,
         )
 
     if provider == "openai":
