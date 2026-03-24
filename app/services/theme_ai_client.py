@@ -962,6 +962,268 @@ class XAIThemeClient(ThemeAIClient):
 
 
 @dataclass(slots=True)
+class PLaMoThemeClient(ThemeAIClient):
+    """PLaMo 2.2 Prime-backed theme generator (OpenAI-compatible API)."""
+
+    api_key: str
+    model: str = "plamo-2.2-prime"
+    endpoint: str = "https://api.platform.preferredai.jp/v1/chat/completions"
+    timeout: float = 30.0
+
+    # カテゴリー別のプロンプト定義（XAIと統一：「つぶやき」「具体的」重視）
+    CATEGORY_PROMPTS = {
+        "恋愛": (
+            "恋愛・片思い・デート・別れなど、恋にまつわるシーンを「つぶやき」として表現してください。"
+            "「LINEで送るような言葉」や「心の中の独り言」のように、"
+            "飾らない言葉で、誰もが「あるある」と共感できるシーンにしてください。"
+        ),
+        "季節": (
+            "季節感、天気、自然の移り変わりを「具体的な映像」として表現してください。"
+            "難しい言葉は使わず、その季節ならではの「光景」や「音」を切り取ってください。\n"
+            "【重要】現在の季節: {season_info}"
+        ),
+        "日常": (
+            "通勤・通学、食事、仕事、家事などの日常シーンを切り取ってください。"
+            "「あーあ」とため息をつく瞬間や、ふとした瞬間の「独り言」を"
+            "そのまま5-7-5にしてください。"
+        ),
+        "ユーモア": (
+            "ユーザーが思わず「下の句」でツッコミを入れたくなるような『大喜利のフリ』となる句を作ってください。"
+            "以下の5つのパターンのいずれかを意識してください:\n"
+            "1. 【自虐・失敗】自分のダメな部分や、日常の悲しい失敗談。\n"
+            "2. 【シュール】現実ではありえない状況設定。\n"
+            "3. 【社会風刺】会社や学校、世の中への皮肉。\n"
+            "4. 【VS型】「きのこたけのこ」のような究極の選択や論争の火種。\n"
+            "5. 【ブラックユーモア】人生の不条理、存在の虚しさ、世代間ギャップ、"
+            "老い、孤独、締切、税金など「笑うしかない現実」を皮肉たっぷりに詠む。"
+            "毒があるが品がある、読んだ人が「わかる…」と苦笑いするような句を目指してください。\n"
+            "クスッと笑える、あるいは「なんでやねん」と言いたくなるボケをかましてください。"
+        ),
+    }
+
+    def _build_openai_judge(self) -> OpenAIThemeJudge | None:
+        settings = get_settings()
+        if not settings.openai_api_key:
+            return None
+        return OpenAIThemeJudge(
+            api_key=settings.openai_api_key,
+            model=settings.openai_eval_model,
+            timeout=settings.openai_eval_timeout,
+        )
+
+    def generate(
+        self,
+        *,
+        category: str,
+        target_date: date,
+        past_themes: list[str] | None = None,
+    ) -> str:
+        """Generate PLaMo candidates, then let OpenAI judge select the final theme."""
+        MAX_RETRIES = 20
+
+        # カテゴリーに応じたプロンプトを取得
+        category_instruction = self.CATEGORY_PROMPTS.get(
+            category,
+            f"「{category}」というテーマで現代的な表現を使ってください。"
+        )
+        # 季節情報をプロンプトに挿入
+        season_info = get_season_info(target_date)
+        category_instruction = category_instruction.format(season_info=season_info)
+
+        # 過去のお題を避けるための指示を構築
+        past_themes_instruction = ""
+        if past_themes:
+            recent_themes = past_themes[:10]
+            past_list = "\n".join(f"- {t.replace(chr(10), ' / ')}" for t in recent_themes)
+            past_themes_instruction = (
+                f"\n\n【重要：過去のお題との重複禁止】\n"
+                f"以下は過去に出題されたお題です。これらと同じ・類似のお題は絶対に作らないでください。\n"
+                f"新しい視点、新しい言葉の組み合わせで、まだ詠まれていないお題を創作してください。\n"
+                f"{past_list}"
+            )
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "あなたは音数（モーラ数）に精通した現代の詩人ですが、決して気取らず、"
+                        "友達とのLINEやSNSのつぶやきのような「話し言葉」で5-7-5の上の句を作ります。\n"
+                        "必ず5-7-5の音数を守り、一音一音数えながら作句します。\n\n"
+                        "【重要：音数カウントルール】\n"
+                        "以下すべて1音（1モーラ）として数えます：\n"
+                        "1. 通常の仮名：「あ」「か」「さ」など → 各1音\n"
+                        "2. 促音「っ」 → 1音（例：がっこう=4音）\n"
+                        "3. 撥音「ん」 → 1音（例：さんぽ=3音）\n"
+                        "4. 長音「ー」 → 1音（例：コーヒー=4音）\n"
+                        "5. 拗音「きゃ」「しょ」「ちゅ」 → 各1音\n"
+                        "6. 小さい「ゃゅょ」 → 前の文字と合わせて1音\n\n"
+                        "注意：文字数≠音数です。音数で数えてください。"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": "恋愛をテーマに、下の句で完結する5-7-5の上の句を作ってください。音数を数えてから作ってください。"
+                },
+                {
+                    "role": "assistant",
+                    "content": "好きな人\nストーリーだけ\n見ちゃってさ"
+                },
+                {
+                    "role": "user",
+                    "content": "季節をテーマに、下の句で完結する5-7-5の上の句を作ってください。音数を数えてから作ってください。"
+                },
+                {
+                    "role": "assistant",
+                    "content": "コンビニの\nおでん買っちゃう\n帰り道"
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"以下の条件で、ユーザーが下の句を続けたくなる「上の句」を作成してください。\n"
+                        f"**作成前に必ず一音ずつ数えて、5-7-5を厳密に確認してください。**\n"
+                        f"**3候補を作り、候補と候補の間は必ず `---` だけを1行で入れてください。説明文や番号は不要です。**\n\n"
+                        f"【音数の厳守（絶対条件）】\n"
+                        f"- 1行目：必ず正確に5音（例: す・れ・ち・が・う）\n"
+                        f"- 2行目：必ず正確に7音（例: い・つ・も・の・え・き・で）\n"
+                        f"- 3行目：必ず正確に5音（例: ま・た・あ・え・た）\n"
+                        f"- 音数が合わない句は絶対に出力しないでください\n"
+                        f"- 3候補とも、少しずつ切り口を変えてください\n\n"
+                        f"【1. 「詩」ではなく「つぶやき」】\n"
+                        f"- 詩的な表現、芸術的な熟語、古風な言い回しは禁止です。\n"
+                        f"- 友達とのLINEや、独り言のような自然な「話し言葉」にしてください。\n"
+                        f"- OK例: コンビニの おでん買っちゃう 帰り道\n"
+                        f"- NG例: 静寂に 包まれし夜の 星月夜\n\n"
+                        f"【2. 「未完の文」で終わらせる（余白を作る）】\n"
+                        f"- 上の句（5-7-5）だけで意味を完結させないでください。\n"
+                        f"- 「〜なのに」「〜だけど」「〜て」や接続詞などで終わり、ユーザーが下の句で続きを書きやすくしてください。\n"
+                        f"- OK例: あと5分 布団にいたい 寒いから（→「遅刻するよ」「二度寝確定」など続きが書きやすい）\n"
+                        f"- NG例: 冬の朝 布団のぬくもり 心地よし（→完結しているので続きにくい）\n\n"
+                        f"【3. 「映像」か「音」を描写（抽象概念の禁止）】\n"
+                        f"- 「愛」「未来」「希望」「絶望」などの抽象的な言葉は禁止です。\n"
+                        f"- 具体的な「モノ」「動作」「聞こえる音」を描写してください。\n"
+                        f"- OK例: 片一方 なくしたピアス どこ行った\n"
+                        f"- NG例: 悲しみは いつか癒えると言うけれど\n\n"
+                        f"【テーマ】\n"
+                        f"{category_instruction}"
+                        f"{past_themes_instruction}\n\n"
+                        f"【出力形式】\n"
+                        f"- 3候補を出力する\n"
+                        f"- 各候補は必ず3行（1行目5音/2行目7音/3行目5音）\n"
+                        f"- 候補の間は `---` の1行だけで区切る\n"
+                        f"- 句のみ出力（音数カウント、候補番号、説明、理由は不要）\n"
+                        f"- 例:\n"
+                        f"すれ違う\\nいつもの駅で\\nまた会えた\\n---\\n"
+                        f"傘なくて\\nにわか雨降る\\n君と僕\\n---\\n"
+                        f"寝過ごして\\n電車の中で\\n目が覚める"
+                    ),
+                },
+            ],
+            "temperature": 1.0,
+            "max_tokens": 320,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        judge = self._build_openai_judge()
+        last_error: str | None = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+            except requests.RequestException as exc:
+                raise ThemeAIClientError("Failed to call PLaMo API endpoint") from exc
+
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as exc:
+                raise ThemeAIClientError(f"PLaMo API returned {response.status_code}") from exc
+
+            try:
+                payload_json = response.json()
+            except ValueError as exc:
+                raise ThemeAIClientError("PLaMo API returned invalid JSON") from exc
+
+            try:
+                content = payload_json["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError) as exc:
+                raise ThemeAIClientError("PLaMo API response missing message content") from exc
+
+            content = content.strip()
+            raw_candidates = _split_xai_candidates(content)
+            filtered_candidates = _filter_xai_candidates(raw_candidates, past_themes=past_themes)
+            log_payload: dict[str, Any] = {
+                "provider": "plamo",
+                "category": category,
+                "attempt": attempt,
+                "candidates": [candidate.text for candidate in raw_candidates],
+                "filtered_candidates": [candidate.text for candidate in filtered_candidates],
+                "openai_selected_index": None,
+                "openai_reason": None,
+                "judge_error": None,
+                "fallback_used": False,
+                "final_counts": None,
+                "failure_type": None,
+            }
+
+            if not filtered_candidates:
+                log_payload["failure_type"] = "no_filtered_candidates"
+                _log_xai_selection("retry", log_payload, level=30)
+                last_error = "PLaMo produced no usable candidates"
+                continue
+
+            judge_result: ThemeJudgeResult | None = None
+            if judge is not None:
+                try:
+                    judge_result = judge.choose_candidate(
+                        category=category,
+                        target_date=target_date,
+                        candidates=filtered_candidates,
+                        past_themes=past_themes,
+                    )
+                    log_payload["openai_selected_index"] = judge_result.selected_index
+                    log_payload["openai_reason"] = judge_result.reason
+
+                    selected_candidate = next(
+                        candidate for candidate in filtered_candidates if candidate.index == judge_result.selected_index
+                    )
+                    is_valid, counts = validate_575(selected_candidate.text)
+                    log_payload["final_counts"] = counts
+                    if is_valid:
+                        _log_xai_selection("selected_by_openai", log_payload)
+                        return selected_candidate.text
+
+                    log_payload["failure_type"] = "openai_selected_candidate_invalid_mora"
+                    _log_xai_selection("retry", log_payload, level=30)
+                    last_error = "OpenAI selected a candidate that failed local mora validation"
+                    continue
+                except ThemeAIClientError as exc:
+                    log_payload["failure_type"] = "openai_judge_failed"
+                    log_payload["judge_error"] = str(exc)
+                    last_error = str(exc)
+            else:
+                log_payload["failure_type"] = "openai_judge_unavailable"
+                log_payload["judge_error"] = "OpenAI judge is not configured"
+                last_error = "OpenAI judge is not configured"
+
+            fallback_selection = _select_local_fallback(filtered_candidates)
+            if fallback_selection is not None:
+                fallback_candidate, counts = fallback_selection
+                log_payload["fallback_used"] = True
+                log_payload["final_counts"] = counts
+                _log_xai_selection("selected_by_fallback", log_payload)
+                return fallback_candidate.text
+
+            _log_xai_selection("retry", log_payload, level=30)
+
+        raise ThemeAIClientError(last_error or "PLaMo failed to produce a valid theme candidate")
+
+
+@dataclass(slots=True)
 class ClaudeThemeClient(ThemeAIClient):
     """Anthropic Claude-backed theme generator."""
 
@@ -1144,6 +1406,16 @@ def resolve_theme_ai_client() -> ThemeAIClient:
 
     settings = get_settings()
     provider = (settings.theme_ai_provider or "dummy").lower()
+
+    if provider == "plamo":
+        api_key = settings.plamo_api_key
+        if not api_key:
+            raise ThemeAIClientError("PLAMO_API_KEY is not configured")
+        return PLaMoThemeClient(
+            api_key=api_key,
+            model=settings.plamo_model,
+            timeout=settings.plamo_timeout,
+        )
 
     if provider == "openai":
         api_key = settings.openai_api_key

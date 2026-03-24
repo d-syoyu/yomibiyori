@@ -31,9 +31,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_EVAL_MODEL: "gpt-5-mini"
           OPENAI_EVAL_TIMEOUT: "45.0"
+          PLAMO_API_KEY: ${{ secrets.PLAMO_API_KEY }}
+          PLAMO_TIMEOUT: "300.0"
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           XAI_TIMEOUT: "300.0"
-          THEME_AI_PROVIDER: "xai"
+          THEME_AI_PROVIDER: "plamo"
           THEME_CATEGORIES: ${{ secrets.THEME_CATEGORIES }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           THEME_GENERATION_RETRY_DELAY_SECONDS: "10.0"

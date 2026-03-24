@@ -146,9 +146,9 @@ class Settings(BaseSettings):
         ge=0.0,
     )
     theme_ai_provider: str = Field(
-        default="xai",
+        default="plamo",
         alias="THEME_AI_PROVIDER",
-        description="Provider used for theme generation AI (openai, claude, or xai).",
+        description="Provider used for theme generation AI (plamo, openai, claude, or xai).",
     )
     openai_api_key: str | None = Field(
         default=None,
@@ -191,6 +191,22 @@ class Settings(BaseSettings):
         default=30.0,
         alias="CLAUDE_TIMEOUT",
         description="Timeout in seconds for Claude API calls.",
+        ge=1.0,
+    )
+    plamo_api_key: str | None = Field(
+        default=None,
+        alias="PLAMO_API_KEY",
+        description="PLaMo API key used when THEME_AI_PROVIDER=plamo.",
+    )
+    plamo_model: str = Field(
+        default="plamo-2.2-prime",
+        alias="PLAMO_MODEL",
+        description="PLaMo model used for theme and work generation.",
+    )
+    plamo_timeout: float = Field(
+        default=30.0,
+        alias="PLAMO_TIMEOUT",
+        description="Timeout in seconds for PLaMo API calls.",
         ge=1.0,
     )
     xai_api_key: str | None = Field(
