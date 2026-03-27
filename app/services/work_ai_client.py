@@ -534,6 +534,141 @@ class PLaMoWorkClient(WorkAIClient):
 
 
 @dataclass(slots=True)
+class GeminiWorkClient(WorkAIClient):
+    """Google Gemini-backed lower verse generator (OpenAI-compatible API)."""
+
+    api_key: str
+    model: str = "gemini-3.1-flash-lite-preview"
+    endpoint: str = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    timeout: float = 60.0
+
+    # カテゴリ別の下の句スタイルガイド（他クライアントと統一）
+    CATEGORY_STYLES = {
+        "恋愛": "切ない余韻、ドキドキする展開、意外な心情の吐露など、読む人の恋心を揺さぶる表現で。",
+        "季節": "季節の移ろいに重ねた心情、五感で感じる情景、自然と心の共鳴を描いて。",
+        "日常": "「わかる！」と共感を呼ぶ展開、クスッと笑える発見、ほっこりする結末で。",
+        "ユーモア": "予想外のオチ、ツッコミどころ満載の展開、笑いを誘う大胆な表現で締めくくって。",
+    }
+
+    def generate(self, *, upper_verse: str, category: str, username: str, persona: str = "") -> str:
+        """Generate a 7-7 lower verse with syllable validation."""
+        MAX_RETRIES = 10
+
+        if not persona:
+            persona = f"「{username}」という名前の詩人として、あなた独自の感性で表現します。"
+
+        style_guide = self.CATEGORY_STYLES.get(
+            category,
+            "読む人の想像力を刺激する、印象的な表現で完結させて。"
+        )
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        f"あなたは音数（モーラ数）に精通した現代的な詩人「{username}」です。\n"
+                        f"ペルソナ: {persona}\n\n"
+                        "上の句（5-7-5）を受け取り、下の句（7-7）で完結させます。\n"
+                        "必ず7-7の音数を守り、一音一音数えながら作句します。\n\n"
+                        "【重要な心得】\n"
+                        "- ありきたりな表現は避ける\n"
+                        "- 読む人の心に残る、個性的な言葉選びを\n"
+                        "- 予定調和を裏切る、意外性のある展開を\n"
+                        "- 余韻や含みを持たせる深い表現を\n"
+                        "- あなたのペルソナを活かした独自の視点で"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"以下の上の句に対して、下の句（7-7）を作成してください。\n"
+                        f"**作成前に必ず一音ずつ数えて、7-7を厳密に確認してください。**\n\n"
+                        f"【上の句】\n{upper_verse}\n\n"
+                        f"【カテゴリ】{category}\n"
+                        f"【このカテゴリでの表現スタイル】\n{style_guide}\n\n"
+                        f"【あなたのペルソナ】\n{persona}\n\n"
+                        f"【音数の厳守（絶対条件）】\n"
+                        f"- 1行目：必ず正確に7音\n"
+                        f"- 2行目：必ず正確に7音\n"
+                        f"- 音数が合わない句は絶対に出力しないでください\n\n"
+                        f"【表現の工夫】\n"
+                        f"- 常套句や決まり文句を避ける\n"
+                        f"- 具体的で鮮やかな描写を\n"
+                        f"- 読み手の想像力を刺激する言葉を\n"
+                        f"- 心に刺さる、印象的なフレーズで締めくくる\n\n"
+                        f"【出力形式】\n"
+                        f"- 必ず2行（1行目7音/2行目7音）\n"
+                        f"- 句のみ出力（音数カウントや説明は不要）"
+                    ),
+                },
+            ],
+            "temperature": 1.2,
+            "max_tokens": 200,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        last_content = None
+        last_counts = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = requests.post(self.endpoint, json=payload, headers=headers, timeout=self.timeout)
+            except requests.RequestException as exc:
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Network error: {exc}")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError(f"Failed to call Gemini API endpoint after {MAX_RETRIES} attempts: {exc}") from exc
+                continue
+
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as exc:
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - HTTP error: {response.status_code}")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError(f"Gemini API returned {response.status_code}") from exc
+                continue
+
+            try:
+                payload_json = response.json()
+            except ValueError as exc:
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Invalid JSON response")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError("Gemini API returned invalid JSON") from exc
+                continue
+
+            try:
+                content = payload_json["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError) as exc:
+                print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} - Missing message content")
+                if attempt == MAX_RETRIES:
+                    raise WorkAIClientError("Gemini API response missing message content") from exc
+                continue
+
+            content = content.strip()
+            is_valid, counts = validate_77(content)
+
+            lines = content.split('\n')
+            lines_detail = " | ".join([f"'{line}' ({count})" for line, count in zip(lines, counts if counts else [])])
+
+            if is_valid:
+                print(f"[Work generation] [OK] Success on attempt {attempt}: {lines_detail}")
+                return content
+
+            last_content = content
+            last_counts = counts
+            print(f"[Work generation] [FAIL] Attempt {attempt}/{MAX_RETRIES} failed: expected [7,7], got {counts}")
+            print(f"[Work generation]    Lines: {lines_detail}")
+
+        print(f"[Work generation] WARNING: All {MAX_RETRIES} attempts failed. Using last result with syllables {last_counts}: {last_content}")
+        return last_content or ""
+
+
+@dataclass(slots=True)
 class ClaudeWorkClient(WorkAIClient):
     """Anthropic Claude-backed lower verse generator."""
 
@@ -680,6 +815,16 @@ def resolve_work_ai_client() -> WorkAIClient:
             api_key=api_key,
             model=settings.claude_model,
             timeout=settings.claude_timeout,
+        )
+
+    if provider == "gemini":
+        api_key = settings.gemini_api_key
+        if not api_key:
+            raise WorkAIClientError("GEMINI_API_KEY is not configured")
+        return GeminiWorkClient(
+            api_key=api_key,
+            model=settings.gemini_model,
+            timeout=settings.gemini_timeout,
         )
 
     if provider == "openai":
