@@ -209,6 +209,22 @@ class Settings(BaseSettings):
         description="Timeout in seconds for PLaMo API calls.",
         ge=1.0,
     )
+    gemini_api_key: str | None = Field(
+        default=None,
+        alias="GEMINI_API_KEY",
+        description="Google Gemini API key used when THEME_AI_PROVIDER=gemini.",
+    )
+    gemini_model: str = Field(
+        default="gemini-3.1-flash-lite-preview",
+        alias="GEMINI_MODEL",
+        description="Google Gemini model used for theme generation.",
+    )
+    gemini_timeout: float = Field(
+        default=60.0,
+        alias="GEMINI_TIMEOUT",
+        description="Timeout in seconds for Gemini API calls.",
+        ge=1.0,
+    )
     xai_api_key: str | None = Field(
         default=None,
         alias="XAI_API_KEY",

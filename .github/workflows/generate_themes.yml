@@ -28,15 +28,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
           CLAUDE_TIMEOUT: "30.0"
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_EVAL_MODEL: "gpt-5-mini"
-          OPENAI_EVAL_TIMEOUT: "45.0"
-          PLAMO_API_KEY: ${{ secrets.PLAMO_API_KEY }}
-          PLAMO_TIMEOUT: "300.0"
-          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-          XAI_MODEL: "grok-4.20-0309-reasoning"
-          XAI_TIMEOUT: "300.0"
-          THEME_AI_PROVIDER: "plamo"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: "gemini-3.1-flash-lite-preview"
+          GEMINI_TIMEOUT: "120.0"
+          THEME_AI_PROVIDER: "gemini"
           THEME_CATEGORIES: ${{ secrets.THEME_CATEGORIES }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           THEME_GENERATION_RETRY_DELAY_SECONDS: "10.0"
