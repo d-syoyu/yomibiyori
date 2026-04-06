@@ -243,6 +243,7 @@ def list_works(
     *,
     theme_id: str,
     limit: int,
+    offset: int = 0,
     order_by: str = "recent",
     exclude_user_id: str | None = None,
 ) -> list[WorkResponse]:
@@ -252,6 +253,7 @@ def list_works(
         session: Database session
         theme_id: Theme identifier
         limit: Maximum number of works to return
+        offset: Number of works to skip
         order_by: Sort order - "recent" (newest first) or "fair_score" (time-normalized)
         exclude_user_id: Optional user ID to exclude from results (typically the current user)
 
@@ -281,8 +283,8 @@ def list_works(
         stmt = stmt.where(Work.user_id != exclude_user_id)
 
     if order_by == "recent":
-        # SQL側でソート＋LIMITを適用し、全件取得のPython処理を廃止
-        stmt = stmt.order_by(Work.created_at.desc()).limit(limit)
+        # SQL側でソート＋LIMIT/OFFSETを適用
+        stmt = stmt.order_by(Work.created_at.desc()).offset(offset).limit(limit)
         results = session.execute(stmt).all()
         return [
             WorkResponse(
@@ -298,7 +300,7 @@ def list_works(
             for work, likes_count, name, email, profile_image_url in results
         ]
 
-    # fair_score: 全件取得してPythonでスコア計算・ソート
+    # fair_score: 全件取得してPythonでスコア計算・ソート後にoffset/limitを適用
     results = session.execute(stmt).all()
     works_with_scores = []
     for work, likes_count, name, email, profile_image_url in results:
@@ -316,7 +318,7 @@ def list_works(
         works_with_scores.append((work_response, fair_score))
 
     works_with_scores.sort(key=lambda x: x[1], reverse=True)
-    return [work_response for work_response, _ in works_with_scores[:limit]]
+    return [work_response for work_response, _ in works_with_scores[offset:offset + limit]]
 
 
 def list_my_works(

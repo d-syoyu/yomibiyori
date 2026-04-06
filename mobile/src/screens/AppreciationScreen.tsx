@@ -36,6 +36,7 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'Appreciation'>;
 type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CATEGORIES: ThemeCategory[] = ['恋愛', '季節', '日常', 'ユーモア'];
+const PAGE_SIZE = 20;
 const IMPRESSION_BATCH_LIMIT = 20;
 
 export default function AppreciationScreen({ route }: Props) {
@@ -57,6 +58,8 @@ export default function AppreciationScreen({ route }: Props) {
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const [likedStates, setLikedStates] = useState<Record<string, boolean>>({});
   const [likingInProgress, setLikingInProgress] = useState<Set<string>>(new Set());
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const impressionsLoggedRef = useRef<Set<string>>(new Set());
 
   useFocusEffect(
@@ -110,7 +113,7 @@ export default function AppreciationScreen({ route }: Props) {
     })();
   }, []);
 
-  // Load works for the selected category
+  // Load works for the selected category (initial load or refresh)
   const loadWorks = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true);
@@ -133,8 +136,13 @@ export default function AppreciationScreen({ route }: Props) {
         view_context: 'appreciation',
       });
 
-      const worksData = await api.getWorksByTheme(theme.id, { limit: 50, order_by: 'fair_score' });
+      const worksData = await api.getWorksByTheme(theme.id, {
+        limit: PAGE_SIZE,
+        offset: 0,
+        order_by: 'fair_score',
+      });
       setWorks(worksData);
+      setHasMore(worksData.length >= PAGE_SIZE);
 
       setThemesMap(newThemesMap);
       void recordImpressionsForWorks(worksData);
@@ -160,6 +168,51 @@ export default function AppreciationScreen({ route }: Props) {
       setIsRefreshing(false);
     }
   }, [selectedCategory, getTodayTheme, handleError, recordImpressionsForWorks, isAuthenticated]);
+
+  // Load more works (infinite scroll)
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore || !currentThemeId) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+
+    try {
+      const moreWorks = await api.getWorksByTheme(currentThemeId, {
+        limit: PAGE_SIZE,
+        offset: works.length,
+        order_by: 'fair_score',
+      });
+
+      if (moreWorks.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      setWorks(prev => [...prev, ...moreWorks]);
+      setHasMore(moreWorks.length >= PAGE_SIZE);
+      void recordImpressionsForWorks(moreWorks);
+
+      // Fetch like statuses for newly loaded works
+      if (isAuthenticated && moreWorks.length > 0) {
+        try {
+          const workIds = moreWorks.map(w => w.id);
+          const likeStatusResponse = await api.getLikeStatusBatch(workIds);
+          const newLikedStates: Record<string, boolean> = {};
+          likeStatusResponse.items.forEach(item => {
+            newLikedStates[item.work_id] = item.liked;
+          });
+          setLikedStates(prev => ({ ...prev, ...newLikedStates }));
+        } catch (error) {
+          console.warn('[AppreciationScreen] Failed to fetch like statuses for new works:', error);
+        }
+      }
+    } catch (error: any) {
+      handleError(error, 'work_fetching');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, currentThemeId, works.length, isAuthenticated, handleError, recordImpressionsForWorks]);
 
   // Load works when category changes
   useEffect(() => {
@@ -336,10 +389,19 @@ export default function AppreciationScreen({ route }: Props) {
                 {selectedCategory}の作品
               </Text>
             }
+            ListFooterComponent={
+              isLoadingMore ? (
+                <View style={styles.loadMoreContainer}>
+                  <ActivityIndicator size="small" color={colors.text.tertiary} />
+                </View>
+              ) : null
+            }
             contentContainerStyle={styles.worksSection}
             refreshControl={
               <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
             }
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.3}
             // パフォーマンス最適化オプション
             initialNumToRender={5}
             maxToRenderPerBatch={5}
@@ -453,5 +515,9 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
     letterSpacing: 0.3,
+  },
+  loadMoreContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
   },
 });

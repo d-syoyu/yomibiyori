@@ -61,6 +61,7 @@ def list_works(
     session: Annotated[Session, Depends(get_db_session)],
     current_user_id: Annotated[str | None, Depends(get_optional_user_id)],
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
     order_by: Annotated[str, Query(description="Sort order: 'recent' or 'fair_score'")] = "recent",
 ) -> list[WorkResponse]:
     """Return works tied to the requested theme.
@@ -70,12 +71,14 @@ def list_works(
     - 'fair_score': Time-normalized score (balances good older works with newer works)
 
     If the user is authenticated, their own works are excluded from the results.
+    Supports pagination via limit/offset.
     """
 
     return works_service.list_works(
         session=session,
         theme_id=theme_id,
         limit=limit,
+        offset=offset,
         order_by=order_by,
         exclude_user_id=current_user_id,
     )

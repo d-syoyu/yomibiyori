@@ -366,6 +366,7 @@ class ApiClient {
 
   async getWorksByTheme(themeId: string, params?: {
     limit?: number;
+    offset?: number;
     order_by?: 'recent' | 'fair_score';
   }): Promise<WorkListResponse> {
     const response = await this.client.get<WorkListResponse>('/works', {
