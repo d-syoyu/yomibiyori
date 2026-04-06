@@ -3,7 +3,7 @@
  * 他ユーザーのプロフィール画面 - 公開プロフィールと作品一覧
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,8 @@ export default function UserProfileScreen() {
   const [dateSummaries, setDateSummaries] = useState<WorkDateSummary[]>([]);
   // 日付ごとの作品キャッシュ
   const [dateWorksCache, setDateWorksCache] = useState<Map<string, DateWorksCache>>(new Map());
+  const dateWorksCacheRef = useRef(dateWorksCache);
+  useEffect(() => { dateWorksCacheRef.current = dateWorksCache; }, [dateWorksCache]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
@@ -70,6 +72,7 @@ export default function UserProfileScreen() {
     if (isRefresh) {
       setIsRefreshing(true);
       setDateWorksCache(new Map());
+      setExpandedDates(new Set());
     } else {
       setIsLoading(true);
     }
@@ -101,7 +104,7 @@ export default function UserProfileScreen() {
   const loadWorksForDate = useCallback(async (date: string) => {
     console.log('[UserProfileScreen] Loading works for date:', date);
 
-    const cached = dateWorksCache.get(date);
+    const cached = dateWorksCacheRef.current.get(date);
     if (cached && cached.loaded) {
       console.log('[UserProfileScreen] Works already cached for date:', date);
       return;
@@ -155,7 +158,7 @@ export default function UserProfileScreen() {
     } catch (error: any) {
       handleError(error, 'user_works', `${date}の作品取得に失敗しました`);
     }
-  }, [userId, dateWorksCache, getThemeById, handleError]);
+  }, [userId, getThemeById, handleError]);
 
   // Load data on mount
   useEffect(() => {
@@ -166,17 +169,20 @@ export default function UserProfileScreen() {
     loadUserData(true);
   };
 
-  const toggleDateExpansion = async (date: string) => {
+  const toggleDateExpansion = (date: string) => {
+    const isCurrentlyExpanded = expandedDates.has(date);
     setExpandedDates((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(date)) {
+      if (isCurrentlyExpanded) {
         newSet.delete(date);
       } else {
         newSet.add(date);
-        loadWorksForDate(date);
       }
       return newSet;
     });
+    if (!isCurrentlyExpanded) {
+      loadWorksForDate(date);
+    }
   };
 
   // Auto-expand the most recent date
@@ -186,7 +192,7 @@ export default function UserProfileScreen() {
       setExpandedDates(new Set([mostRecentDate]));
       loadWorksForDate(mostRecentDate);
     }
-  }, [dateSummaries]);
+  }, [dateSummaries, loadWorksForDate]);
 
   if (isLoading) {
     return (

@@ -3,7 +3,7 @@
  * マイページ - 自分の投稿した俳句一覧
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -70,6 +70,8 @@ export default function MyPoemsScreen() {
   const [dateSummaries, setDateSummaries] = useState<WorkDateSummary[]>([]);
   // 日付ごとの作品キャッシュ
   const [dateWorksCache, setDateWorksCache] = useState<Map<string, DateWorksCache>>(new Map());
+  const dateWorksCacheRef = useRef(dateWorksCache);
+  useEffect(() => { dateWorksCacheRef.current = dateWorksCache; }, [dateWorksCache]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
@@ -94,6 +96,7 @@ export default function MyPoemsScreen() {
       setIsRefreshing(true);
       // リフレッシュ時はキャッシュもクリア
       setDateWorksCache(new Map());
+      setExpandedDates(new Set());
     } else {
       setIsLoading(true);
     }
@@ -125,6 +128,7 @@ export default function MyPoemsScreen() {
       });
       if (isAuthenticated) {
         setDateWorksCache(new Map());
+        setExpandedDates(new Set());
         loadMyWorksSummary();
       }
     }, [isAuthenticated, loadMyWorksSummary])
@@ -135,7 +139,7 @@ export default function MyPoemsScreen() {
     console.log('[MyPoemsScreen] Loading works for date:', date);
 
     // すでにキャッシュがあれば何もしない
-    const cached = dateWorksCache.get(date);
+    const cached = dateWorksCacheRef.current.get(date);
     if (cached && cached.loaded) {
       console.log('[MyPoemsScreen] Works already cached for date:', date);
       return;
@@ -196,7 +200,7 @@ export default function MyPoemsScreen() {
     } catch (error: any) {
       handleError(error, 'user_data', `${date}の作品取得に失敗しました`);
     }
-  }, [dateWorksCache, getThemeById, handleError]);
+  }, [getThemeById, handleError]);
 
   const handleLogout = async () => {
     await logout();
@@ -312,19 +316,20 @@ export default function MyPoemsScreen() {
     setSelectedWork(null);
   }, []);
 
-  const toggleDateExpansion = async (date: string) => {
+  const toggleDateExpansion = (date: string) => {
+    const isCurrentlyExpanded = expandedDates.has(date);
     setExpandedDates((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(date)) {
-        // 閉じる
+      if (isCurrentlyExpanded) {
         newSet.delete(date);
       } else {
-        // 開く - 作品をロード
         newSet.add(date);
-        loadWorksForDate(date); // 非同期でロード
       }
       return newSet;
     });
+    if (!isCurrentlyExpanded) {
+      loadWorksForDate(date);
+    }
   };
 
   // Auto-expand the most recent date
@@ -334,7 +339,7 @@ export default function MyPoemsScreen() {
       setExpandedDates(new Set([mostRecentDate]));
       loadWorksForDate(mostRecentDate);
     }
-  }, [dateSummaries]);
+  }, [dateSummaries, loadWorksForDate]);
 
   // Clear cache when app goes to background
   useEffect(() => {
@@ -342,6 +347,7 @@ export default function MyPoemsScreen() {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         console.log('[MyPoemsScreen] App going to background, clearing works cache');
         setDateWorksCache(new Map());
+        setExpandedDates(new Set());
       }
     });
 
