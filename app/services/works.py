@@ -260,13 +260,17 @@ def list_works(
     if not theme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="お題が見つかりませんでした")
 
-    # Work.id は PK のため User.* は Work.id に関数従属 → group_by(Work.id) のみで十分
+    # Likes count via subquery to avoid GROUP BY on joined User columns
+    likes_subq = (
+        select(Like.work_id, func.count(Like.id).label("likes_count"))
+        .group_by(Like.work_id)
+        .subquery()
+    )
     stmt = (
-        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email, User.profile_image_url)
-        .outerjoin(Like, Like.work_id == Work.id)
+        select(Work, func.coalesce(likes_subq.c.likes_count, 0).label("likes_count"), User.name, User.email, User.profile_image_url)
         .join(User, User.id == Work.user_id)
+        .outerjoin(likes_subq, likes_subq.c.work_id == Work.id)
         .where(Work.theme_id == theme_id)
-        .group_by(Work.id)
     )
 
     # Exclude the specified user's works (e.g., current user viewing appreciation screen)
@@ -332,14 +336,17 @@ def list_my_works(
     Returns:
         List of user's works with likes count
     """
-    # Build query to fetch user's works with likes count and user info
-    # Work.id は PK のため User.* は Work.id に関数従属 → group_by(Work.id) のみで十分
+    # Likes count via subquery to avoid GROUP BY on joined User columns
+    likes_subq = (
+        select(Like.work_id, func.count(Like.id).label("likes_count"))
+        .group_by(Like.work_id)
+        .subquery()
+    )
     stmt = (
-        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email, User.profile_image_url)
-        .outerjoin(Like, Like.work_id == Work.id)
+        select(Work, func.coalesce(likes_subq.c.likes_count, 0).label("likes_count"), User.name, User.email, User.profile_image_url)
         .join(User, User.id == Work.user_id)
+        .outerjoin(likes_subq, likes_subq.c.work_id == Work.id)
         .where(Work.user_id == user_id)
-        .group_by(Work.id)
         .order_by(Work.created_at.desc())
         .limit(limit)
         .offset(offset)
