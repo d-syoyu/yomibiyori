@@ -52,6 +52,8 @@ interface DateWorksCache {
 export default function MyPoemsScreen() {
   const { width } = useWindowDimensions();
   const titleFontSize = width < 380 ? fontSize.h3 : width < 420 ? fontSize.h2 : fontSize.h1;
+  const btnPaddingH = width < 380 ? spacing.xs : spacing.sm;
+  const btnFontSize = width < 380 ? fontSize.captionSmall : fontSize.caption;
 
   const navigation = useNavigation<MyPoemsScreenNavigationProp>();
   const { user, logout, isAuthenticated } = useAuthStore();
@@ -392,14 +394,14 @@ export default function MyPoemsScreen() {
             <Text style={[styles.title, { fontSize: titleFontSize }]}>マイページ</Text>
             <View style={styles.headerButtons}>
               <TouchableOpacity
-                style={styles.tutorialButton}
+                style={[styles.tutorialButton, { paddingHorizontal: btnPaddingH }]}
                 onPress={() => setTutorialModalVisible(true)}
               >
                 <Ionicons name="help-circle-outline" size={20} color="#4A5568" />
-                <Text style={styles.tutorialButtonText}>使い方</Text>
+                <Text style={[styles.tutorialButtonText, { fontSize: btnFontSize }]}>使い方</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                <Text style={styles.logoutButtonText}>ログアウト</Text>
+              <TouchableOpacity style={[styles.logoutButton, { paddingHorizontal: btnPaddingH }]} onPress={handleLogout}>
+                <Text style={[styles.logoutButtonText, { fontSize: btnFontSize }]}>ログアウト</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -662,7 +664,7 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
-    alignItems: 'center',
+    alignItems: 'stretch',
     flexShrink: 0,
   },
   tutorialButton: {
@@ -672,6 +674,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   tutorialButtonText: {
@@ -684,6 +687,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logoutButtonText: {
     fontSize: fontSize.bodySmall,
