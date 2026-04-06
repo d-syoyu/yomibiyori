@@ -55,7 +55,7 @@ export default function AppreciationScreen({ route }: Props) {
   const [currentThemeId, setCurrentThemeId] = useState<string | null>(null);
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
-  const [likedStates, setLikedStates] = useState<Map<string, boolean>>(new Map());
+  const [likedStates, setLikedStates] = useState<Record<string, boolean>>({});
   const [likingInProgress, setLikingInProgress] = useState<Set<string>>(new Set());
   const impressionsLoggedRef = useRef<Set<string>>(new Set());
 
@@ -144,9 +144,9 @@ export default function AppreciationScreen({ route }: Props) {
         try {
           const workIds = worksData.map(w => w.id);
           const likeStatusResponse = await api.getLikeStatusBatch(workIds);
-          const newLikedStates = new Map<string, boolean>();
+          const newLikedStates: Record<string, boolean> = {};
           likeStatusResponse.items.forEach(item => {
-            newLikedStates.set(item.work_id, item.liked);
+            newLikedStates[item.work_id] = item.liked;
           });
           setLikedStates(newLikedStates);
         } catch (error) {
@@ -187,32 +187,20 @@ export default function AppreciationScreen({ route }: Props) {
     setLikingInProgress(prev => new Set(prev).add(workId));
 
     // Get current state for rollback
-    const currentLiked = likedStates.get(workId) ?? false;
+    const currentLiked = likedStates[workId] ?? false;
 
     // Optimistic update: toggle liked state immediately
     const newLiked = !currentLiked;
-    setLikedStates(prev => {
-      const next = new Map(prev);
-      next.set(workId, newLiked);
-      return next;
-    });
+    setLikedStates(prev => ({ ...prev, [workId]: newLiked }));
 
     try {
       const response = await api.toggleLike(workId);
 
       // Update liked state based on server response
-      setLikedStates(prev => {
-        const next = new Map(prev);
-        next.set(workId, response.status === 'liked');
-        return next;
-      });
+      setLikedStates(prev => ({ ...prev, [workId]: response.status === 'liked' }));
     } catch (error: any) {
       // Rollback on error
-      setLikedStates(prev => {
-        const next = new Map(prev);
-        next.set(workId, currentLiked);
-        return next;
-      });
+      setLikedStates(prev => ({ ...prev, [workId]: currentLiked }));
 
       handleError(error, 'like_action');
     } finally {
@@ -311,6 +299,7 @@ export default function AppreciationScreen({ route }: Props) {
           <FlatList
             data={works}
             keyExtractor={(item) => item.id}
+            extraData={likedStates}
             renderItem={({ item: work }) => {
               const theme = themesMap.get(work.theme_id);
               return (
@@ -322,7 +311,7 @@ export default function AppreciationScreen({ route }: Props) {
                   userId={work.user_id}
                   profileImageUrl={work.profile_image_url}
                   onAuthorPress={handleAuthorPress}
-                  liked={likedStates.get(work.id) ?? false}
+                  liked={likedStates[work.id] ?? false}
                   onLike={() => handleLike(work.id)}
                   onShare={() => openShareSheet(work)}
                   sponsorName={theme?.sponsored ? theme.sponsor_company_name : undefined}

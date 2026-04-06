@@ -260,27 +260,41 @@ def list_works(
     if not theme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="お題が見つかりませんでした")
 
-    # Fetch all works with likes count and user info (without ordering, we'll sort in Python)
+    # Work.id は PK のため User.* は Work.id に関数従属 → group_by(Work.id) のみで十分
     stmt = (
         select(Work, func.count(Like.id).label("likes_count"), User.name, User.email, User.profile_image_url)
         .outerjoin(Like, Like.work_id == Work.id)
         .join(User, User.id == Work.user_id)
         .where(Work.theme_id == theme_id)
-        .group_by(Work.id, User.name, User.email, User.profile_image_url)
+        .group_by(Work.id)
     )
 
     # Exclude the specified user's works (e.g., current user viewing appreciation screen)
     if exclude_user_id:
         stmt = stmt.where(Work.user_id != exclude_user_id)
 
-    results = session.execute(stmt).all()
+    if order_by == "recent":
+        # SQL側でソート＋LIMITを適用し、全件取得のPython処理を廃止
+        stmt = stmt.order_by(Work.created_at.desc()).limit(limit)
+        results = session.execute(stmt).all()
+        return [
+            WorkResponse(
+                id=str(work.id),
+                user_id=str(work.user_id),
+                theme_id=str(work.theme_id),
+                text=work.text,
+                created_at=work.created_at,
+                likes_count=likes_count or 0,
+                display_name=(name if name else email) or "Unknown",
+                profile_image_url=profile_image_url,
+            )
+            for work, likes_count, name, email, profile_image_url in results
+        ]
 
-    # Build response objects
+    # fair_score: 全件取得してPythonでスコア計算・ソート
+    results = session.execute(stmt).all()
     works_with_scores = []
     for work, likes_count, name, email, profile_image_url in results:
-        # Use name if available, otherwise fallback to email
-        author_name = name if name else email
-
         work_response = WorkResponse(
             id=str(work.id),
             user_id=str(work.user_id),
@@ -288,21 +302,13 @@ def list_works(
             text=work.text,
             created_at=work.created_at,
             likes_count=likes_count or 0,
-            display_name=author_name or "Unknown",
+            display_name=(name if name else email) or "Unknown",
             profile_image_url=profile_image_url,
         )
+        fair_score = _calculate_fair_score(work.created_at, likes_count or 0)
+        works_with_scores.append((work_response, fair_score))
 
-        if order_by == "fair_score":
-            fair_score = _calculate_fair_score(work.created_at, likes_count or 0)
-            works_with_scores.append((work_response, fair_score))
-        else:
-            # For "recent" ordering, use timestamp as score
-            works_with_scores.append((work_response, work.created_at.timestamp()))
-
-    # Sort by score (descending)
     works_with_scores.sort(key=lambda x: x[1], reverse=True)
-
-    # Return only the work responses (without scores), limited
     return [work_response for work_response, _ in works_with_scores[:limit]]
 
 
@@ -327,12 +333,13 @@ def list_my_works(
         List of user's works with likes count
     """
     # Build query to fetch user's works with likes count and user info
+    # Work.id は PK のため User.* は Work.id に関数従属 → group_by(Work.id) のみで十分
     stmt = (
         select(Work, func.count(Like.id).label("likes_count"), User.name, User.email, User.profile_image_url)
         .outerjoin(Like, Like.work_id == Work.id)
         .join(User, User.id == Work.user_id)
         .where(Work.user_id == user_id)
-        .group_by(Work.id, User.name, User.email, User.profile_image_url)
+        .group_by(Work.id)
         .order_by(Work.created_at.desc())
         .limit(limit)
         .offset(offset)

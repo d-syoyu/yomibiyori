@@ -100,7 +100,7 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({
       >
         {profileImageUrl ? (
           <Image
-            source={{ uri: profileImageUrl, cache: 'reload' }}
+            source={{ uri: profileImageUrl, cache: 'default' }}
             style={styles.authorAvatar}
             key={profileImageUrl}
           />

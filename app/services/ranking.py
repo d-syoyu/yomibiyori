@@ -190,29 +190,21 @@ def _fetch_from_snapshot(session: Session, theme_id: str, limit: int) -> list[Ra
 
     from uuid import UUID
 
-    stmt: Select[Ranking] = select(Ranking).order_by(Ranking.rank.asc())
+    try:
+        theme_uuid = UUID(str(theme_id))
+    except ValueError:
+        theme_uuid = None
+
+    stmt: Select[Ranking] = (
+        select(Ranking)
+        .where(Ranking.theme_id == theme_uuid)
+        .order_by(Ranking.rank.asc())
+        .limit(limit)
+    )
     ranking_rows = session.execute(stmt).scalars().all()
-
-    def _normalize_theme(value: object) -> tuple[str, str | None]:
-        if isinstance(value, UUID):
-            return (str(value), value.hex)
-        text_value = str(value)
-        try:
-            parsed = UUID(text_value)
-            return (text_value, parsed.hex)
-        except ValueError:
-            return (text_value, None)
-
-    normalized_query_id, normalized_hex = _normalize_theme(theme_id)
 
     entries: list[RankingEntry] = []
     for ranking in ranking_rows:
-        ranking_theme, ranking_hex = _normalize_theme(ranking.theme_id)
-        if ranking_theme != normalized_query_id and ranking_hex != normalized_query_id and (
-            normalized_hex is None or (ranking_theme != normalized_hex and ranking_hex != normalized_hex)
-        ):
-            continue
-
         work_id_value = ranking.work_id
         if isinstance(work_id_value, UUID):
             work_id_str = str(work_id_value)

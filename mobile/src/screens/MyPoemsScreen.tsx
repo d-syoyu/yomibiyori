@@ -81,14 +81,6 @@ export default function MyPoemsScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { showSuccess, showError } = useToastStore();
 
-  useFocusEffect(
-    useCallback(() => {
-      trackEvent(EventNames.SCREEN_VIEWED, {
-        screen_name: 'MyPoems',
-      });
-    }, [])
-  );
-
   // Load summary of user's works (日付ごとのサマリーのみ取得)
   const loadMyWorksSummary = useCallback(async (isRefresh = false) => {
     console.log('[MyPoemsScreen] Loading user works summary');
@@ -119,6 +111,18 @@ export default function MyPoemsScreen() {
       setIsRefreshing(false);
     }
   }, [handleError]);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent(EventNames.SCREEN_VIEWED, {
+        screen_name: 'MyPoems',
+      });
+      if (isAuthenticated) {
+        setDateWorksCache(new Map());
+        loadMyWorksSummary();
+      }
+    }, [isAuthenticated, loadMyWorksSummary])
+  );
 
   // Load works for a specific date (アコーディオンを開いたときに呼ばれる)
   const loadWorksForDate = useCallback(async (date: string) => {
@@ -187,13 +191,6 @@ export default function MyPoemsScreen() {
       handleError(error, 'user_data', `${date}の作品取得に失敗しました`);
     }
   }, [dateWorksCache, getThemeById, handleError]);
-
-  // Load summary on mount (only if authenticated)
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadMyWorksSummary();
-    }
-  }, [loadMyWorksSummary, isAuthenticated]);
 
   const handleLogout = async () => {
     await logout();
