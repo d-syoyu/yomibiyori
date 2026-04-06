@@ -50,6 +50,35 @@ class WorkResponse(BaseModel):
     profile_image_url: str | None = Field(default=None, description="Profile image URL of the author")
 
 
+class WorkThemeInfo(BaseModel):
+    """Inline theme information included with work responses."""
+
+    id: str
+    text: str = Field(description="Upper verse (上の句) text")
+    category: str
+    date: Date
+    sponsored: bool = False
+    sponsor_company_name: str | None = None
+    sponsor_official_url: str | None = None
+    is_finalized: bool = False
+
+
+class WorkWithThemeResponse(BaseModel):
+    """Work response that includes inline theme information for efficient loading."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    user_id: str
+    theme_id: str
+    text: str = Field(description="Lower verse (下の句) text")
+    created_at: datetime
+    likes_count: int = 0
+    display_name: str = Field(description="Display name of the author")
+    profile_image_url: str | None = Field(default=None, description="Profile image URL of the author")
+    theme: WorkThemeInfo = Field(description="Theme (upper verse) information")
+
+
 class WorkLikeResponse(BaseModel):
     """Response payload for a work like action."""
 

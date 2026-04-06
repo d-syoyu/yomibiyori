@@ -15,13 +15,16 @@ from app.core.config import get_settings
 from app.core.logging import logger
 from app.core.analytics import EventNames, build_event_user_properties, track_event
 from app.models import Like, Ranking, Theme, User, Work
+from app.services.themes import _get_sponsor_url, _is_theme_finalized
 from app.schemas.work import (
     WorkCreate,
     WorkDateSummary,
     WorkImpressionRequest,
     WorkImpressionResponse,
     WorkResponse,
+    WorkThemeInfo,
     WorkUpdate,
+    WorkWithThemeResponse,
 )
 
 SUBMISSION_START = time(hour=6, minute=0)
@@ -323,8 +326,8 @@ def list_my_works(
     theme_id: str | None = None,
     limit: int = 50,
     offset: int = 0,
-) -> list[WorkResponse]:
-    """Return works created by the authenticated user.
+) -> list[WorkWithThemeResponse]:
+    """Return works created by the authenticated user with inline theme data.
 
     Args:
         session: Database session
@@ -334,17 +337,25 @@ def list_my_works(
         offset: Number of works to skip
 
     Returns:
-        List of user's works with likes count
+        List of user's works with likes count and theme information
     """
-    # Likes count via subquery to avoid GROUP BY on joined User columns
+    # Likes count via subquery to avoid GROUP BY on joined columns
     likes_subq = (
         select(Like.work_id, func.count(Like.id).label("likes_count"))
         .group_by(Like.work_id)
         .subquery()
     )
     stmt = (
-        select(Work, func.coalesce(likes_subq.c.likes_count, 0).label("likes_count"), User.name, User.email, User.profile_image_url)
+        select(
+            Work,
+            func.coalesce(likes_subq.c.likes_count, 0).label("likes_count"),
+            User.name,
+            User.email,
+            User.profile_image_url,
+            Theme,
+        )
         .join(User, User.id == Work.user_id)
+        .join(Theme, Theme.id == Work.theme_id)
         .outerjoin(likes_subq, likes_subq.c.work_id == Work.id)
         .where(Work.user_id == user_id)
         .order_by(Work.created_at.desc())
@@ -360,11 +371,11 @@ def list_my_works(
 
     # Build response objects
     works = []
-    for work, likes_count, name, email, profile_image_url in results:
+    for work, likes_count, name, email, profile_image_url, theme in results:
         # Use name if available, otherwise fallback to email
         author_name = name if name else email
 
-        work_response = WorkResponse(
+        work_response = WorkWithThemeResponse(
             id=str(work.id),
             user_id=str(work.user_id),
             theme_id=str(work.theme_id),
@@ -373,6 +384,16 @@ def list_my_works(
             likes_count=likes_count or 0,
             display_name=author_name or "Unknown",
             profile_image_url=profile_image_url,
+            theme=WorkThemeInfo(
+                id=str(theme.id),
+                text=theme.text,
+                category=theme.category,
+                date=theme.date,
+                sponsored=theme.sponsored,
+                sponsor_company_name=theme.sponsor_company_name,
+                sponsor_official_url=_get_sponsor_url(theme),
+                is_finalized=_is_theme_finalized(theme.date),
+            ),
         )
         works.append(work_response)
 

@@ -24,14 +24,13 @@ import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useTutorialStore } from '../stores/useTutorialStore';
-import type { Work, Theme, WorkDateSummary, MyPoemsStackParamList } from '../types';
+import type { Work, Theme, WorkDateSummary, WorkWithTheme, WorkThemeInfo, MyPoemsStackParamList } from '../types';
 import type { SharePayload } from '../types/share';
 import api from '../services/api';
 import WorkCard from '../components/WorkCard';
 import ShareSheet from '../components/ShareSheet';
 import EditWorkModal from '../components/EditWorkModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
-import { useThemeStore } from '../stores/useThemeStore';
 import { useProfileSetupStore } from '../stores/useProfileSetupStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
@@ -57,7 +56,6 @@ export default function MyPoemsScreen() {
 
   const navigation = useNavigation<MyPoemsScreenNavigationProp>();
   const { user, logout, isAuthenticated } = useAuthStore();
-  const getThemeById = useThemeStore(state => state.getThemeById);
   const { profileSetupCompleted, loadProfileSetupStatus } = useProfileSetupStore();
   const { handleError } = useApiErrorHandler();
 
@@ -146,42 +144,20 @@ export default function MyPoemsScreen() {
     }
 
     try {
-      // その日の全ての作品を取得（すべてのカテゴリ）
+      // テーマ情報付きで全作品を1回のAPIコールで取得
       const myWorks = await api.getMyWorks({ limit: 200 });
 
-      // 最適化: ユニークなテーマIDを収集し、バッチでプリロード
-      const uniqueThemeIds = [...new Set(myWorks.map(w => w.theme_id))];
-      console.log('[MyPoemsScreen] Pre-loading', uniqueThemeIds.length, 'unique themes');
-
-      // テーマを並列でプリロード（キャッシュがあればスキップされる）
-      const themesMap = new Map<string, Theme>();
-      const BATCH_SIZE = 5; // 並列度を制限
-
-      for (let i = 0; i < uniqueThemeIds.length; i += BATCH_SIZE) {
-        const batch = uniqueThemeIds.slice(i, i + BATCH_SIZE);
-        const themes = await Promise.all(
-          batch.map(async (id) => {
-            try {
-              return await getThemeById(id);
-            } catch (error) {
-              console.warn('[MyPoemsScreen] Failed to fetch theme:', id);
-              return null;
-            }
-          })
-        );
-        themes.forEach((theme) => {
-          if (theme) {
-            themesMap.set(theme.id, theme);
-          }
-        });
-      }
-
-      // その日の作品のみフィルタ（キャッシュ済みテーマから取得）
+      // その日の作品のみフィルタ（インラインテーマデータを使用）
       const worksForDate: Array<{ work: Work; theme?: Theme }> = [];
-      for (const work of myWorks) {
-        const theme = themesMap.get(work.theme_id);
-        if (theme && theme.date === date) {
-          worksForDate.push({ work, theme });
+      for (const workWithTheme of myWorks) {
+        if (workWithTheme.theme && workWithTheme.theme.date === date) {
+          // WorkWithTheme → Work + Theme に変換
+          const { theme: themeInfo, ...workData } = workWithTheme;
+          const theme: Theme = {
+            ...themeInfo,
+            created_at: '', // インラインレスポンスに含まれないフィールド
+          };
+          worksForDate.push({ work: workData, theme });
         }
       }
 
@@ -200,7 +176,7 @@ export default function MyPoemsScreen() {
     } catch (error: any) {
       handleError(error, 'user_data', `${date}の作品取得に失敗しました`);
     }
-  }, [getThemeById, handleError]);
+  }, [handleError]);
 
   const handleLogout = async () => {
     await logout();

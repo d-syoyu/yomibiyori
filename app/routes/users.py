@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
-from app.schemas.work import WorkDateSummary, WorkResponse
+from app.schemas.work import WorkDateSummary, WorkResponse, WorkWithThemeResponse
 from app.services.users import (
     get_user_public_profile,
     get_user_works,
@@ -52,7 +52,7 @@ def get_profile(
 
 @router.get(
     "/{user_id}/works",
-    response_model=list[WorkResponse],
+    response_model=list[WorkWithThemeResponse],
     summary="Get user's works",
 )
 def list_user_works(
@@ -60,8 +60,8 @@ def list_user_works(
     session: Annotated[Session, Depends(get_db_session)],
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> list[WorkResponse]:
-    """Return works created by the specified user."""
+) -> list[WorkWithThemeResponse]:
+    """Return works created by the specified user with inline theme data."""
 
     return get_user_works(session=session, user_id=user_id, limit=limit, offset=offset)
 

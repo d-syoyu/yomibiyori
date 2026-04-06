@@ -22,6 +22,7 @@ from app.schemas.work import (
     WorkLikeStatusResponse,
     WorkResponse,
     WorkUpdate,
+    WorkWithThemeResponse,
 )
 from app.services import likes as likes_service
 from app.services import works as works_service
@@ -100,7 +101,7 @@ def get_my_works_summary(
 
 @router.get(
     "/me",
-    response_model=list[WorkResponse],
+    response_model=list[WorkWithThemeResponse],
     summary="List works by authenticated user",
 )
 def list_my_works(
@@ -109,8 +110,8 @@ def list_my_works(
     theme_id: Annotated[str | None, Query(description="Optional theme filter")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> list[WorkResponse]:
-    """Return works created by the authenticated user.
+) -> list[WorkWithThemeResponse]:
+    """Return works created by the authenticated user with inline theme data.
 
     Supports optional filtering by theme and pagination.
     """

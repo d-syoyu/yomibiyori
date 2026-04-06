@@ -19,6 +19,8 @@ from app.schemas.notification import NotificationTokenCreate, NotificationTokenR
 from app.schemas.work import (
     WorkCreate,
     WorkResponse,
+    WorkWithThemeResponse,
+    WorkThemeInfo,
     WorkLikeResponse,
     WorkImpressionRequest,
     WorkImpressionResponse,
@@ -65,6 +67,8 @@ __all__ = [
     # work
     "WorkCreate",
     "WorkResponse",
+    "WorkWithThemeResponse",
+    "WorkThemeInfo",
     "WorkLikeResponse",
     "WorkImpressionRequest",
     "WorkImpressionResponse",

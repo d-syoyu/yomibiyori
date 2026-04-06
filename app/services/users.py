@@ -6,7 +6,8 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from app.models import Like, Theme, User, Work
-from app.schemas.work import WorkDateSummary, WorkResponse
+from app.schemas.work import WorkDateSummary, WorkResponse, WorkThemeInfo, WorkWithThemeResponse
+from app.services.themes import _get_sponsor_url, _is_theme_finalized
 
 
 def get_user_public_profile(session: Session, *, user_id: str) -> dict:
@@ -49,8 +50,8 @@ def get_user_works(
     user_id: str,
     limit: int = 50,
     offset: int = 0,
-) -> list[WorkResponse]:
-    """Return works created by a specific user.
+) -> list[WorkWithThemeResponse]:
+    """Return works created by a specific user with inline theme data.
 
     Args:
         session: Database session
@@ -59,15 +60,27 @@ def get_user_works(
         offset: Number of works to skip
 
     Returns:
-        List of user's works with likes count
+        List of user's works with likes count and theme information
     """
-    # Build query to fetch user's works with likes count and user name
+    # Likes count via subquery to avoid GROUP BY on joined columns
+    likes_subq = (
+        select(Like.work_id, func.count(Like.id).label("likes_count"))
+        .group_by(Like.work_id)
+        .subquery()
+    )
     stmt = (
-        select(Work, func.count(Like.id).label("likes_count"), User.name, User.email)
-        .outerjoin(Like, Like.work_id == Work.id)
+        select(
+            Work,
+            func.coalesce(likes_subq.c.likes_count, 0).label("likes_count"),
+            User.name,
+            User.email,
+            User.profile_image_url,
+            Theme,
+        )
         .join(User, User.id == Work.user_id)
+        .join(Theme, Theme.id == Work.theme_id)
+        .outerjoin(likes_subq, likes_subq.c.work_id == Work.id)
         .where(Work.user_id == user_id)
-        .group_by(Work.id, User.name, User.email)
         .order_by(Work.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -77,10 +90,10 @@ def get_user_works(
 
     # Build response objects
     works = []
-    for work, likes_count, name, email in results:
+    for work, likes_count, name, email, profile_image_url, theme in results:
         author_name = name if name else email
 
-        work_response = WorkResponse(
+        work_response = WorkWithThemeResponse(
             id=str(work.id),
             user_id=str(work.user_id),
             theme_id=str(work.theme_id),
@@ -88,6 +101,17 @@ def get_user_works(
             created_at=work.created_at,
             likes_count=likes_count or 0,
             display_name=author_name or "Unknown",
+            profile_image_url=profile_image_url,
+            theme=WorkThemeInfo(
+                id=str(theme.id),
+                text=theme.text,
+                category=theme.category,
+                date=theme.date,
+                sponsored=theme.sponsored,
+                sponsor_company_name=theme.sponsor_company_name,
+                sponsor_official_url=_get_sponsor_url(theme),
+                is_finalized=_is_theme_finalized(theme.date),
+            ),
         )
         works.append(work_response)
 

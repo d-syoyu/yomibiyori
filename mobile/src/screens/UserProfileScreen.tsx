@@ -20,10 +20,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { Work, Theme, WorkDateSummary, RootStackParamList, PublicUserProfile } from '../types';
+import type { Work, Theme, WorkDateSummary, RootStackParamList, PublicUserProfile, WorkWithTheme, WorkThemeInfo } from '../types';
 import api from '../services/api';
 import WorkCard from '../components/WorkCard';
-import { useThemeStore } from '../stores/useThemeStore';
 import { useApiErrorHandler } from '../hooks/useApiErrorHandler';
 import { colors, spacing, borderRadius, shadow, fontSize, fontFamily } from '../theme';
 import { trackEvent, EventNames } from '../utils/analytics';
@@ -42,7 +41,6 @@ export default function UserProfileScreen() {
   const navigation = useNavigation<UserProfileScreenNavigationProp>();
   const route = useRoute<UserProfileScreenRouteProp>();
   const { userId, displayName } = route.params;
-  const getThemeById = useThemeStore(state => state.getThemeById);
   const { handleError } = useApiErrorHandler();
 
   // User profile data
@@ -111,40 +109,23 @@ export default function UserProfileScreen() {
     }
 
     try {
+      // テーマ情報付きで全作品を1回のAPIコールで取得
       const userWorks = await api.getUserWorks(userId, { limit: 200 });
 
-      // Pre-load themes
-      const uniqueThemeIds = [...new Set(userWorks.map(w => w.theme_id))];
-      const themesMap = new Map<string, Theme>();
-      const BATCH_SIZE = 5;
-
-      for (let i = 0; i < uniqueThemeIds.length; i += BATCH_SIZE) {
-        const batch = uniqueThemeIds.slice(i, i + BATCH_SIZE);
-        const themes = await Promise.all(
-          batch.map(async (id) => {
-            try {
-              return await getThemeById(id);
-            } catch (error) {
-              console.warn('[UserProfileScreen] Failed to fetch theme:', id);
-              return null;
-            }
-          })
-        );
-        themes.forEach((theme) => {
-          if (theme) {
-            themesMap.set(theme.id, theme);
-          }
-        });
-      }
-
-      // Filter works for the specific date
+      // その日の作品のみフィルタ（インラインテーマデータを使用）
       const worksForDate: Array<{ work: Work; theme?: Theme }> = [];
-      for (const work of userWorks) {
-        const theme = themesMap.get(work.theme_id);
-        if (theme && theme.date === date) {
-          worksForDate.push({ work, theme });
+      for (const workWithTheme of userWorks) {
+        if (workWithTheme.theme && workWithTheme.theme.date === date) {
+          const { theme: themeInfo, ...workData } = workWithTheme;
+          const theme: Theme = {
+            ...themeInfo,
+            created_at: '',
+          };
+          worksForDate.push({ work: workData, theme });
         }
       }
+
+      console.log('[UserProfileScreen] Loaded', worksForDate.length, 'works for date:', date);
 
       setDateWorksCache(prev => {
         const newCache = new Map(prev);
@@ -158,7 +139,7 @@ export default function UserProfileScreen() {
     } catch (error: any) {
       handleError(error, 'user_works', `${date}の作品取得に失敗しました`);
     }
-  }, [userId, getThemeById, handleError]);
+  }, [userId, handleError]);
 
   // Load data on mount
   useEffect(() => {

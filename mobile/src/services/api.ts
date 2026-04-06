@@ -28,6 +28,8 @@ import type {
   WorkLikeBatchResponse,
   WorkDateSummary,
   WorkImpressionResponse,
+  WorkWithTheme,
+  WorkWithThemeListResponse,
   RankingResponse,
   ApiError,
   NotificationTokenRequest,
@@ -398,8 +400,8 @@ class ApiClient {
     theme_id?: string;
     limit?: number;
     offset?: number;
-  }): Promise<WorkListResponse> {
-    const response = await this.client.get<WorkListResponse>('/works/me', {
+  }): Promise<WorkWithThemeListResponse> {
+    const response = await this.client.get<WorkWithThemeListResponse>('/works/me', {
       params,
     });
     return response.data;
@@ -462,8 +464,8 @@ class ApiClient {
   async getUserWorks(userId: string, params?: {
     limit?: number;
     offset?: number;
-  }): Promise<WorkListResponse> {
-    const response = await this.client.get<WorkListResponse>(`/users/${userId}/works`, {
+  }): Promise<WorkWithThemeListResponse> {
+    const response = await this.client.get<WorkWithThemeListResponse>(`/users/${userId}/works`, {
       params,
     });
     return response.data;

@@ -153,6 +153,25 @@ export interface Work {
 // API returns an array of works directly, not wrapped in an object
 export type WorkListResponse = Work[];
 
+/** Inline theme info returned with WorkWithTheme responses */
+export interface WorkThemeInfo {
+  id: string;
+  text: string;
+  category: ThemeCategory;
+  date: string; // YYYY-MM-DD
+  sponsored: boolean;
+  sponsor_company_name?: string;
+  sponsor_official_url?: string;
+  is_finalized: boolean;
+}
+
+/** Work with inline theme data (returned by /works/me and /users/:id/works) */
+export interface WorkWithTheme extends Work {
+  theme: WorkThemeInfo;
+}
+
+export type WorkWithThemeListResponse = WorkWithTheme[];
+
 export interface WorkLikeResponse {
   status: 'liked' | 'unliked';
   likes_count: number;
