@@ -16,6 +16,7 @@ import {
   AppStateStatus,
   Linking,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,6 +50,9 @@ interface DateWorksCache {
 }
 
 export default function MyPoemsScreen() {
+  const { width } = useWindowDimensions();
+  const titleFontSize = width < 380 ? fontSize.h3 : width < 420 ? fontSize.h2 : fontSize.h1;
+
   const navigation = useNavigation<MyPoemsScreenNavigationProp>();
   const { user, logout, isAuthenticated } = useAuthStore();
   const getThemeById = useThemeStore(state => state.getThemeById);
@@ -385,7 +389,7 @@ export default function MyPoemsScreen() {
         {/* Fixed Header */}
         <View style={styles.header}>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>マイページ</Text>
+            <Text style={[styles.title, { fontSize: titleFontSize }]}>マイページ</Text>
             <View style={styles.headerButtons}>
               <TouchableOpacity
                 style={styles.tutorialButton}
@@ -659,6 +663,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     alignItems: 'center',
+    flexShrink: 0,
   },
   tutorialButton: {
     backgroundColor: colors.background.secondary,
