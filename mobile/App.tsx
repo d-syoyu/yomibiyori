@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Alert } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -135,8 +136,10 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Navigation />
-      <StatusBar style="auto" />
+      <SafeAreaProvider>
+        <Navigation />
+        <StatusBar style="auto" />
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
