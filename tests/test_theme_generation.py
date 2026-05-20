@@ -252,3 +252,61 @@ def test_retry_run_generates_only_missing_categories(
         ("emotion", "Tender echoes linger in the heart"),
         ("general", "Gentle dawn hums across the valley"),
     ]
+
+
+def test_generate_all_categories_resolves_date_smartly(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "theme_categories", "general")
+    monkeypatch.setattr(settings, "theme_generation_max_retries", 1)
+    monkeypatch.setattr(settings, "theme_day_rollover_hour", 6)
+
+    class _DynamicThemeClient:
+        def __init__(self) -> None:
+            self.counter = 0
+        def generate(self, *, category: str, target_date: date, past_themes: list[str] | None = None) -> str:
+            self.counter += 1
+            return f"The gentle wind of a new dawn {self.counter}"
+
+    client = _DynamicThemeClient()
+
+    import datetime as real_datetime
+    from datetime import date
+
+    # Case 1: Before rollover hour (e.g. 05:00 JST on 2026-05-20)
+    # Should resolve to "today" (2026-05-20)
+    class MockDatetimeBefore:
+        @classmethod
+        def now(cls, tz=None):
+            return real_datetime.datetime(2026, 5, 20, 5, 0, 0, tzinfo=tz)
+
+    monkeypatch.setattr("app.services.theme_generation.datetime", MockDatetimeBefore)
+    
+    batch = generate_all_categories(
+        client,
+        target_date=None,  # triggers smart date resolution
+        session_factory=lambda: mock_session_factory(db_session),
+    )
+    assert len(batch.results) == 1
+    assert batch.results[0].theme.date == date(2026, 5, 20)
+
+    # Case 2: On/After rollover hour (e.g. 21:00 JST on 2026-05-20)
+    # Should resolve to "tomorrow" (2026-05-21)
+    class MockDatetimeAfter:
+        @classmethod
+        def now(cls, tz=None):
+            return real_datetime.datetime(2026, 5, 20, 21, 0, 0, tzinfo=tz)
+
+    monkeypatch.setattr("app.services.theme_generation.datetime", MockDatetimeAfter)
+    
+    batch2 = generate_all_categories(
+        client,
+        target_date=None,  # triggers smart date resolution
+        session_factory=lambda: mock_session_factory(db_session),
+    )
+    assert len(batch2.results) == 1
+    assert batch2.results[0].theme.date == date(2026, 5, 21)
+
+

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.core.config import get_settings
 from app.services.theme_generation import ThemeGenerationError, generate_all_categories
@@ -44,7 +44,14 @@ def main() -> int:
         traceback.print_exc()
         raise SystemExit(1) from exc
 
-    resolved_date = args.target_date or datetime.now(settings.timezone).date()
+    if args.target_date is not None:
+        resolved_date = args.target_date
+    else:
+        now = datetime.now(settings.timezone)
+        if now.hour < settings.theme_day_rollover_hour:
+            resolved_date = now.date()
+        else:
+            resolved_date = now.date() + timedelta(days=1)
     
     # Check if dry run
     if args.dry_run:

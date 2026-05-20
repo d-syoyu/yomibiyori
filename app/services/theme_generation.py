@@ -241,7 +241,14 @@ def generate_all_categories(
 
     settings = get_settings()
     categories = settings.theme_categories_list
-    resolved_date = target_date or datetime.now(settings.timezone).date()
+    if target_date is not None:
+        resolved_date = target_date
+    else:
+        now = datetime.now(settings.timezone)
+        if now.hour < settings.theme_day_rollover_hour:
+            resolved_date = now.date()
+        else:
+            resolved_date = now.date() + timedelta(days=1)
 
     client = ai_client or resolve_theme_ai_client()
     results: list[ThemeGenerationResult] = []
