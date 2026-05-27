@@ -215,7 +215,7 @@ class Settings(BaseSettings):
         description="Google Gemini API key used when THEME_AI_PROVIDER=gemini.",
     )
     gemini_model: str = Field(
-        default="gemini-3.1-flash-lite-preview",
+        default="gemini-3.1-flash-lite",
         alias="GEMINI_MODEL",
         description="Google Gemini model used for theme generation.",
     )

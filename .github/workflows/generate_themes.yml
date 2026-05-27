@@ -29,7 +29,7 @@ jobs:
           CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
           CLAUDE_TIMEOUT: "30.0"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: "gemini-3.1-flash-lite-preview"
+          GEMINI_MODEL: "gemini-3.1-flash-lite"
           GEMINI_TIMEOUT: "120.0"
           THEME_AI_PROVIDER: "gemini"
           THEME_CATEGORIES: ${{ secrets.THEME_CATEGORIES }}
@@ -39,4 +39,3 @@ jobs:
         run: |
           # Generate theme (runs at 21:00 JST, generates for next day's 06:00 release; if delayed past midnight, still target the current day's 06:00 release)
           python scripts/generate_themes.py
-

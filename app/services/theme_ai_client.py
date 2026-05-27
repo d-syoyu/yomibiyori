@@ -405,7 +405,7 @@ class GeminiThemeJudge:
     """Gemini-based judge that selects the best candidate (OpenAI-compatible Chat Completions)."""
 
     api_key: str
-    model: str = "gemini-3.1-flash-lite-preview"
+    model: str = "gemini-3.1-flash-lite"
     endpoint: str = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     timeout: float = 30.0
 
@@ -1528,7 +1528,7 @@ class GeminiThemeClient(ThemeAIClient):
     """Google Gemini-backed theme generator (OpenAI-compatible API)."""
 
     api_key: str
-    model: str = "gemini-3.1-flash-lite-preview"
+    model: str = "gemini-3.1-flash-lite"
     endpoint: str = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     timeout: float = 60.0
 

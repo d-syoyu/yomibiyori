@@ -538,7 +538,7 @@ class GeminiWorkClient(WorkAIClient):
     """Google Gemini-backed lower verse generator (OpenAI-compatible API)."""
 
     api_key: str
-    model: str = "gemini-3.1-flash-lite-preview"
+    model: str = "gemini-3.1-flash-lite"
     endpoint: str = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     timeout: float = 60.0
 

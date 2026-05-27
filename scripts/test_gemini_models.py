@@ -20,7 +20,7 @@ from app.services.theme_ai_client import (
 from app.core.config import get_settings
 
 
-MODEL = "gemini-3.1-flash-lite-preview"
+MODEL = "gemini-3.1-flash-lite"
 CATEGORIES = ["恋愛", "季節", "日常", "ユーモア"]
 TARGET_DATE = date(2026, 3, 28)
 

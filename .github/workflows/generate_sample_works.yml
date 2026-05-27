@@ -40,7 +40,7 @@ jobs:
           # AI Provider configuration
           THEME_AI_PROVIDER: "gemini"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: "gemini-3.1-flash-lite-preview"
+          GEMINI_MODEL: "gemini-3.1-flash-lite"
           GEMINI_TIMEOUT: "120.0"
 
           # Supabase configuration (for imports)
