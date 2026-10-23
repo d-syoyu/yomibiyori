@@ -25,7 +25,6 @@ jobs:
       - name: Generate themes
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
           CLAUDE_TIMEOUT: "30.0"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
